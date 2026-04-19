@@ -1,6 +1,6 @@
 const { drizzle } = require("drizzle-orm/node-postgres")
 const { Pool } = require("pg")
-const schema = require("../models/schema")
+const schema = require("../model/schema")
 const dotenv = require("dotenv")
 
 dotenv.config()
