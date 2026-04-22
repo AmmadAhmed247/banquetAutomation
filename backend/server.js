@@ -6,6 +6,16 @@ const BookingRouter = require("./routes/booking.route")
 
 dotenv.config()
 
+app.use(express.json())
+app.use(express.urlencoded({extended: true}))
+
+app.use("/health", (req,res)=> {
+    return res.status(200).json({
+        success: true,
+        message: "API IS WORKING FINE!"
+    })
+})
+
 app.use("/api/user", UserRouter)
 app.use("/api/booking", BookingRouter)
 

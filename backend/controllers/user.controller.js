@@ -16,7 +16,7 @@ async function GetOrRegisterUser(req,res) {
             return res.status(401).json(result)
         }
 
-        const status = isNew ? 201 : 200
+        const status = result?.isNew ? 201 : 200
 
         return res.status(status).json({
             isNew: result.isNew,
