@@ -4,8 +4,6 @@ import {
   CalendarCheck, Image, Bell, Settings, ArrowBigLeft
 } from "lucide-react";
 
-// Page Imports
-import DashboardPage from "./pages/DashboardPage"; // We will use this for the Hub
 import InboxPage from "./pages/InboxPage";
 import AutoBotPage from "./pages/AutoBotPage";
 import ContactsPage from "./pages/ContactsPage";
