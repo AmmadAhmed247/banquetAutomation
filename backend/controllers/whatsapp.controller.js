@@ -2,7 +2,7 @@ const { parseIncoming, sendMessage, sendTwimlResponse } = require("../services/t
 const { getSession, setSession } = require("../services/session.service")
 const { getOrCreateUser } = require("../services/user.service")
 const { parseWhatsAppMessage, CreateBooking } = require("../services/booking.service")
-const { getHelpMessage, getPackagesMessage, getGellaryMessage } = require("../services/message.service")
+const { getHelpMessage, getPackagesMessage, getGalleryMessage} = require("../services/message.service")
 
 async function handleWhatsappWebhook(req, res) {
     const { phone, body } = parseIncoming(req)
@@ -22,7 +22,7 @@ async function handleWhatsappWebhook(req, res) {
         }
 
         if(keyword === "GALLERY"){
-            const msg = await getGellaryMessage()
+            const msg = await getGalleryMessage()
             return sendTwimlResponse(res, msg)
         }
 

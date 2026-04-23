@@ -9,9 +9,11 @@ const WhatsappRouter = require("./routes/whatsapp.route")
 dotenv.config()
 
 app.use(express.json())
-app.use(express.urlencoded({extended: true}))
+app.use(express.urlencoded({extended: false}))
 
-app.use("/health", (req,res)=> {
+app.get("/", (req,res)=> {
+    console.log("API WORKING!")
+
     return res.status(200).json({
         success: true,
         message: "API IS WORKING FINE!"
@@ -24,5 +26,5 @@ app.use("/api/package", PackageRouter)
 app.use("/api/whatsapp", WhatsappRouter)
 
 app.listen(3000, ()=> {
-    console.log("Server Is Running At PORT")
+    console.log("Server Is Running At 3000")
 })

@@ -36,5 +36,5 @@ Or follow us on Instagram:\nhttps://instagram.com/your-handle`
 module.exports = {
     getHelpMessage,
     getPackagesMessage,
-    getGellaryMessage
+    getGalleryMessage
 }
