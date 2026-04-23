@@ -62,3 +62,7 @@ async function handleWhatsappWebhook(req, res) {
     }
 
 }
+
+module.exports = {
+    handleWhatsappWebhook
+}
