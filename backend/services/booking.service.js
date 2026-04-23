@@ -1,6 +1,7 @@
 const { eq } = require("drizzle-orm");
 const { db } = require("../config/db");
 const { booking } = require("../model/schema");
+const { sendMessage } = require("./twillo.service");
 
 async function CreateBooking(event, date, packageName, phone) {
     try {
@@ -20,6 +21,8 @@ async function CreateBooking(event, date, packageName, phone) {
                 message: "Booking Not Created!"
             }
         }
+
+        await sendMessage(phone, `Your booking for ${booking.event} on ${booking.date} has been confirmed by our team!`)
 
         return {
             success: true,
@@ -55,7 +58,26 @@ async function GetAllBookings(phone) {
     }
 }
 
+function parseWhatsAppMessage(body, phone) {
+  if (!body?.toUpperCase().startsWith("BOOK:")) return null;
+
+  const parts = body.slice(5).split("|").map(s => s.trim());
+  const [date, event, pkg] = parts;
+
+  if (!date || !event) return null;
+
+  return {
+    phone,
+    date,
+    event,
+    package: pkg || "Standard",
+  };
+}
+
+module.exports = { parseWhatsAppMessage };
+
 module.exports = {
     CreateBooking,
-    GetAllBookings
+    GetAllBookings,
+    parseWhatsAppMessage
 }

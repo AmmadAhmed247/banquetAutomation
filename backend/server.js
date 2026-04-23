@@ -3,6 +3,7 @@ const app = express()
 const dotenv = require("dotenv")
 const UserRouter = require("./routes/user.route")
 const BookingRouter = require("./routes/booking.route")
+const PackageRouter = require("./routes/package.route")
 
 dotenv.config()
 
@@ -18,6 +19,7 @@ app.use("/health", (req,res)=> {
 
 app.use("/api/user", UserRouter)
 app.use("/api/booking", BookingRouter)
+app.use("/api/package", PackageRouter)
 
 app.listen(3000, ()=> {
     console.log("Server Is Running At PORT")
