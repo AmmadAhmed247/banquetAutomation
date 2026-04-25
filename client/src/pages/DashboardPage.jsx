@@ -1,11 +1,36 @@
+import React from "react";
+import {
+  MessageCircle,
+  Zap,
+  Users,
+  Calendar,
+  CalendarCheck,
+  Image,
+  Bell,
+  Settings,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { BOOKINGS } from "../data/mockData";
 
-export default function Dashboard({ setActive }) {
+export default function DashboardPage() {
+  const navigate = useNavigate();
+
+  const tools = [
+    { name: "Inbox", path: "inbox", icon: MessageCircle, desc: "Manage your studio" },
+    { name: "Auto Reply Bot", path: "autobot", icon: Zap, desc: "Manage your studio" },
+    { name: "Contacts", path: "contacts", icon: Users, desc: "Manage your studio" },
+    { name: "Calendar", path: "calendar", icon: Calendar, desc: "Manage your studio" },
+    { name: "Bookings", path: "bookings", icon: CalendarCheck, desc: "Manage your studio" },
+    { name: "Gallery", path: "gallery", icon: Image, desc: "Manage your studio" },
+    { name: "Reminders", path: "reminders", icon: Bell, desc: "Manage your studio" },
+    { name: "Settings", path: "settings", icon: Settings, desc: "Manage your studio" },
+  ];
+
   const stats = [
-    { label: "Total Clients", value: "48", sub: "+3 this week", icon: "◎", c: "#10b981", bg: "rgba(16,185,129,0.08)" },
-    { label: "Weddings This Month", value: "6", sub: "2 upcoming", icon: "✦", c: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
-    { label: "Messages Sent Today", value: "312", sub: "via Twilio", icon: "✉", c: "#6366f1", bg: "rgba(99,102,241,0.08)" },
-    { label: "Auto Replies", value: "89", sub: "This week", icon: "⚡", c: "#ec4899", bg: "rgba(236,72,153,0.08)" },
+    { label: "Total Clients", val: "48", trend: "+3 this week", icon: Users },
+    { label: "Weddings", val: "6", trend: "2 upcoming", icon: Calendar },
+    { label: "Messages", val: "312", trend: "Today", icon: MessageCircle },
+    { label: "Auto Replies", val: "89", trend: "This week", icon: Zap },
   ];
 
   const alerts = [
@@ -15,51 +40,78 @@ export default function Dashboard({ setActive }) {
   ];
 
   return (
-    <div style={{ padding: 32 }}>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 700, color: "#1e293b", margin: 0 }}>Good morning ✨</h1>
-        <p style={{ color: "#94a3b8", fontFamily: "'DM Sans', sans-serif", fontSize: 14, marginTop: 4 }}>Here's your studio overview for today</p>
+    <div className="p-12 max-w-7xl mx-auto animate-in fade-in duration-700">
+      <div className="flex justify-between items-center mb-12">
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-4xl font-mono font-bold text-slate-900 leading-none">Darbar</h1>
+            <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">CRM</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-slate-400 text-sm font-medium">Karachi • April 19, 2026</p>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 24 }}>
-        {stats.map(s => (
-          <div key={s.label} style={{ background: "#fff", borderRadius: 20, border: "1px solid #d1fae5", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", padding: 20 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: s.c, marginBottom: 14 }}>{s.icon}</div>
-            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: "#1e293b", margin: 0 }}>{s.value}</p>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#94a3b8", marginTop: 2 }}>{s.label}</p>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#10b981", marginTop: 2, fontWeight: 600 }}>{s.sub}</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+        {stats.map((s, i) => (
+          <div key={i} className="bg-white p-8 rounded-[32px] border border-emerald-50 shadow-sm hover:shadow-md transition-shadow">
+            <s.icon className="w-6 h-6 text-emerald-600 mb-4" />
+            <h3 className="text-4xl font-bold text-slate-900 mb-1">{s.val}</h3>
+            <p className="text-slate-400 text-xs font-medium mb-2">{s.label}</p>
+            <span className="text-emerald-500 text-[10px] font-bold uppercase tracking-tight">{s.trend}</span>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      {/* Main Content Grid */}
+      {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12"> */}
         {/* Smart Alerts */}
-        <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #d1fae5", padding: 24 }}>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, color: "#1e293b", marginBottom: 16, fontSize: 15 }}>Smart Alerts</p>
-          {alerts.map((a, i) => (
-            <div key={i} style={{ padding: "12px 14px", borderRadius: 14, marginBottom: 10, background: a.type === "red" ? "#fef2f2" : a.type === "amber" ? "#fffbeb" : "#f0fdf4" }}>
-              <p style={{ fontSize: 13, color: "#334155", margin: 0 }}>{a.msg}</p>
-            </div>
-          ))}
-        </div>
+        {/* <div className="lg:col-span-2 bg-white p-8 rounded-[32px] border border-emerald-50 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-800 mb-6">Smart Alerts</h2>
+          <div className="space-y-4">
+            {alerts.map((a, i) => (
+              <div key={i} className={`p-4 rounded-xl ${
+                a.type === "red" ? "bg-red-50" : a.type === "amber" ? "bg-amber-50" : "bg-green-50"
+              }`}>
+                <p className="text-sm text-slate-700">{a.msg}</p>
+              </div>
+            ))}
+          </div>
+        </div> */}
 
         {/* Upcoming Weddings */}
-        <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #d1fae5", padding: 24 }}>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, color: "#1e293b", marginBottom: 16, fontSize: 15 }}>Upcoming Weddings</p>
-          {BOOKINGS.slice(0, 4).map(b => (
-            <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 14, background: "#f0fdf4", marginBottom: 8 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: "#d1fae5", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#059669", fontWeight: 700, fontSize: 12 }}>{new Date(b.date).getDate()}</span>
-                <span style={{ color: "#34d399", fontSize: 10 }}>{new Date(b.date).toLocaleDateString("en", { month: "short" })}</span>
+        {/* <div className="bg-white p-8 rounded-[32px] border border-emerald-50 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-800 mb-6">Upcoming Weddings</h2>
+          <div className="space-y-3">
+            {BOOKINGS?.slice(0, 4).map(b => (
+              <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50">
+                <div className="w-2 h-2 bg-emerald-600 rounded-full" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-700 truncate">{b.client || "Unknown"}</p>
+                  <p className="text-xs text-slate-400">{b.date || "TBD"}</p>
+                </div>
               </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", margin: 0 }}>{b.client}</p>
-                <p style={{ fontSize: 11, color: "#94a3b8", margin: 0 }}>{b.event} · {b.package}</p>
-              </div>
-              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99, fontWeight: 600, background: "#d1fae5", color: "#059669" }}>{b.status}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </div> */}
+      {/* </div> */}
+
+      {/* Tools Grid */}
+      <h2 className="text-lg font-bold text-slate-800 mb-8">Studio Tools</h2>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {tools.map((tool) => (
+          <button
+            key={tool.path}
+            onClick={() => navigate(`/${tool.path}`)}
+            className="group bg-white p-8 rounded-[32px] border border-emerald-50 shadow-sm hover:border-emerald-200 hover:shadow-lg transition-all text-left"
+          >
+            <tool.icon className="w-7 h-7 text-emerald-600 mb-6 group-hover:scale-110 transition-transform" />
+            <h4 className="text-lg font-bold text-slate-900 mb-1">{tool.name}</h4>
+            <p className="text-slate-400 text-[11px] font-medium uppercase tracking-tighter">{tool.desc}</p>
+          </button>
+        ))}
       </div>
     </div>
   );
