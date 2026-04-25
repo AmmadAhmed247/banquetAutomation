@@ -37,6 +37,30 @@ async function getOrCreateUser(phone, name) {
     }
 }
 
+async function getAllUsers() {
+    try {
+        const allUsers = await db
+        .select()
+        .from(user)
+
+        if(allUsers.length === 0){
+            return {
+                success: false,
+                message: "No Users Found!"
+            }
+        }
+
+        return {
+            success: true,
+            allUsers
+        }
+
+    } catch (error) {
+        console.log("An Error Occured While Fetching Users (Service): ", error)
+    }
+}
+
 module.exports = {
-    getOrCreateUser
+    getOrCreateUser,
+    getAllUsers
 }

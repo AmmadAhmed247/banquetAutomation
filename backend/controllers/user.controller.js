@@ -1,4 +1,4 @@
-const {getOrCreateUser} = require("../services/user.service")
+const {getOrCreateUser, getAllUsers} = require("../services/user.service")
 
 async function GetOrRegisterUser(req,res) {
     try {
@@ -28,6 +28,22 @@ async function GetOrRegisterUser(req,res) {
     }
 }
 
+async function fetchAllUsers(req,res){
+    try {
+        const result = await getAllUsers()
+
+        if(!result){
+           return res.status(401).json(result)
+        }
+
+        return res.status(200).json(result)
+
+    } catch (error) {
+        console.log("Error While Fetching Users (Controller): ", error)
+    }
+}
+
 module.exports = {
-    GetOrRegisterUser
+    GetOrRegisterUser,
+    fetchAllUsers
 }

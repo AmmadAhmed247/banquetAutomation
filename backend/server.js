@@ -5,6 +5,8 @@ const UserRouter = require("./routes/user.route")
 const BookingRouter = require("./routes/booking.route")
 const PackageRouter = require("./routes/package.route")
 const WhatsappRouter = require("./routes/whatsapp.route")
+const messageRouter = require("./routes/message.route")
+require("./jobs/reminder.jobs")
 
 dotenv.config()
 
@@ -24,6 +26,7 @@ app.use("/api/user", UserRouter)
 app.use("/api/booking", BookingRouter)
 app.use("/api/package", PackageRouter)
 app.use("/api/whatsapp", WhatsappRouter)
+app.use("/api/message", messageRouter)
 
 app.listen(3000, ()=> {
     console.log("Server Is Running At 3000")

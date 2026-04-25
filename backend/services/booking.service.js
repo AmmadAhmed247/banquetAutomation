@@ -16,13 +16,27 @@ async function CreateBooking(event, date, packageName, phone) {
         .returning()
 
         if(!newBooking){
+            await db
+            .update(booking)
+            .set({
+                status: "failed"
+            })
+            .where(eq(booking.id, newBooking.id))
+
             return {
                 success: false,
                 message: "Booking Not Created!"
             }
         }
 
-        await sendMessage(phone, `Your booking for ${booking.event} on ${booking.date} has been confirmed by our team!`)
+        await sendMessage(phone, `Your booking for ${newBooking.event} on ${newBooking.date} has been confirmed by our team!`)
+
+        await db
+        .update(booking)
+        .set({
+            status: "Booked"
+        })
+        .where(eq(booking.id, newBooking.id))
 
         return {
             success: true,
