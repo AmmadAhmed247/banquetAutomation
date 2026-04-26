@@ -20,11 +20,23 @@ function sendTwimlResponse(res, message){
 }
 
 async function sendMessage(to, message) {
-    return client.messages.create({
-        from: process.env.TWILIO_WHATSAPP_NUMBER,
-        to,
-        body: message
-    })
+    try {
+        // Skip sending if Twilio credentials are not configured
+        if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_WHATSAPP_NUMBER) {
+            console.log("Twilio credentials not configured. Skipping message send.")
+            return { success: false, message: "Twilio not configured" }
+        }
+
+        return await client.messages.create({
+            from: process.env.TWILIO_WHATSAPP_NUMBER,
+            to,
+            body: message
+        })
+    } catch (error) {
+        console.log("Error sending Twilio message:", error.message)
+        // Don't throw error, just log it - booking should still succeed
+        return { success: false, message: error.message }
+    }
 }
 
 module.exports = {

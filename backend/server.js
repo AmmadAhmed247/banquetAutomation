@@ -1,5 +1,6 @@
 const express = require("express")
 const app = express()
+const cors = require("cors")
 const dotenv = require("dotenv")
 const UserRouter = require("./routes/user.route")
 const BookingRouter = require("./routes/booking.route")
@@ -9,6 +10,12 @@ const messageRouter = require("./routes/message.route")
 require("./jobs/reminder.jobs")
 
 dotenv.config()
+
+// CORS Configuration
+app.use(cors({
+  origin: ["http://localhost:5173", "http://localhost:3000"],
+  credentials: true
+}))
 
 app.use(express.json())
 app.use(express.urlencoded({extended: false}))

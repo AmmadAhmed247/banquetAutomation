@@ -2,73 +2,125 @@ const { eq } = require("drizzle-orm");
 const { db } = require("../config/db");
 const { booking } = require("../model/schema");
 const { sendMessage } = require("./twillo.service");
+const { getOrCreateUser } = require("./user.service");
 
-async function CreateBooking(event, date, packageName, phone) {
+async function CreateBooking(bookingData) {
     try {
+        const {
+            event,
+            date,
+            packageName,
+            phone,
+            client,
+            guests = 0,
+            venue,
+            totalAmount = 0,
+            advancePaid = 0,
+            paymentMethod = "Cash",
+            paymentNote = "",
+            status = "Pending"
+        } = bookingData
+
+        // Create or get user first
+        const userResult = await getOrCreateUser(phone, client)
+        if (!userResult?.success || !userResult?.user) {
+            return {
+                success: false,
+                message: "Failed to create/retrieve user",
+                error: userResult?.error
+            }
+        }
+
+        const userId = Array.isArray(userResult.user) ? userResult.user[0]?.id : userResult.user?.id
+
         const [newBooking] = await db
         .insert(booking)
         .values({
+            userId: userId,
             event: event,
             date: date,
             package_name: packageName,
-            phone: phone
+            phone: phone,
+            client: client,
+            guests: guests,
+            venue: venue,
+            total_amount: totalAmount.toString(),
+            advance_paid: advancePaid.toString(),
+            payment_method: paymentMethod,
+            payment_note: paymentNote,
+            status: status
         })
         .returning()
 
         if(!newBooking){
-            await db
-            .update(booking)
-            .set({
-                status: "failed"
-            })
-            .where(eq(booking.id, newBooking.id))
-
             return {
                 success: false,
                 message: "Booking Not Created!"
             }
         }
 
-        await sendMessage(phone, `Your booking for ${newBooking.event} on ${newBooking.date} has been confirmed by our team!`)
+        // Send message, but don't fail if it errors
+        try {
+            await sendMessage(phone, `Your booking for ${newBooking.event} on ${newBooking.date} has been confirmed by our team!`)
+        } catch (msgError) {
+            console.log("Warning: Failed to send message:", msgError.message)
+        }
 
         await db
         .update(booking)
         .set({
-            status: "Booked"
+            status: "Confirmed"
         })
+        .where(eq(booking.id, newBooking.id))
+
+        const updatedBooking = await db
+        .select()
+        .from(booking)
         .where(eq(booking.id, newBooking.id))
 
         return {
             success: true,
-            newBooking
+            booking: updatedBooking[0],
+            message: "Booking created successfully!"
         }
 
     } catch (error) {
-        console.log("Error In Booking Creation (Service) ", error)
+        console.log("Error In Booking Creation (Service): ", error)
+        return {
+            success: false,
+            message: "Failed to create booking",
+            error: error.message
+        }
     }
 }
 
 async function GetAllBookings(phone) {
     try {
-        const allBookings = await db
+        const bookings = await db
         .select()
         .from(booking)
         .where(eq(booking.phone, phone))
 
 
-        if(!allBookings || allBookings.length === 0){
+        if(!bookings || bookings.length === 0){
             return {
-                success: false,
-                message: "No Bookings Found!"
+                success: true,
+                bookings: [],
+                message: "No bookings found"
             }
         }
 
         return {
             success: true,
-            allBookings
+            bookings: bookings
         }
     } catch (error) {
         console.log("Error On Getting Bookings (Service): ", error)
+        return {
+            success: false,
+            message: "Failed to fetch bookings",
+            error: error.message
+        }
     }
 }
 
