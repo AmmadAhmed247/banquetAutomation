@@ -16,14 +16,13 @@ export default function DashboardPage() {
   const navigate = useNavigate();
 
   const tools = [
-    { name: "Inbox", path: "inbox", icon: MessageCircle, desc: "Manage your studio" },
-    { name: "Auto Reply Bot", path: "autobot", icon: Zap, desc: "Manage your studio" },
+    
     { name: "Contacts", path: "contacts", icon: Users, desc: "Manage your studio" },
     { name: "Calendar", path: "calendar", icon: Calendar, desc: "Manage your studio" },
     { name: "Bookings", path: "bookings", icon: CalendarCheck, desc: "Manage your studio" },
-    { name: "Gallery", path: "gallery", icon: Image, desc: "Manage your studio" },
-    { name: "Reminders", path: "reminders", icon: Bell, desc: "Manage your studio" },
-    { name: "Settings", path: "settings", icon: Settings, desc: "Manage your studio" },
+    // { name: "Gallery", path: "gallery", icon: Image, desc: "Manage your studio" },
+    // { name: "Reminders", path: "reminders", icon: Bell, desc: "Manage your studio" },
+    // { name: "Settings", path: "settings", icon: Settings, desc: "Manage your studio" },
   ];
 
   const stats = [

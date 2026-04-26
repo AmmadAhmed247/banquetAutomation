@@ -20,14 +20,14 @@ export const router = createBrowserRouter([
         path: "/",
         element: <DashboardPage />,
       },
-      {
-        path: "inbox",
-        element: <InboxPage />,
-      },
-      {
-        path: "autobot",
-        element: <AutoBotPage />,
-      },
+      // {
+      //   path: "inbox",
+      //   element: <InboxPage />,
+      // },
+      // {
+      //   path: "autobot",
+      //   element: <AutoBotPage />,
+      // },
       {
         path: "contacts",
         element: <ContactsPage />,
@@ -40,14 +40,14 @@ export const router = createBrowserRouter([
         path: "bookings",
         element: <BookingsPage />,
       },
-      {
-        path: "gallery",
-        element: <GalleryPage />,
-      },
-      {
-        path: "reminders",
-        element: <RemindersPage />,
-      },
+      // {
+      //   path: "gallery",
+      //   element: <GalleryPage />,
+      // },
+      // {
+      //   path: "reminders",
+      //   element: <RemindersPage />,
+      // },
       {
         path: "settings",
         element: <SettingsPage />,

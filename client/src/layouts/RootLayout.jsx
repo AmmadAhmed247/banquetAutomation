@@ -17,14 +17,14 @@ export default function RootLayout() {
   const location = useLocation();
 
   const tools = [
-    { name: "Inbox", path: "inbox", icon: MessageCircle },
-    { name: "Auto Reply Bot", path: "autobot", icon: Zap },
+    // { name: "Inbox", path: "inbox", icon: MessageCircle },
+    // { name: "Auto Reply Bot", path: "autobot", icon: Zap },
     { name: "Contacts", path: "contacts", icon: Users },
     { name: "Calendar", path: "calendar", icon: Calendar },
     { name: "Bookings", path: "bookings", icon: CalendarCheck },
-    { name: "Gallery", path: "gallery", icon: Image },
-    { name: "Reminders", path: "reminders", icon: Bell },
-    { name: "Settings", path: "settings", icon: Settings },
+    // { name: "Gallery", path: "gallery", icon: Image },
+    // { name: "Reminders", path: "reminders", icon: Bell },
+    // { name: "Settings", path: "settings", icon: Settings },
   ];
 
   const isOnDashboard = location.pathname === "/";
