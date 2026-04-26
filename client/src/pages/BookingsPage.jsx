@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CalendarDays, Phone, Users, MapPin, Tag,
   PlusCircle, X, CheckCircle2, Clock, XCircle,
   CreditCard, Wallet, ChevronDown, Search, LayoutGrid,
-  Pencil, Save
+  Pencil, Save, AlertCircle, Loader
 } from "lucide-react";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
 const BOOKINGS = [
   { id: 1, client: "Ayesha & Bilal", phone: "+92 300 1234567", date: "2025-06-15", event: "Wedding", package: "Premium", status: "Confirmed", guests: 350, venue: "Emerald Hall", totalAmount: 850000, advancePaid: 300000, paymentMethod: "Bank Transfer", paymentNote: "Token received" },
@@ -16,15 +18,23 @@ const BOOKINGS = [
 ];
 
 const EVENTS = ["Wedding", "Walima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate"];
-
-const VENUES = ["Room A ", "Room B"];
+const VENUES = ["Room A", "Room B"];
 const PAYMENT_METHODS = ["Cash", "Bank Transfer", "Online", "Cheque"];
 const STATUSES = ["Pending", "Confirmed", "Cancelled"];
 
 const emptyForm = {
-  client: "", phone: "", date: "", event: "Wedding",
-  status: "Pending", guests: "", venue: "Emerald Hall",
-  totalAmount: "", advancePaid: "", paymentMethod: "Cash", paymentNote: "",
+  client: "",
+  phone: "",
+  date: "",
+  event: "Wedding",
+  status: "Pending",
+  guests: "",
+  venue: "Room A",
+  totalAmount: "",
+  advancePaid: "",
+  paymentMethod: "Cash",
+  paymentNote: "",
+  package: "Standard"
 };
 
 const statusConfig = {
@@ -69,7 +79,7 @@ function Field({ label, children }) {
 const inputCls = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm text-green-900 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 placeholder-green-300";
 const selectCls = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm text-green-900 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 appearance-none cursor-pointer";
 
-function BookingModal({ booking, onClose, onSave, isNew }) {
+function BookingModal({ booking, onClose, onSave, isNew, isLoading }) {
   const [form, setForm] = useState(booking);
   const f = (key, val) => setForm(p => ({ ...p, [key]: val }));
   const remaining = Number(form.totalAmount || 0) - Number(form.advancePaid || 0);
@@ -92,7 +102,7 @@ function BookingModal({ booking, onClose, onSave, isNew }) {
               <p className="text-xs text-green-400">{isNew ? "Fill in all reservation details" : `Editing: ${booking.client}`}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-green-300 hover:text-green-600 cursor-pointer border-none bg-transparent p-1 rounded-lg hover:bg-green-50 transition-colors">
+          <button onClick={onClose} disabled={isLoading} className="text-green-300 hover:text-green-600 cursor-pointer border-none bg-transparent p-1 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50">
             <X size={20} />
           </button>
         </div>
@@ -107,14 +117,14 @@ function BookingModal({ booking, onClose, onSave, isNew }) {
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <Field label="Client Name *">
-                  <input type="text" placeholder="e.g. Ayesha & Bilal" value={form.client} onChange={e => f("client", e.target.value)} className={inputCls} />
+                  <input type="text" placeholder="e.g. Ayesha & Bilal" value={form.client} onChange={e => f("client", e.target.value)} className={inputCls} disabled={isLoading} />
                 </Field>
               </div>
-              <Field label="Phone">
-                <input type="text" placeholder="+92 300 0000000" value={form.phone} onChange={e => f("phone", e.target.value)} className={inputCls} />
+              <Field label="Phone *">
+                <input type="text" placeholder="+92 300 0000000" value={form.phone} onChange={e => f("phone", e.target.value)} className={inputCls} disabled={isLoading} />
               </Field>
               <Field label="Guests">
-                <input type="number" placeholder="250" value={form.guests} onChange={e => f("guests", e.target.value)} className={inputCls} />
+                <input type="number" placeholder="250" value={form.guests} onChange={e => f("guests", e.target.value)} className={inputCls} disabled={isLoading} />
               </Field>
             </div>
           </section>
@@ -127,12 +137,13 @@ function BookingModal({ booking, onClose, onSave, isNew }) {
             <div className="grid grid-cols-2 gap-4">
               {[
                 { label: "Event Type", key: "event", options: EVENTS },
+                { label: "Package", key: "package", options: ["Basic", "Standard", "Premium"] },
                 { label: "Venue", key: "venue", options: VENUES },
                 { label: "Status", key: "status", options: STATUSES },
               ].map(fi => (
                 <Field key={fi.key} label={fi.label}>
                   <div className="relative">
-                    <select value={form[fi.key]} onChange={e => f(fi.key, e.target.value)} className={selectCls}>
+                    <select value={form[fi.key]} onChange={e => f(fi.key, e.target.value)} className={selectCls} disabled={isLoading}>
                       {fi.options.map(o => <option key={o}>{o}</option>)}
                     </select>
                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none" />
@@ -141,7 +152,7 @@ function BookingModal({ booking, onClose, onSave, isNew }) {
               ))}
               <div className="col-span-2">
                 <Field label="Event Date *">
-                  <input type="date" value={form.date} onChange={e => f("date", e.target.value)} className={inputCls} />
+                  <input type="date" value={form.date} onChange={e => f("date", e.target.value)} className={inputCls} disabled={isLoading} />
                 </Field>
               </div>
             </div>
@@ -154,21 +165,21 @@ function BookingModal({ booking, onClose, onSave, isNew }) {
             </p>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Total Amount (PKR)">
-                <input type="number" placeholder="e.g. 850000" value={form.totalAmount} onChange={e => f("totalAmount", e.target.value)} className={inputCls} />
+                <input type="number" placeholder="e.g. 850000" value={form.totalAmount} onChange={e => f("totalAmount", e.target.value)} className={inputCls} disabled={isLoading} />
               </Field>
               <Field label="Advance Paid (PKR)">
-                <input type="number" placeholder="e.g. 300000" value={form.advancePaid} onChange={e => f("advancePaid", e.target.value)} className={inputCls} />
+                <input type="number" placeholder="e.g. 300000" value={form.advancePaid} onChange={e => f("advancePaid", e.target.value)} className={inputCls} disabled={isLoading} />
               </Field>
               <Field label="Payment Method">
                 <div className="relative">
-                  <select value={form.paymentMethod} onChange={e => f("paymentMethod", e.target.value)} className={selectCls}>
+                  <select value={form.paymentMethod} onChange={e => f("paymentMethod", e.target.value)} className={selectCls} disabled={isLoading}>
                     {PAYMENT_METHODS.map(o => <option key={o}>{o}</option>)}
                   </select>
                   <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none" />
                 </div>
               </Field>
               <Field label="Payment Note">
-                <input type="text" placeholder="e.g. Token received" value={form.paymentNote} onChange={e => f("paymentNote", e.target.value)} className={inputCls} />
+                <input type="text" placeholder="e.g. Token received" value={form.paymentNote} onChange={e => f("paymentNote", e.target.value)} className={inputCls} disabled={isLoading} />
               </Field>
             </div>
 
@@ -193,15 +204,16 @@ function BookingModal({ booking, onClose, onSave, isNew }) {
 
         {/* Footer */}
         <div className="flex gap-3 px-8 pb-7">
-          <button onClick={onClose} className="flex-1 border border-green-200 text-green-600 text-sm font-semibold py-3 rounded-xl hover:bg-green-50 transition-colors cursor-pointer bg-transparent">
+          <button onClick={onClose} disabled={isLoading} className="flex-1 border border-green-200 text-green-600 text-sm font-semibold py-3 rounded-xl hover:bg-green-50 transition-colors cursor-pointer bg-transparent disabled:opacity-50">
             Cancel
           </button>
           <button
             onClick={() => onSave(form)}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-3 rounded-xl shadow-md shadow-green-200 transition-all duration-200 cursor-pointer border-none flex items-center justify-center gap-2"
+            disabled={isLoading}
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-3 rounded-xl shadow-md shadow-green-200 transition-all duration-200 cursor-pointer border-none flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {isNew ? <PlusCircle size={15} /> : <Save size={15} />}
-            {isNew ? "Save Booking" : "Update Booking"}
+            {isLoading ? <Loader size={15} className="animate-spin" /> : isNew ? <PlusCircle size={15} /> : <Save size={15} />}
+            {isLoading ? "Saving..." : isNew ? "Save Booking" : "Update Booking"}
           </button>
         </div>
       </div>
@@ -210,32 +222,108 @@ function BookingModal({ booking, onClose, onSave, isNew }) {
 }
 
 export default function Bookings({ showToast }) {
-  const [bookings, setBookings] = useState(BOOKINGS);
-  const [modal, setModal] = useState(null); // null | { mode: 'new' | 'edit', booking }
+  const [bookings, setBookings] = useState([]);
+  const [modal, setModal] = useState(null);
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [userPhone, setUserPhone] = useState("");
+
+  useEffect(() => {
+    if (userPhone) {
+      fetchBookings();
+    }
+  }, [userPhone]);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`${API_BASE_URL}/booking/getAllUserBookings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: userPhone })
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch bookings");
+
+      const data = await response.json();
+      if (data.success && Array.isArray(data.bookings)) {
+        setBookings(data.bookings);
+      } else if (data.success) {
+        setBookings([]);
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching bookings:", err);
+      showToast?.("Failed to load bookings");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openNew = () => setModal({ mode: "new", booking: { ...emptyForm, id: Date.now() } });
   const openEdit = (b) => setModal({ mode: "edit", booking: { ...b } });
   const closeModal = () => setModal(null);
 
-  const handleSave = (form) => {
-    if (!form.client || !form.date) return;
-    if (modal.mode === "new") {
-      setBookings(prev => [...prev, { ...form, id: Date.now() }]);
-      showToast?.("Booking created successfully!");
-    } else {
-      setBookings(prev => prev.map(b => b.id === form.id ? form : b));
-      showToast?.("Booking updated successfully!");
+  const handleSave = async (form) => {
+    if (!form.client || !form.date || !form.phone || !form.event || !form.package) {
+      showToast?.("Please fill in all required fields");
+      return;
     }
-    closeModal();
+
+    try {
+      setLoading(true);
+
+      if (modal.mode === "new") {
+        const response = await fetch(`${API_BASE_URL}/booking/createBooking`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: form.event,
+            date: form.date,
+            packageName: form.package,
+            phone: form.phone,
+            client: form.client,
+            guests: form.guests,
+            venue: form.venue,
+            totalAmount: form.totalAmount,
+            advancePaid: form.advancePaid,
+            paymentMethod: form.paymentMethod,
+            paymentNote: form.paymentNote,
+            status: form.status
+          })
+        });
+
+        if (!response.ok) throw new Error("Failed to create booking");
+
+        const data = await response.json();
+        if (data.success) {
+          setBookings(prev => [...prev, form]);
+          showToast?.("Booking created successfully!");
+          closeModal();
+          fetchBookings();
+        }
+      } else {
+        setBookings(prev => prev.map(b => b.id === form.id ? form : b));
+        showToast?.("Booking updated successfully!");
+        closeModal();
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error saving booking:", err);
+      showToast?.("Failed to save booking");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filtered = bookings
     .filter(b => filter === "All" || b.status === filter)
     .filter(b =>
-      b.client.toLowerCase().includes(search.toLowerCase()) ||
-      b.event.toLowerCase().includes(search.toLowerCase())
+      b.client?.toLowerCase().includes(search.toLowerCase()) ||
+      b.event?.toLowerCase().includes(search.toLowerCase())
     );
 
   const stats = [
@@ -252,16 +340,32 @@ export default function Bookings({ showToast }) {
       <div className="flex items-start justify-between mb-8">
         <div>
           <p className="text-green-500 text-xs font-semibold tracking-widest uppercase mb-1">Management</p>
-          <h1 className="text-4xl font-bold text-green-900 font-mono " >Bookings</h1>
+          <h1 className="text-4xl font-bold text-green-900 font-mono">Bookings</h1>
           <p className="text-green-500 text-sm mt-1">All banquet reservations in one place</p>
         </div>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-md shadow-green-200 transition-all duration-200 hover:-translate-y-0.5 border-none cursor-pointer"
-        >
-          <PlusCircle size={16} /> New Booking
-        </button>
+        <div className="flex flex-col gap-3">
+          <input
+            type="text"
+            placeholder="Enter your phone number"
+            value={userPhone}
+            onChange={e => setUserPhone(e.target.value)}
+            className="px-4 py-2 border border-green-200 rounded-xl text-sm"
+          />
+          <button
+            onClick={openNew}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-md shadow-green-200 transition-all duration-200 hover:-translate-y-0.5 border-none cursor-pointer"
+          >
+            <PlusCircle size={16} /> New Booking
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <AlertCircle size={18} className="text-red-500" />
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-8">
@@ -308,102 +412,114 @@ export default function Bookings({ showToast }) {
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-3 gap-5">
-        {filtered.map(b => {
-          const sc = statusConfig[b.status];
-          const StatusIcon = sc.icon;
-          return (
-            <div
-              key={b.id}
-              className="bg-white rounded-2xl border border-green-100 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-green-100 hover:-translate-y-1 transition-all duration-300 group"
-            >
-              <div className={`h-1.5 w-full ${sc.bar}`} />
-              <div className="p-5">
+      {loading && !bookings.length ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader size={32} className="animate-spin text-green-600" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-5">
+          {filtered.length === 0 ? (
+            <div className="col-span-3 text-center py-8 text-green-400">
+              <p className="text-sm">No bookings found. Create one to get started!</p>
+            </div>
+          ) : (
+            filtered.map(b => {
+              const sc = statusConfig[b.status] || statusConfig.Pending;
+              const StatusIcon = sc.icon;
+              return (
+                <div
+                  key={b.id}
+                  className="bg-white rounded-2xl border border-green-100 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-green-100 hover:-translate-y-1 transition-all duration-300 group"
+                >
+                  <div className={`h-1.5 w-full ${sc.bar}`} />
+                  <div className="p-5">
 
-                {/* Client + Status + Edit btn */}
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-base font-bold text-green-900">{b.client}</h3>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Phone size={11} className="text-green-400" />
-                      <p className="text-xs text-green-400">{b.phone}</p>
+                    {/* Client + Status + Edit btn */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="text-base font-bold text-green-900">{b.client}</h3>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Phone size={11} className="text-green-400" />
+                          <p className="text-xs text-green-400">{b.phone}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${sc.bg} ${sc.text} ${sc.border}`}>
+                          <StatusIcon size={11} />
+                          {b.status}
+                        </span>
+                        <button
+                          onClick={() => openEdit(b)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg p-1.5 cursor-pointer"
+                          title="Edit booking"
+                        >
+                          <Pencil size={13} className="text-green-600" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${sc.bg} ${sc.text} ${sc.border}`}>
-                      <StatusIcon size={11} />
-                      {b.status}
-                    </span>
+
+                    <div className="border-t border-green-50 mb-3" />
+
+                    {/* Detail Grid */}
+                    <div className="grid grid-cols-2 gap-2.5 mb-3">
+                      <div className="bg-green-50 rounded-xl p-3">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <Tag size={10} className="text-green-400" />
+                          <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Event</p>
+                        </div>
+                        <p className="text-sm font-bold text-green-800">{b.event}</p>
+                      </div>
+
+                      <div className="bg-green-50 rounded-xl p-3">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <CalendarDays size={10} className="text-green-400" />
+                          <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Date</p>
+                        </div>
+                        <p className="text-sm font-bold text-green-800">
+                          {new Date(b.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                        </p>
+                      </div>
+                      <div className="bg-green-50 rounded-xl p-3">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <Users size={10} className="text-green-400" />
+                          <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Guests</p>
+                        </div>
+                        <p className="text-sm font-bold text-green-800">{b.guests}</p>
+                      </div>
+                    </div>
+
+                    {/* Venue */}
+                    <div className="flex items-center gap-2 bg-green-50 rounded-xl px-3 py-2 mb-3">
+                      <MapPin size={12} className="text-green-500" />
+                      <p className="text-xs font-semibold text-green-700">{b.venue}</p>
+                    </div>
+
+                    {/* Payment */}
+                    <div className="border-t border-green-50 pt-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <CreditCard size={11} className="text-green-500" />
+                        <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Payment</p>
+                        <span className="ml-auto text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold">{b.paymentMethod}</span>
+                      </div>
+                      <p className="text-sm font-bold text-green-900">{formatPKR(b.totalAmount)}</p>
+                      {b.paymentNote && <p className="text-[10px] text-green-400 italic mt-0.5">{b.paymentNote}</p>}
+                      <PaymentBar total={b.totalAmount} advance={b.advancePaid} />
+                    </div>
+
+                    {/* Edit CTA at bottom */}
                     <button
                       onClick={() => openEdit(b)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg p-1.5 cursor-pointer"
-                      title="Edit booking"
+                      className="mt-4 w-full flex items-center justify-center gap-2 border border-green-200 text-green-600 text-xs font-semibold py-2 rounded-xl hover:bg-green-50 transition-colors cursor-pointer bg-transparent opacity-0 group-hover:opacity-100 duration-200"
                     >
-                      <Pencil size={13} className="text-green-600" />
+                      <Pencil size={12} /> Edit Booking
                     </button>
                   </div>
                 </div>
-
-                <div className="border-t border-green-50 mb-3" />
-
-                {/* Detail Grid */}
-                <div className="grid grid-cols-2 gap-2.5 mb-3">
-                  <div className="bg-green-50 rounded-xl p-3">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <Tag size={10} className="text-green-400" />
-                      <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Event</p>
-                    </div>
-                    <p className="text-sm font-bold text-green-800">{b.event}</p>
-                  </div>
-                 
-                  <div className="bg-green-50 rounded-xl p-3">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <CalendarDays size={10} className="text-green-400" />
-                      <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Date</p>
-                    </div>
-                    <p className="text-sm font-bold text-green-800">
-                      {new Date(b.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                    </p>
-                  </div>
-                  <div className="bg-green-50 rounded-xl p-3">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <Users size={10} className="text-green-400" />
-                      <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Guests</p>
-                    </div>
-                    <p className="text-sm font-bold text-green-800">{b.guests}</p>
-                  </div>
-                </div>
-
-                {/* Venue */}
-                <div className="flex items-center gap-2 bg-green-50 rounded-xl px-3 py-2 mb-3">
-                  <MapPin size={12} className="text-green-500" />
-                  <p className="text-xs font-semibold text-green-700">{b.venue}</p>
-                </div>
-
-                {/* Payment */}
-                <div className="border-t border-green-50 pt-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <CreditCard size={11} className="text-green-500" />
-                    <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Payment</p>
-                    <span className="ml-auto text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold">{b.paymentMethod}</span>
-                  </div>
-                  <p className="text-sm font-bold text-green-900">{formatPKR(b.totalAmount)}</p>
-                  {b.paymentNote && <p className="text-[10px] text-green-400 italic mt-0.5">{b.paymentNote}</p>}
-                  <PaymentBar total={b.totalAmount} advance={b.advancePaid} />
-                </div>
-
-                {/* Edit CTA at bottom */}
-                <button
-                  onClick={() => openEdit(b)}
-                  className="mt-4 w-full flex items-center justify-center gap-2 border border-green-200 text-green-600 text-xs font-semibold py-2 rounded-xl hover:bg-green-50 transition-colors cursor-pointer bg-transparent opacity-0 group-hover:opacity-100 duration-200"
-                >
-                  <Pencil size={12} /> Edit Booking
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* Modal */}
       {modal && (
@@ -412,6 +528,7 @@ export default function Bookings({ showToast }) {
           isNew={modal.mode === "new"}
           onClose={closeModal}
           onSave={handleSave}
+          isLoading={loading}
         />
       )}
     </div>
