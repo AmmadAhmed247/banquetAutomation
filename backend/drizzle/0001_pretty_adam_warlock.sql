@@ -1,0 +1,1 @@
+ALTER TABLE "packages" ALTER COLUMN "event_time" SET DATA TYPE text;

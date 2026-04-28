@@ -7,6 +7,7 @@ const BookingRouter = require("./routes/booking.route")
 const PackageRouter = require("./routes/package.route")
 const WhatsappRouter = require("./routes/whatsapp.route")
 const messageRouter = require("./routes/message.route")
+const path = require("path");
 require("./jobs/reminder.jobs")
 
 dotenv.config()
@@ -19,6 +20,7 @@ app.use(cors({
 
 app.use(express.json())
 app.use(express.urlencoded({extended: false}))
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 app.get("/", (req,res)=> {
     console.log("API WORKING!")

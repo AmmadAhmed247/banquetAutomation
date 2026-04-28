@@ -1,20 +1,10 @@
 const { getAllPackages } = require("../services/package.service");
-const { sendMessage } = require("./twillo.service");
+const { sendMessage, sendMediaMessage } = require("../services/twillo.service");
+const { generateCalendarImage } = require("../services/calender.service");
+
 
 async function getHelpMessage() {
-  return `Available commands:
-
-BOOK: Date | Event | Package
-  → Create a booking
-
-PACKAGES
-  → View all available packages
-
-GALLERY
-  → View our photo gallery
-
-HELP
-  → Show this menu`;
+  return `Available commands:\n\nCALENDAR - View availability\nPACKAGES - View our packages\nGALLERY - View our gallery\nBOOK: Date | Event | Package - Create a booking\nSUPPORT - Talk to a human\nHELP - Show this menu`;
 }
 
 async function getPackagesMessage() {
@@ -27,6 +17,18 @@ async function getPackagesMessage() {
   return `Our packages:\n\n${list}\n\nTo book, send:\nBOOK: Date | Event | Package`;
 
 }
+
+async function getCalendarMessage(phone) {
+  const now = new Date();
+  await generateCalendarImage(now.getFullYear(), now.getMonth() + 1);
+
+  await sendMediaMessage(
+    phone,
+    "Here is our availability for this month!\n\n🔴 Red = Booked\n⚪ White = Available\n\nTo book send:\nBOOK: Date | Event | Package",
+    `${process.env.BASE_URL}/public/calendar.png`
+  );
+}
+
 
 function getGalleryMessage() {
   return `View our gallery here:\nhttps://your-website.com/gallery
@@ -55,5 +57,6 @@ module.exports = {
   getHelpMessage,
   getPackagesMessage,
   getGalleryMessage,
-  SendMessageToUser
+  SendMessageToUser,
+  getCalendarMessage
 }

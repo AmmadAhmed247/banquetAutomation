@@ -2,7 +2,7 @@ const {pgTable, integer, serial,varchar, text, timestamp , numeric} = require("d
 
 const user = pgTable("users", {
     id: serial("id").primaryKey().notNull(),
-    name: varchar("name", {length: 100}).default("New User").notNull(),
+    name: varchar("name", {length: 100}).default("New User"),
     phone: text("phone").notNull().unique(),
     created_at: timestamp("created_at").defaultNow()
 })
@@ -16,7 +16,7 @@ const booking = pgTable("bookings", {
   guests:integer("guests").notNull().default(0),
  
   // Event Details
-  date:varchar("date", { length: 50 }).notNull(),
+  date:timestamp("date", { length: 50 }).notNull(),
   event:varchar("event", { length: 100 }).notNull(),
   package_name:varchar("package_name", { length: 100 }).notNull(),
   venue:varchar("venue", { length: 100 }).notNull(),

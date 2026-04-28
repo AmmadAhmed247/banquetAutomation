@@ -8,6 +8,20 @@
       "when": 1776622838580,
       "tag": "0000_oval_starbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777389280906,
+      "tag": "0001_sudden_union_jack",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777389607353,
+      "tag": "0002_demonic_stryfe",
+      "breakpoints": true
     }
   ]
 }

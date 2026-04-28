@@ -39,9 +39,19 @@ async function sendMessage(to, message) {
     }
 }
 
+async function sendMediaMessage(to, body, mediaUrl) {
+  return client.messages.create({
+    from: process.env.TWILIO_WHATSAPP_NUMBER,
+    to,
+    body,
+    mediaUrl: [mediaUrl], 
+  });
+}
+
 module.exports = {
     createResponse,
     parseIncoming,
     sendTwimlResponse,
-    sendMessage
+    sendMessage,
+    sendMediaMessage
 }
