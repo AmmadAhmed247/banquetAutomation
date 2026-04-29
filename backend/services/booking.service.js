@@ -38,7 +38,7 @@ async function CreateBooking(bookingData) {
         .values({
             userId: userId,
             event: event,
-            date: date,
+            date: new Date(date),
             package_name: packageName,
             phone: phone,
             client: client,
@@ -124,6 +124,99 @@ async function GetAllBookings(phone) {
     }
 }
 
+async function GetAllBookingsUnfiltered() {
+    try {
+        const bookings = await db
+        .select()
+        .from(booking)
+
+        if(!bookings || bookings.length === 0){
+            return {
+                success: true,
+                bookings: [],
+                message: "No bookings found"
+            }
+        }
+
+        return {
+            success: true,
+            bookings: bookings
+        }
+    } catch (error) {
+        console.log("Error On Getting All Bookings (Service): ", error)
+        return {
+            success: false,
+            message: "Failed to fetch bookings",
+            error: error.message
+        }
+    }
+}
+
+async function UpdateBooking(bookingId, bookingData) {
+    try {
+        const {
+            event,
+            date,
+            packageName,
+            phone,
+            client,
+            guests = 0,
+            venue,
+            totalAmount = 0,
+            advancePaid = 0,
+            paymentMethod = "Cash",
+            paymentNote = "",
+            status = "Pending"
+        } = bookingData
+
+        console.log("Updating booking with ID:", bookingId)
+        console.log("Update data:", bookingData)
+
+        const updatedBooking = await db
+        .update(booking)
+        .set({
+            event: event,
+            date: new Date(date),
+            package_name: packageName,
+            phone: phone,
+            client: client,
+            guests: guests,
+            venue: venue,
+            total_amount: totalAmount.toString(),
+            advance_paid: advancePaid.toString(),
+            payment_method: paymentMethod,
+            payment_note: paymentNote,
+            status: status,
+            updated_at: new Date()
+        })
+        .where(eq(booking.id, bookingId))
+        .returning()
+
+        console.log("Updated booking result:", updatedBooking)
+
+        if(!updatedBooking || updatedBooking.length === 0){
+            return {
+                success: false,
+                message: "Booking Not Found!"
+            }
+        }
+
+        return {
+            success: true,
+            booking: updatedBooking[0],
+            message: "Booking updated successfully!"
+        }
+
+    } catch (error) {
+        console.log("Error In Booking Update (Service): ", error)
+        return {
+            success: false,
+            message: "Failed to update booking",
+            error: error.message
+        }
+    }
+}
+
 function parseWhatsAppMessage(body, phone) {
   if (!body?.toUpperCase().startsWith("BOOK:")) return null;
 
@@ -145,5 +238,7 @@ module.exports = { parseWhatsAppMessage };
 module.exports = {
     CreateBooking,
     GetAllBookings,
+    GetAllBookingsUnfiltered,
+    UpdateBooking,
     parseWhatsAppMessage
 }
