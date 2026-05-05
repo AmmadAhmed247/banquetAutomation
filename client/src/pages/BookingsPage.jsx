@@ -8,6 +8,7 @@ import StatsSection from "../components/StatsSection";
 import FiltersSection from "../components/FiltersSection";
 import BookingsList from "../components/BookingsList";
 
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
 const emptyForm = {

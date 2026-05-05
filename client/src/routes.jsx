@@ -10,7 +10,7 @@ import GalleryPage from "./pages/GalleryPage";
 import RemindersPage from "./pages/RemindersPage";
 import SettingsPage from "./pages/SettingsPage";
 import Gallery from "./pages/gallery";
-
+import Recipt from "./components/Recipt";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -31,6 +31,10 @@ export const router = createBrowserRouter([
       {
         path: "contacts",
         element: <ContactsPage />,
+      },
+      {
+        path: "recipt",
+        element: <Recipt />,
       },
       {
         path: "calendar",

@@ -9,6 +9,7 @@ import {
   Image,
   Bell,
   Settings,
+  ReceiptIcon
 } from "lucide-react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
@@ -22,6 +23,7 @@ export default function RootLayout() {
     { name: "Contacts", path: "contacts", icon: Users },
     { name: "Calendar", path: "calendar", icon: Calendar },
     { name: "Bookings", path: "bookings", icon: CalendarCheck },
+    { name: "Receipt", path: "recipt", icon: ReceiptIcon },
     // { name: "Gallery", path: "gallery", icon: Image },
     // { name: "Reminders", path: "reminders", icon: Bell },
     // { name: "Settings", path: "settings", icon: Settings },

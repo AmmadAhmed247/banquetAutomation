@@ -8,6 +8,7 @@ import {
   Image,
   Bell,
   Settings,
+  ReceiptIcon
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BOOKINGS } from "../data/mockData";
@@ -20,6 +21,7 @@ export default function DashboardPage() {
     { name: "Contacts", path: "contacts", icon: Users, desc: "Manage your studio" },
     { name: "Calendar", path: "calendar", icon: Calendar, desc: "Manage your studio" },
     { name: "Bookings", path: "bookings", icon: CalendarCheck, desc: "Manage your studio" },
+    { name: "Receipt", path: "recipt", icon: ReceiptIcon, desc: "Manage your studio" },
     // { name: "Gallery", path: "gallery", icon: Image, desc: "Manage your studio" },
     // { name: "Reminders", path: "reminders", icon: Bell, desc: "Manage your studio" },
     // { name: "Settings", path: "settings", icon: Settings, desc: "Manage your studio" },
