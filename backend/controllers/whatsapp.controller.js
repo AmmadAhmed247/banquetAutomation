@@ -2,7 +2,8 @@ const { parseIncoming, sendMessage, sendTwimlResponse } = require("../services/t
 const { getSession, setSession } = require("../services/session.service")
 const { getOrCreateUser } = require("../services/user.service")
 const { parseWhatsAppMessage, CreateBooking } = require("../services/booking.service")
-const { getHelpMessage, getPackagesMessage, getGalleryMessage, getCalendarMessage } = require("../services/message.service")
+const { getHelpMessage, getPackagesMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage } = require("../services/message.service")
+const { drawDarbarReceipt } = require("../services/recipt.service")
 
 async function handleWhatsappWebhook(req, res) {
     const { phone, body } = parseIncoming(req)
@@ -29,6 +30,19 @@ async function handleWhatsappWebhook(req, res) {
         if (keyword === "CALENDAR") {
             await getCalendarMessage(phone);
             return res.status(200).send();
+        }
+
+        if (keyword === "RECEIPT") {
+        
+                await getReceiptMessage(phone, {
+                    rNo: "001",
+                    date: new Date().toLocaleDateString(),
+                    clientName: "Masab Ahmed",
+                    phone: "+921234567",
+                });
+                return res.status(200).send();
+    
+            // return sendTwimlResponse(res, "No booking found. Send BOOK: Date | Event | Package first.");
         }
 
         if (!session) {

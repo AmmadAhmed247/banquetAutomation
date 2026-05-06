@@ -1,13 +1,13 @@
 const twilio = require("twilio")
 const client = require("../config/twilio")
 
-function createResponse(message){
- const twiml = new twilio.twiml.MessagingResponse()
- twiml.message(message)
- return twiml.toString()
+function createResponse(message) {
+    const twiml = new twilio.twiml.MessagingResponse()
+    twiml.message(message)
+    return twiml.toString()
 }
 
-function parseIncoming(req){
+function parseIncoming(req) {
     return {
         phone: req.body.From,
         body: req.body.Body?.trim() || "",
@@ -15,7 +15,7 @@ function parseIncoming(req){
     }
 }
 
-function sendTwimlResponse(res, message){
+function sendTwimlResponse(res, message) {
     res.type("text/xml").send(createResponse(message))
 }
 
@@ -40,12 +40,16 @@ async function sendMessage(to, message) {
 }
 
 async function sendMediaMessage(to, body, mediaUrl) {
-  return client.messages.create({
-    from: process.env.TWILIO_WHATSAPP_NUMBER,
-    to,
-    body,
-    mediaUrl: [mediaUrl], 
-  });
+    const from = process.env.TWILIO_WHATSAPP_NUMBER.startsWith("whatsapp:")
+        ? process.env.TWILIO_WHATSAPP_NUMBER
+        : `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`;
+
+    return client.messages.create({
+        from,
+        to,
+        body,
+        mediaUrl: [mediaUrl],
+    });
 }
 
 module.exports = {

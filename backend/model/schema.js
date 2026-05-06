@@ -2,7 +2,7 @@ const {pgTable, integer, serial,varchar, text, timestamp , numeric} = require("d
 
 const user = pgTable("users", {
     id: serial("id").primaryKey().notNull(),
-    name: varchar("name", {length: 100}).default("New User"),
+    name: varchar("name", {length: 100}),
     phone: text("phone").notNull().unique(),
     created_at: timestamp("created_at").defaultNow()
 })

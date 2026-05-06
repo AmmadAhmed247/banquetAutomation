@@ -22,6 +22,13 @@
       "when": 1777389607353,
       "tag": "0002_demonic_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777549471490,
+      "tag": "0003_fuzzy_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

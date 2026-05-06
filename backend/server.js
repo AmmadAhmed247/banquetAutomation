@@ -7,6 +7,7 @@ const BookingRouter = require("./routes/booking.route")
 const PackageRouter = require("./routes/package.route")
 const WhatsappRouter = require("./routes/whatsapp.route")
 const messageRouter = require("./routes/message.route")
+const receiptRouter = require("./routes/receipt.route")
 const path = require("path");
 require("./jobs/reminder.jobs")
 
@@ -36,6 +37,7 @@ app.use("/api/booking", BookingRouter)
 app.use("/api/package", PackageRouter)
 app.use("/api/whatsapp", WhatsappRouter)
 app.use("/api/message", messageRouter)
+app.use("/api/receipt", receiptRouter)
 
 app.listen(3000, ()=> {
     console.log("Server Is Running At 3000")

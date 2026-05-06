@@ -1,6 +1,7 @@
 const { getAllPackages } = require("../services/package.service");
 const { sendMessage, sendMediaMessage } = require("../services/twillo.service");
 const { generateCalendarImage } = require("../services/calender.service");
+const { generateReceipt } = require("./recipt.service");
 
 
 async function getHelpMessage() {
@@ -16,6 +17,25 @@ async function getPackagesMessage() {
 
   return `Our packages:\n\n${list}\n\nTo book, send:\nBOOK: Date | Event | Package`;
 
+}
+
+async function getReceiptMessage(phone, data) {
+  const { fileName } = generateReceipt(data);
+
+  console.log("Receipt generated:", fileName);
+
+  const mediaUrl = `${process.env.BASE_URL}/public/${fileName}`;
+
+  await sendMediaMessage(
+    phone,
+    "Here is your booking receipt!",
+    mediaUrl
+  );
+
+  return {
+    success: true,
+    fileName,
+  };
 }
 
 async function getCalendarMessage(phone) {
@@ -58,5 +78,6 @@ module.exports = {
   getPackagesMessage,
   getGalleryMessage,
   SendMessageToUser,
-  getCalendarMessage
+  getCalendarMessage,
+  getReceiptMessage
 }
