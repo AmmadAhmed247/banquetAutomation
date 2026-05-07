@@ -11,7 +11,7 @@ async function CreateBooking(bookingData) {
             date,
             packageName,
             phone,
-            client,
+            client = client || "New Client",
             guests = 0,
             venue,
             totalAmount = 0,
@@ -21,7 +21,6 @@ async function CreateBooking(bookingData) {
             status = "Pending"
         } = bookingData
 
-        // Create or get user first
         const userResult = await getOrCreateUser(phone, client)
         if (!userResult?.success || !userResult?.user) {
             return {

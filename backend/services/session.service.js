@@ -8,12 +8,12 @@ function setSession(phone, data){
     sessions.set(phone,data)
 }
 
-function deleteSession(phone){
-    sessions.delete(phone)
+function clearSession(phone) {
+  sessions.delete(phone);
 }
 
 module.exports = {
     getSession,
     setSession,
-    deleteSession
+    clearSession
 }

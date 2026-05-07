@@ -1,9 +1,9 @@
 const { parseIncoming, sendMessage, sendTwimlResponse } = require("../services/twillo.service")
-const { getSession, setSession } = require("../services/session.service")
+const { getSession, setSession, clearSession } = require("../services/session.service")
 const { getOrCreateUser } = require("../services/user.service")
 const { parseWhatsAppMessage, CreateBooking } = require("../services/booking.service")
 const { getHelpMessage, getPackagesMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage } = require("../services/message.service")
-const { drawDarbarReceipt } = require("../services/recipt.service")
+const { createOrGetConversation, addAdminToConversation } = require("../services/conversation.service");
 
 async function handleWhatsappWebhook(req, res) {
     const { phone, body } = parseIncoming(req)
@@ -32,18 +32,19 @@ async function handleWhatsappWebhook(req, res) {
             return res.status(200).send();
         }
 
-        if (keyword === "RECEIPT") {
-        
-                await getReceiptMessage(phone, {
-                    rNo: "001",
-                    date: new Date().toLocaleDateString(),
-                    clientName: "Masab Ahmed",
-                    phone: "+921234567",
-                });
-                return res.status(200).send();
-    
-            // return sendTwimlResponse(res, "No booking found. Send BOOK: Date | Event | Package first.");
+        if (keyword === "SUPPORT") {
+            const conversation = await createOrGetConversation(phone, session?.name);
+            await addAdminToConversation(conversation.sid);
+
+            await sendMessage(
+                `whatsapp:${process.env.ADMIN_PHONE}`,
+                `Support request!\n\nName: ${session?.name || "Unknown"}\nPhone: ${phone}\n\nReply directly in this chat.\nSend END to hand back to the bot.`
+            );
+
+            setSession(phone, { ...session, step: "human_handoff" });
+            return sendTwimlResponse(res, "Connecting you to our team. A team member will reply shortly.\n\nSend HELP to return to the bot.");
         }
+
 
         if (!session) {
             const result = await getOrCreateUser(phone, null)
@@ -73,6 +74,20 @@ async function handleWhatsappWebhook(req, res) {
             }
             return sendTwimlResponse(res, "Command not recognised. Send HELP to see available commands.");
 
+        }
+
+        if (session?.step === "human_handoff") {
+            if (keyword === "HELP") {
+                clearSession(phone);
+                const msg = await getHelpMessage();
+                return sendTwimlResponse(res, msg);
+            }
+            return res.status(200).send();
+        }
+
+        if (phone === `whatsapp:${process.env.ADMIN_PHONE}` && keyword === "END") {
+            // find and clear the user session — for now just acknowledge
+            return res.status(200).send();
         }
 
     } catch (error) {
