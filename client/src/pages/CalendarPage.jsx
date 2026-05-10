@@ -1,87 +1,361 @@
 import { useState } from "react";
-import { BOOKINGS } from "../data/mockData";
 
+// ─── Mock data ───────────────────────────────────────────────────────────────
+// Replace with your real BOOKINGS import:  import { BOOKINGS } from "../data/mockData";
+const BOOKINGS = [
+  { id:  1, hall: "a", date: "2026-05-03", client: "Rania & Omar",    event: "Wedding",    package: "Premium", status: "Confirmed" },
+  { id:  2, hall: "b", date: "2026-05-03", client: "Sana & Bilal",    event: "Nikkah",     package: "Basic",   status: "Confirmed" },
+  { id:  3, hall: "a", date: "2026-05-08", client: "Fatima & Usman",  event: "Wedding",    package: "Premium", status: "Confirmed" },
+  { id:  4, hall: "b", date: "2026-05-10", client: "Ayesha & Hassan", event: "Reception",  package: "Gold",    status: "Tentative" },
+  { id:  5, hall: "a", date: "2026-05-14", client: "Zara & Khalid",   event: "Mehndi",     package: "Basic",   status: "Confirmed" },
+  { id:  6, hall: "b", date: "2026-05-14", client: "Sara & Ahmed",    event: "Wedding",    package: "Premium", status: "Confirmed" },
+  { id:  7, hall: "a", date: "2026-05-17", client: "Hira & Faisal",   event: "Wedding",    package: "Gold",    status: "Confirmed" },
+  { id:  8, hall: "b", date: "2026-05-20", client: "Mariam & Tariq",  event: "Reception",  package: "Basic",   status: "Tentative" },
+  { id:  9, hall: "a", date: "2026-05-22", client: "Nadia & Imran",   event: "Wedding",    package: "Premium", status: "Confirmed" },
+  { id: 10, hall: "b", date: "2026-05-22", client: "Laila & Rehan",   event: "Engagement", package: "Gold",    status: "Confirmed" },
+  { id: 11, hall: "a", date: "2026-05-25", client: "Sobia & Junaid",  event: "Mehndi",     package: "Basic",   status: "Confirmed" },
+  { id: 12, hall: "b", date: "2026-05-28", client: "Aroha & Zaid",    event: "Wedding",    package: "Premium", status: "Confirmed" },
+  { id: 13, hall: "a", date: "2026-05-30", client: "Maryam & Shahid", event: "Wedding",    package: "Gold",    status: "Tentative" },
+];
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+const MONTH_NAMES = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+/** Hall filter tab */
+function HallTab({ label, active, onClick, style }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "7px 18px",
+        borderRadius: 10,
+        border: "1px solid",
+        fontSize: 13,
+        fontWeight: 500,
+        cursor: "pointer",
+        transition: "all .12s",
+        ...style,
+        ...(active ? style.active : style.inactive),
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+/** Side-panel booking chip */
+function BookingChip({ booking }) {
+  const isA = booking.hall === "a";
+  return (
+    <div
+      style={{
+        padding: 14,
+        borderRadius: 12,
+        marginBottom: 10,
+        border: "1px solid",
+        background: isA ? "#FCEBEB" : "#E6F1FB",
+        borderColor: isA ? "#F7C1C1" : "#B5D4F4",
+      }}
+    >
+      <p style={{ fontSize: 10, fontWeight: 600, color: isA ? "#993C1D" : "#185FA5", marginBottom: 3 }}>
+        Hall {booking.hall.toUpperCase()}
+      </p>
+      <p style={{ fontWeight: 600, fontSize: 13, color: "#1a1a1a", marginBottom: 2 }}>{booking.client}</p>
+      <p style={{ fontSize: 12, color: "#64748b" }}>
+        {booking.event} &bull; {booking.package}
+      </p>
+      <p style={{ fontSize: 11, marginTop: 4, fontWeight: 600, color: isA ? "#A32D2D" : "#185FA5" }}>
+        {booking.status}
+      </p>
+    </div>
+  );
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 export default function CalendarView() {
-  const [current, setCurrent] = useState(new Date(2026, 3, 1)); // April 2026
-  const [sel, setSel] = useState(null);
+  const [current, setCurrent] = useState(new Date(2026, 4, 1)); // May 2026
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [view, setView] = useState("both"); // "both" | "a" | "b"
 
-  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const yr = current.getFullYear();
   const mo = current.getMonth();
 
-  const firstDay = new Date(yr, mo, 1).getDay();
-  const daysInMonth = new Date(yr, mo + 1, 0).getDate();
-
+  // Build a map: day → bookings[]
   const bMap = {};
-  BOOKINGS.forEach(b => {
+  BOOKINGS.forEach((b) => {
     const d = new Date(b.date);
-    if (d.getFullYear() === yr && d.getMonth() === mo) {
-      const day = d.getDate();
-      if (!bMap[day]) bMap[day] = [];
-      bMap[day].push(b);
-    }
+    if (d.getFullYear() !== yr || d.getMonth() !== mo) return;
+    if (view !== "both" && b.hall !== view) return;
+    const day = d.getDate();
+    if (!bMap[day]) bMap[day] = [];
+    bMap[day].push(b);
   });
 
-  const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const firstDayOfMonth = new Date(yr, mo, 1).getDay();
+  const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+  const today = new Date();
+  const isCurrentMonth =
+    today.getFullYear() === yr && today.getMonth() === mo;
+
+  // Blank leading cells + actual day numbers
+  const cells = [
+    ...Array(firstDayOfMonth).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  const selectedBookings = selectedDay ? (bMap[selectedDay] || []) : [];
+
+  // ── Tab styles ──────────────────────────────────────────────────────────
+  const tabBase = {
+    padding: "7px 18px",
+    borderRadius: 10,
+    border: "1px solid #d1d5db",
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "all .12s",
+    background: "#fff",
+    color: "#6b7280",
+  };
+  const tabStyles = {
+    both: {
+      ...(view === "both"
+        ? { background: "#f3f4f6", color: "#111827", border: "1px solid #9ca3af" }
+        : tabBase),
+    },
+    a: {
+      ...(view === "a"
+        ? { background: "#FCEBEB", color: "#A32D2D", border: "1px solid #F7C1C1" }
+        : tabBase),
+    },
+    b: {
+      ...(view === "b"
+        ? { background: "#E6F1FB", color: "#185FA5", border: "1px solid #B5D4F4" }
+        : tabBase),
+    },
+  };
 
   return (
     <div style={{ padding: 32 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 28 }}>
+      {/* ── Top navigation ── */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        {/* Left: title */}
         <div>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 700 }}>Calendar</h1>
-          <p style={{ color: "#94a3b8" }}>Visual overview of all booked wedding dates</p>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 700 }}>
+            Hall Bookings
+          </h1>
+          <p style={{ color: "#94a3b8", fontSize: 13, marginTop: 2 }}>
+            Visual overview of booked dates by hall
+          </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => setCurrent(new Date(yr, mo - 1, 1))} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #d1fae5" }}>‹</button>
-          <span style={{ fontWeight: 600, minWidth: 180, textAlign: "center" }}>{monthNames[mo]} {yr}</span>
-          <button onClick={() => setCurrent(new Date(yr, mo + 1, 1))} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #d1fae5" }}>›</button>
+
+        {/* Centre: hall tabs */}
+        <div style={{ display: "flex", gap: 6 }}>
+          {[
+            { key: "both", label: "Both halls" },
+            { key: "a",    label: "Hall A" },
+            { key: "b",    label: "Hall B" },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => { setView(key); setSelectedDay(null); }}
+              style={{ ...tabBase, ...tabStyles[key] }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Right: month navigator */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => { setCurrent(new Date(yr, mo - 1, 1)); setSelectedDay(null); }}
+            style={{
+              width: 34, height: 34, borderRadius: 10,
+              border: "1px solid #d1fae5", background: "#fff",
+              cursor: "pointer", fontSize: 16, display: "flex",
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            ‹
+          </button>
+          <span style={{ fontWeight: 600, minWidth: 160, textAlign: "center", fontSize: 14 }}>
+            {MONTH_NAMES[mo]} {yr}
+          </span>
+          <button
+            onClick={() => { setCurrent(new Date(yr, mo + 1, 1)); setSelectedDay(null); }}
+            style={{
+              width: 34, height: 34, borderRadius: 10,
+              border: "1px solid #d1fae5", background: "#fff",
+              cursor: "pointer", fontSize: 16, display: "flex",
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            ›
+          </button>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20 }}>
-        {/* Calendar Grid */}
-        <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #d1fae5", overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", background: "#f0fdf4" }}>
-            {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
-              <div key={d} style={{ padding: "12px 0", textAlign: "center", fontWeight: 700, fontSize: 12, color: "#64748b" }}>{d}</div>
-            ))}
+      {/* ── Legend ── */}
+      <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+        {(view === "both" || view === "a") && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#64748b" }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: "#F09595", display: "inline-block" }} />
+            Hall A — booked
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
-            {cells.map((day, i) => (
+        )}
+        {(view === "both" || view === "b") && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#64748b" }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: "#85B7EB", display: "inline-block" }} />
+            Hall B — booked
+          </div>
+        )}
+      </div>
+
+      {/* ── Main layout: calendar + sidebar ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20 }}>
+
+        {/* Calendar grid */}
+        <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #d1fae5", overflow: "hidden" }}>
+          {/* Day-of-week headers */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", background: "#f0fdf4" }}>
+            {DAY_NAMES.map((d) => (
               <div
-                key={i}
-                onClick={() => day && setSel(day)}
+                key={d}
                 style={{
-                  minHeight: 90, padding: 8, borderBottom: "1px solid #f0fdf4", borderRight: "1px solid #f0fdf4",
-                  background: sel === day ? "#f0fdf4" : "transparent", cursor: day ? "pointer" : "default"
+                  padding: "11px 0", textAlign: "center",
+                  fontWeight: 700, fontSize: 11, color: "#64748b",
+                  textTransform: "uppercase",
                 }}
               >
-                {day && (
-                  <>
-                    <span style={{ fontWeight: sel === day ? 700 : 500, color: sel === day ? "#10b981" : "#475569" }}>{day}</span>
-                    {bMap[day] && bMap[day].slice(0, 2).map((b, idx) => (
-                      <div key={idx} style={{ fontSize: 10, padding: "2px 6px", marginTop: 4, borderRadius: 6, background: b.color + "20", color: b.color }}>
-                        {b.client.split("&")[0].trim()}
-                      </div>
-                    ))}
-                  </>
-                )}
+                {d}
               </div>
             ))}
           </div>
+
+          {/* Date cells */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+            {cells.map((day, idx) => {
+              if (!day) {
+                return (
+                  <div
+                    key={`empty-${idx}`}
+                    style={{ minHeight: 84, borderBottom: "1px solid #f0fdf4", borderRight: "1px solid #f0fdf4" }}
+                  />
+                );
+              }
+
+              const bookings = bMap[day] || [];
+              const isToday = isCurrentMonth && today.getDate() === day;
+              const isSel = selectedDay === day;
+
+              return (
+                <div
+                  key={day}
+                  onClick={() => setSelectedDay(day === selectedDay ? null : day)}
+                  style={{
+                    minHeight: 84,
+                    padding: 8,
+                    borderBottom: "1px solid #f0fdf4",
+                    borderRight: "1px solid #f0fdf4",
+                    cursor: "pointer",
+                    background: isSel ? "#f0fdf4" : "transparent",
+                    transition: "background .1s",
+                  }}
+                  onMouseEnter={(e) => { if (!isSel) e.currentTarget.style.background = "#fafafa"; }}
+                  onMouseLeave={(e) => { if (!isSel) e.currentTarget.style.background = "transparent"; }}
+                >
+                  {/* Day number */}
+                  {isToday ? (
+                    <div
+                      style={{
+                        width: 24, height: 24, borderRadius: "50%",
+                        background: "#E24B4A", color: "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, fontWeight: 700, marginBottom: 4,
+                      }}
+                    >
+                      {day}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        fontSize: 13, fontWeight: isSel ? 700 : 500,
+                        color: isSel ? "#10b981" : "#475569", marginBottom: 4,
+                      }}
+                    >
+                      {day}
+                    </div>
+                  )}
+
+                  {/* Booking pills */}
+                  {bookings.slice(0, 2).map((b) => (
+                    <div
+                      key={b.id}
+                      style={{
+                        fontSize: 10,
+                        padding: "2px 6px",
+                        marginBottom: 2,
+                        borderRadius: 5,
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        background: b.hall === "a" ? "#F7C1C1" : "#B5D4F4",
+                        color:      b.hall === "a" ? "#791F1F" : "#0C447C",
+                      }}
+                    >
+                      {b.client.split("&")[0].trim()}
+                    </div>
+                  ))}
+                  {bookings.length > 2 && (
+                    <div style={{ fontSize: 10, color: "#94a3b8" }}>
+                      +{bookings.length - 2} more
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Selected Date Details */}
-        <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #d1fae5", padding: 24 }}>
-          <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 16 }}>
-            {sel ? `${monthNames[mo]} ${sel}, ${yr}` : "Select a date"}
+        {/* ── Side panel ── */}
+        <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #d1fae5", padding: 22 }}>
+          <p style={{ fontWeight: 600, fontSize: 15, marginBottom: 16 }}>
+            {selectedDay
+              ? `${MONTH_NAMES[mo]} ${selectedDay}, ${yr}`
+              : "Select a date"}
           </p>
-          {sel && (bMap[sel] || []).map(b => (
-            <div key={b.id} style={{ padding: 16, background: "#f0fdf4", borderRadius: 14, marginBottom: 12 }}>
-              <p style={{ fontWeight: 600 }}>{b.client}</p>
-              <p style={{ fontSize: 13, color: "#64748b" }}>{b.event} • {b.package}</p>
-              <p style={{ fontSize: 11, color: "#10b981" }}>{b.status}</p>
-            </div>
+
+          {!selectedDay && (
+            <p style={{ fontSize: 13, color: "#94a3b8", textAlign: "center", paddingTop: 32 }}>
+              Click any date to see its bookings
+            </p>
+          )}
+
+          {selectedDay && selectedBookings.length === 0 && (
+            <p style={{ fontSize: 13, color: "#94a3b8", textAlign: "center", paddingTop: 32 }}>
+              No bookings for this date
+            </p>
+          )}
+
+          {selectedBookings.map((b) => (
+            <BookingChip key={b.id} booking={b} />
           ))}
         </div>
       </div>
