@@ -91,4 +91,5 @@ async function generateCalendarImage(year, month) {
     return outputPath;
 }
 
+
 module.exports = { generateCalendarImage };

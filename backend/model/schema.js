@@ -1,4 +1,4 @@
-const {pgTable, integer, serial,varchar, text, timestamp , numeric} = require("drizzle-orm/pg-core")
+const {pgTable, integer, serial,varchar, text, timestamp , numeric, time} = require("drizzle-orm/pg-core")
 
 const user = pgTable("users", {
     id: serial("id").primaryKey().notNull(),
@@ -36,7 +36,7 @@ const booking = pgTable("bookings", {
 const packages = pgTable("packages", {
     id: serial("id").primaryKey().notNull(),
     package_name: varchar("package_name", {length: 100}).notNull(),
-    time: timestamp("event_time").notNull(),
+    time: time("event_time").notNull(),
     price: integer("package_price").notNull()
 })
 

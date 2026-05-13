@@ -232,7 +232,6 @@ function parseWhatsAppMessage(body, phone) {
   };
 }
 
-module.exports = { parseWhatsAppMessage };
 
 module.exports = {
     CreateBooking,

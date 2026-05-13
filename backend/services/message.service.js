@@ -39,14 +39,18 @@ async function getReceiptMessage(phone, data) {
 }
 
 async function getCalendarMessage(phone) {
-  const now = new Date();
+  try {
+    const now = new Date();
   await generateCalendarImage(now.getFullYear(), now.getMonth() + 1);
 
   await sendMediaMessage(
     phone,
-    "Here is our availability for this month!\n\n🔴 Red = Booked\n⚪ White = Available\n\nTo book send:\nBOOK: Date | Event | Package",
+    "Here is our availability for this month!\n\n🔴 Red = Booked\n⚪ White = Available\n",
     `${process.env.BASE_URL}/public/calendar.png`
   );
+  } catch (error) {
+    console.log("An Error Occured: ", error)
+  }
 }
 
 

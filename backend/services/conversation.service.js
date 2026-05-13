@@ -33,15 +33,23 @@ async function createOrGetConversation(phone, userName) {
 }
 
 async function addAdminToConversation(conversationSid) {
-  await client
-    .conversations.v1
-    .services(SERVICE_SID)
-    .conversations(conversationSid)
-    .participants
-    .create({
-      "messagingBinding.address": `whatsapp:${process.env.ADMIN_PHONE}`,
-      "messagingBinding.proxyAddress": process.env.TWILIO_WHATSAPP_NUMBER,
-    });
+  try {
+    await client
+      .conversations.v1
+      .services(SERVICE_SID)
+      .conversations(conversationSid)
+      .participants
+      .create({
+        "messagingBinding.address": `whatsapp:${process.env.ADMIN_PHONE}`,
+        "messagingBinding.proxyAddress": process.env.TWILIO_WHATSAPP_NUMBER,
+      });
+  } catch (error) {
+    if (error.code === 50416) {
+      console.log("Admin already in conversation, skipping...");
+      return;
+    }
+    throw error; 
+  }
 }
 
 module.exports = { createOrGetConversation, addAdminToConversation };

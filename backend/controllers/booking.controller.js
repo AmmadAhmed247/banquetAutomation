@@ -60,13 +60,15 @@ async function GetAllUserBookings(req,res) {
     }
 }
 
-async function GetAllBookingsController(req, res) {
+async function GetAllBookingsAdmin(req, res) {
     try {
         const result = await GetAllBookingsUnfiltered()
 
         if(!result?.success){
             return res.status(200).json(result)
         }
+
+        console.log(result)
 
         return res.status(200).json(result)
 
@@ -125,6 +127,6 @@ async function UpdateUserBooking(req, res) {
 module.exports = {
     CreateUserBooking,
     GetAllUserBookings,
-    GetAllBookingsController,
+    GetAllBookingsAdmin,
     UpdateUserBooking
 }

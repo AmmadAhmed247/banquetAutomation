@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1776622838580,
-      "tag": "0000_oval_starbolt",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1777389280906,
-      "tag": "0001_sudden_union_jack",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777389607353,
-      "tag": "0002_demonic_stryfe",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1777549471490,
-      "tag": "0003_fuzzy_squirrel_girl",
+      "when": 1778698228101,
+      "tag": "0000_glamorous_supernaut",
       "breakpoints": true
     }
   ]

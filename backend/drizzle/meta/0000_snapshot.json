@@ -1,5 +1,5 @@
 {
-  "id": "3ae748db-598c-41f3-92d1-c7faa46f9ed1",
+  "id": "e0b9535c-42f7-4e46-ba9b-943606678bb1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -18,8 +18,7 @@
           "name": "name",
           "type": "varchar(100)",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'New User'"
+          "notNull": false
         },
         "phone": {
           "name": "phone",
@@ -67,9 +66,28 @@
           "primaryKey": false,
           "notNull": false
         },
+        "client": {
+          "name": "client",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guests": {
+          "name": "guests",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "date": {
           "name": "date",
-          "type": "varchar(50)",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
@@ -79,27 +97,61 @@
           "primaryKey": false,
           "notNull": true
         },
-        "status": {
-          "name": "status",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
         "package_name": {
           "name": "package_name",
           "type": "varchar(100)",
           "primaryKey": false,
           "notNull": true
         },
-        "phone": {
-          "name": "phone",
+        "venue": {
+          "name": "venue",
           "type": "varchar(100)",
           "primaryKey": false,
           "notNull": true
         },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Pending'"
+        },
+        "total_amount": {
+          "name": "total_amount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "advance_paid": {
+          "name": "advance_paid",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "payment_method": {
+          "name": "payment_method",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Cash'"
+        },
+        "payment_note": {
+          "name": "payment_note",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false,

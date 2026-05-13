@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { getAllBookings } from "../lib/hooks/booking.hook";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
@@ -68,26 +69,8 @@ export default function CalendarView() {
 
   // Fetch bookings from backend
   
-  const { data: fetchedBookings = [], isLoading, error } = useQuery({
-    queryKey: ["calendarBookings"],
-    queryFn: async () => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/booking/allBookings`);
-        if (response.data.success) {
-          return response.data.bookings || [];
-        }
-        return [];
-      } catch (err) {
-        console.error("Error fetching calendar bookings:", err);
-        return [];
-      }
-    }, 
-    staleTime: 1000 * 60 * 1, // 1 minute for now .......
-  });
-
-  // Transform backend bookings to calendar format
+  const { data: fetchedBookings = [], isLoading, error } = getAllBookings()
   const BOOKINGS = fetchedBookings.map((b) => {
-    // Parse date to YYYY-MM-DD format
     const dateObj = new Date(b.date);
     const month = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
     const day = String(dateObj.getUTCDate()).padStart(2, "0");
@@ -270,12 +253,9 @@ export default function CalendarView() {
         )}
       </div>
 
-      {/* ── Main layout: calendar + sidebar ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20 }}>
 
-        {/* Calendar grid */}
         <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #d1fae5", overflow: "hidden" }}>
-          {/* Day-of-week headers */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", background: "#f0fdf4" }}>
             {DAY_NAMES.map((d) => (
               <div
