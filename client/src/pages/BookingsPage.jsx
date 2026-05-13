@@ -18,7 +18,7 @@ const emptyForm = {
   event: "Wedding",
   status: "Pending",
   guests: "",
-  venue: "Room A",
+  venue: "Hall A",
   totalAmount: "",
   advancePaid: "",
   paymentMethod: "Cash",
@@ -28,11 +28,26 @@ const emptyForm = {
 
 const formatDateForInput = (date) => {
   if (!date) return "";
-  const d = new Date(date);
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${year}-${month}-${day}`;
+  try {
+    // Handle both ISO strings and Date objects
+    let d;
+    if (typeof date === 'string') {
+      // If it's already YYYY-MM-DD format, return as is
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+      // Parse ISO string in UTC
+      d = new Date(date + 'Z');
+    } else {
+      d = new Date(date);
+    }
+    // Use UTC values to avoid timezone shifts
+    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    const year = d.getUTCFullYear();
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    console.error('Date format error:', e);
+    return "";
+  }
 };
 
 export default function Bookings({ showToast }) {
@@ -56,14 +71,25 @@ export default function Bookings({ showToast }) {
     }
   });
 
-  const bookings = fetchedBookings?.map(b => ({
-    ...b,
-    totalAmount: b.total_amount || b.totalAmount,
-    advancePaid: b.advance_paid || b.advancePaid,
-    paymentNote: b.payment_note || b.paymentNote,
-    date: formatDateForInput(b.date || b.date),
-    package: b.package_name || b.package,
-  })) || [];
+  const bookings = fetchedBookings?.map(b => {
+    // Properly handle date conversion
+    let formattedDate = "";
+    if (b.date) {
+      const dateObj = new Date(b.date);
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getUTCDate()).padStart(2, "0");
+      const year = dateObj.getUTCFullYear();
+      formattedDate = `${year}-${month}-${day}`;
+    }
+    return {
+      ...b,
+      totalAmount: b.total_amount || b.totalAmount,
+      advancePaid: b.advance_paid || b.advancePaid,
+      paymentNote: b.payment_note || b.paymentNote,
+      date: formattedDate,
+      package: b.package_name || b.package,
+    };
+  }) || [];
 
   const openNew = () => setModal({ mode: "new", booking: { ...emptyForm, id: Date.now() } });
   const openEdit = (b) => setModal({ mode: "edit", booking: { ...b } });

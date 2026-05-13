@@ -1,33 +1,16 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
-// ─── Mock data ───────────────────────────────────────────────────────────────
-// Replace with your real BOOKINGS import:  import { BOOKINGS } from "../data/mockData";
-const BOOKINGS = [
-  { id:  1, hall: "a", date: "2026-05-03", client: "Rania & Omar",    event: "Wedding",    package: "Premium", status: "Confirmed" },
-  { id:  2, hall: "b", date: "2026-05-03", client: "Sana & Bilal",    event: "Nikkah",     package: "Basic",   status: "Confirmed" },
-  { id:  3, hall: "a", date: "2026-05-08", client: "Fatima & Usman",  event: "Wedding",    package: "Premium", status: "Confirmed" },
-  { id:  4, hall: "b", date: "2026-05-10", client: "Ayesha & Hassan", event: "Reception",  package: "Gold",    status: "Tentative" },
-  { id:  5, hall: "a", date: "2026-05-14", client: "Zara & Khalid",   event: "Mehndi",     package: "Basic",   status: "Confirmed" },
-  { id:  6, hall: "b", date: "2026-05-14", client: "Sara & Ahmed",    event: "Wedding",    package: "Premium", status: "Confirmed" },
-  { id:  7, hall: "a", date: "2026-05-17", client: "Hira & Faisal",   event: "Wedding",    package: "Gold",    status: "Confirmed" },
-  { id:  8, hall: "b", date: "2026-05-20", client: "Mariam & Tariq",  event: "Reception",  package: "Basic",   status: "Tentative" },
-  { id:  9, hall: "a", date: "2026-05-22", client: "Nadia & Imran",   event: "Wedding",    package: "Premium", status: "Confirmed" },
-  { id: 10, hall: "b", date: "2026-05-22", client: "Laila & Rehan",   event: "Engagement", package: "Gold",    status: "Confirmed" },
-  { id: 11, hall: "a", date: "2026-05-25", client: "Sobia & Junaid",  event: "Mehndi",     package: "Basic",   status: "Confirmed" },
-  { id: 12, hall: "b", date: "2026-05-28", client: "Aroha & Zaid",    event: "Wedding",    package: "Premium", status: "Confirmed" },
-  { id: 13, hall: "a", date: "2026-05-30", client: "Maryam & Shahid", event: "Wedding",    package: "Gold",    status: "Tentative" },
-];
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const MONTH_NAMES = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
 ];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
 
-/** Hall filter tab */
 function HallTab({ label, active, onClick, style }) {
   return (
     <button
@@ -82,6 +65,52 @@ export default function CalendarView() {
   const [current, setCurrent] = useState(new Date(2026, 4, 1)); // May 2026
   const [selectedDay, setSelectedDay] = useState(null);
   const [view, setView] = useState("both"); // "both" | "a" | "b"
+
+  // Fetch bookings from backend
+  
+  const { data: fetchedBookings = [], isLoading, error } = useQuery({
+    queryKey: ["calendarBookings"],
+    queryFn: async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/booking/allBookings`);
+        if (response.data.success) {
+          return response.data.bookings || [];
+        }
+        return [];
+      } catch (err) {
+        console.error("Error fetching calendar bookings:", err);
+        return [];
+      }
+    }, 
+    staleTime: 1000 * 60 * 1, // 1 minute for now .......
+  });
+
+  // Transform backend bookings to calendar format
+  const BOOKINGS = fetchedBookings.map((b) => {
+    // Parse date to YYYY-MM-DD format
+    const dateObj = new Date(b.date);
+    const month = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getUTCDate()).padStart(2, "0");
+    const year = dateObj.getUTCFullYear();
+    const formattedDate = `${year}-${month}-${day}`;
+
+    // Determine hall from venue
+    const hallChar = b.venue?.toLowerCase().includes("hall a") 
+      ? "a" 
+      : b.venue?.toLowerCase().includes("hall b") 
+      ? "b" 
+      : "a";
+
+    return {
+      id: b.id,
+      hall: hallChar,
+      date: formattedDate,
+      client: b.client,
+      event: b.event,
+      package: b.package_name || b.package,
+      status: b.status,
+    };
+  });
 
   const yr = current.getFullYear();
   const mo = current.getMonth();
@@ -143,6 +172,20 @@ export default function CalendarView() {
 
   return (
     <div style={{ padding: 32 }}>
+      {isLoading && (
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
+          <p style={{ color: "#94a3b8", fontSize: 14 }}>Loading calendar...</p>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ textAlign: "center", padding: "40px 0", color: "#dc2626" }}>
+          <p style={{ fontSize: 14 }}>Failed to load bookings. Please try again.</p>
+        </div>
+      )}
+      
+      {!isLoading && !error && (
+      <>
       {/* ── Top navigation ── */}
       <div
         style={{
@@ -359,6 +402,8 @@ export default function CalendarView() {
           ))}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
