@@ -1,21 +1,64 @@
 import api from "../api/api";
-
+import axios from "axios";
 const bookingService = {
-    getAllBookings: async ()=> {
-        try {
-            const res = await api.get("/api/booking/allBookings")
 
-            const responseData = res.data.bookings || []
-
-            console.log(responseData)
-
-            return responseData
-
-        } catch (error) {
-            console.log("Error In Bookings (Client): ", error)
-            throw error
-        }
+  getAllBookings: async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/booking/allBookings`);
+      return res.data.bookings || [];
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      throw error;
     }
-}
+  },
 
-export default bookingService
+  createBooking: async (form) => {
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/booking/createBooking`, {
+        event:         form.event,
+        date:          form.date,
+        packageName:   form.package,
+        phone:         form.phone,
+        client:        form.client,
+        guests:        form.guests,
+        venue:         form.venue,
+        totalAmount:   form.totalAmount,
+        advancePaid:   form.advancePaid,
+        paymentMethod: form.paymentMethod,
+        paymentNote:   form.paymentNote,
+        status:        form.status,
+      });
+      return res.data;
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      throw error;
+    }
+  },
+
+  updateBooking: async (form) => {
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/booking/updateBooking`, {
+        id:            form.id,
+        event:         form.event,
+        date:          form.date,
+        packageName:   form.package,
+        phone:         form.phone,
+        client:        form.client,
+        guests:        form.guests,
+        venue:         form.venue,
+        totalAmount:   form.totalAmount,
+        advancePaid:   form.advancePaid,
+        paymentMethod: form.paymentMethod,
+        paymentNote:   form.paymentNote,
+        status:        form.status,
+      });
+      return res.data;
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      throw error;
+    }
+  },
+
+};
+
+export default bookingService;

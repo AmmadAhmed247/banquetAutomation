@@ -1,34 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
+
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [form, setForm]       = useState({ email: "", password: "" });
-  const [error, setError]     = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const change = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError("");
+  const [form, setForm] = useState({ email: "", password: "" });
+  const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const { mutate: login, isPending, error } = useMutation({
+    mutationFn: (form) =>
+      axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/auth/login`,
+        form,
+        { withCredentials: true }
+      ),
+    onSuccess: () => navigate("/"),
+  });
+  const submit = (e) => {
+    e.preventDefault();
+    login(form);
   };
 
-  const submit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
-  try {
-    await axios.post(
-      `${import.meta.env.VITE_BACKEND_URL}/api/auth/login`,
-      form,
-      { withCredentials: true }
-    );
-    navigate("/");
-  } catch (err) {
-    setError(err.response?.data?.message || "Something went wrong");
-  } finally {
-    setLoading(false);
-  }
-};
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -38,7 +30,6 @@ const LoginPage = () => {
           <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
             <span className="text-white font-bold text-base">B</span>
           </div>
-          
         </div>
 
         {/* Card */}
@@ -54,7 +45,7 @@ const LoginPage = () => {
               <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {error}
+              {error.response?.data?.message || "Something went wrong"}
             </div>
           )}
 
@@ -94,10 +85,10 @@ const LoginPage = () => {
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={isPending}
               className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors mt-2"
             >
-              {loading ? (
+              {isPending ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -112,7 +103,6 @@ const LoginPage = () => {
           </form>
         </div>
 
-        
       </div>
     </div>
   );

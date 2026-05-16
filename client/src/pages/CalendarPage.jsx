@@ -7,47 +7,38 @@ const MONTH_NAMES = [
 ];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// ─── Booking chip in side panel ───────────────────────────────────────────────
 function BookingChip({ booking }) {
   const isA = booking.hall === "a";
   return (
-    <div
-      className={`p-3.5 rounded-xl mb-2.5 border ${
-        isA ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200"
-      }`}
-    >
+    <div className={`p-3 rounded-xl mb-2 border ${isA ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200"}`}>
       <p className={`text-[10px] font-semibold mb-1 ${isA ? "text-red-700" : "text-blue-700"}`}>
         Hall {booking.hall.toUpperCase()}
       </p>
-      <p className="text-[13px] font-semibold text-gray-900 mb-0.5">{booking.client}</p>
-      <p className="text-[12px] text-slate-500">
-        {booking.event} &bull; {booking.package}
-      </p>
-      <p className={`text-[11px] mt-1 font-semibold ${isA ? "text-red-700" : "text-blue-700"}`}>
+      <p className="text-xs font-semibold text-gray-900 mb-0.5">{booking.client}</p>
+      <p className="text-[11px] text-slate-500">{booking.event} &bull; {booking.package}</p>
+      <p className={`text-[10px] mt-1 font-semibold ${isA ? "text-red-700" : "text-blue-700"}`}>
         {booking.status}
       </p>
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
 export default function CalendarView() {
-  const [current, setCurrent] = useState(new Date(2026, 4, 1));
+  const [current, setCurrent]     = useState(new Date(2026, 4, 1));
   const [selectedDay, setSelectedDay] = useState(null);
-  const [view, setView] = useState("both"); // "both" | "a" | "b"
+  const [view, setView]           = useState("both");
+  const [showPanel, setShowPanel] = useState(false); // mobile side panel toggle
 
   const { data: fetchedBookings = [], isLoading, error } = getAllBookings();
 
   const BOOKINGS = fetchedBookings.map((b) => {
-    const dateObj = new Date(b.date);
-    const month   = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
-    const day     = String(dateObj.getUTCDate()).padStart(2, "0");
-    const year    = dateObj.getUTCFullYear();
-
+    const dateObj  = new Date(b.date);
+    const month    = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+    const day      = String(dateObj.getUTCDate()).padStart(2, "0");
+    const year     = dateObj.getUTCFullYear();
     const hallChar =
       b.venue?.toLowerCase().includes("hall a") ? "a" :
       b.venue?.toLowerCase().includes("hall b") ? "b" : "a";
-
     return {
       id:      b.id,
       hall:    hallChar,
@@ -62,7 +53,6 @@ export default function CalendarView() {
   const yr = current.getFullYear();
   const mo = current.getMonth();
 
-  // day → filtered bookings[]
   const bMap = {};
   BOOKINGS.forEach((b) => {
     const d = new Date(b.date);
@@ -85,8 +75,7 @@ export default function CalendarView() {
 
   const selectedBookings = selectedDay ? (bMap[selectedDay] || []) : [];
 
-  // ── Tab class helper ───────────────────────────────────────────────────────
-  const tabBase = "px-4 py-1.5 rounded-xl border text-[13px] font-medium cursor-pointer transition-all";
+  const tabBase = "px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer transition-all";
   function tabClass(key) {
     if (key === "both")
       return view === "both"
@@ -96,13 +85,11 @@ export default function CalendarView() {
       return view === "a"
         ? `${tabBase} bg-red-50 text-red-700 border-red-300`
         : `${tabBase} bg-white text-gray-500 border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200`;
-    // key === "b"
     return view === "b"
       ? `${tabBase} bg-blue-50 text-blue-700 border-blue-300`
       : `${tabBase} bg-white text-gray-500 border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200`;
   }
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -114,100 +101,82 @@ export default function CalendarView() {
     );
   }
 
-  // ── Error ──────────────────────────────────────────────────────────────────
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-red-500 text-sm font-medium">
-          Failed to load bookings. Please try again.
-        </p>
+        <p className="text-red-500 text-sm font-medium">Failed to load bookings. Please try again.</p>
       </div>
     );
   }
 
-  // ── Calendar ───────────────────────────────────────────────────────────────
   return (
-    <div className="p-8">
+    <div className="p-4 xl:p-8">
 
       {/* ── Top navigation ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div className="flex flex-col gap-3 mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
 
         {/* Title */}
         <div>
-          <h1 className="font-mono text-[28px] font-bold text-gray-900">
-            Hall Bookings
-          </h1>
-          <p className="text-slate-400 text-[13px] mt-0.5">
-            Visual overview of booked dates by hall
-          </p>
+          <h1 className="font-mono text-2xl xl:text-[28px] font-bold text-gray-900">Hall Bookings</h1>
+          <p className="text-slate-400 text-xs mt-0.5">Visual overview of booked dates by hall</p>
         </div>
 
-        {/* Hall tabs */}
-        <div className="flex gap-1.5">
-          {[
-            { key: "both", label: "Both halls" },
-            { key: "a",    label: "Hall A" },
-            { key: "b",    label: "Hall B" },
-          ].map(({ key, label }) => (
+        {/* Hall tabs + month nav row */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Hall tabs */}
+          <div className="flex gap-1.5">
+            {[
+              { key: "both", label: "Both" },
+              { key: "a",    label: "Hall A" },
+              { key: "b",    label: "Hall B" },
+            ].map(({ key, label }) => (
+              <button key={key} className={tabClass(key)} onClick={() => { setView(key); setSelectedDay(null); setShowPanel(false); }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Month navigator */}
+          <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
             <button
-              key={key}
-              className={tabClass(key)}
-              onClick={() => { setView(key); setSelectedDay(null); }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Month navigator */}
-        <div className="flex items-center gap-2">
-          <button
-            className="w-[34px] h-[34px] rounded-xl border border-green-100 bg-white flex items-center justify-center text-base hover:bg-green-50 transition-colors cursor-pointer"
-            onClick={() => { setCurrent(new Date(yr, mo - 1, 1)); setSelectedDay(null); }}
-          >
-            ‹
-          </button>
-          <span className="font-semibold text-[14px] w-40 text-center text-gray-800">
-            {MONTH_NAMES[mo]} {yr}
-          </span>
-          <button
-            className="w-[34px] h-[34px] rounded-xl border border-green-100 bg-white flex items-center justify-center text-base hover:bg-green-50 transition-colors cursor-pointer"
-            onClick={() => { setCurrent(new Date(yr, mo + 1, 1)); setSelectedDay(null); }}
-          >
-            ›
-          </button>
+              className="w-8 h-8 rounded-xl border border-green-100 bg-white flex items-center justify-center hover:bg-green-50 transition-colors cursor-pointer"
+              onClick={() => { setCurrent(new Date(yr, mo - 1, 1)); setSelectedDay(null); setShowPanel(false); }}
+            >‹</button>
+            <span className="font-semibold text-sm w-36 text-center text-gray-800">
+              {MONTH_NAMES[mo]} {yr}
+            </span>
+            <button
+              className="w-8 h-8 rounded-xl border border-green-100 bg-white flex items-center justify-center hover:bg-green-50 transition-colors cursor-pointer"
+              onClick={() => { setCurrent(new Date(yr, mo + 1, 1)); setSelectedDay(null); setShowPanel(false); }}
+            >›</button>
+          </div>
         </div>
       </div>
 
       {/* ── Legend ── */}
       <div className="flex gap-4 mb-4">
         {(view === "both" || view === "a") && (
-          <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-red-300 inline-block" />
-            Hall A — booked
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className="w-2.5 h-2.5 rounded-[3px] bg-red-300 inline-block" />Hall A
           </div>
         )}
         {(view === "both" || view === "b") && (
-          <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-blue-300 inline-block" />
-            Hall B — booked
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className="w-2.5 h-2.5 rounded-[3px] bg-blue-300 inline-block" />Hall B
           </div>
         )}
       </div>
 
       {/* ── Main layout ── */}
-      <div className="grid grid-cols-[1fr_300px] gap-5">
+      <div className="xl:grid xl:grid-cols-[1fr_300px] xl:gap-5">
 
         {/* Calendar card */}
-        <div className="bg-white rounded-2xl border border-green-100 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-green-100 overflow-hidden mb-4 xl:mb-0">
 
-          {/* Day-of-week headers */}
+          {/* Day headers */}
           <div className="grid grid-cols-7 bg-green-50">
             {DAY_NAMES.map((d) => (
-              <div
-                key={d}
-                className="py-2.5 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wide"
-              >
+              <div key={d} className="py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                 {d}
               </div>
             ))}
@@ -216,15 +185,7 @@ export default function CalendarView() {
           {/* Date cells */}
           <div className="grid grid-cols-7">
             {cells.map((day, idx) => {
-              // Empty leading cell
-              if (!day) {
-                return (
-                  <div
-                    key={`empty-${idx}`}
-                    className="min-h-[84px] border-b border-r border-green-50"
-                  />
-                );
-              }
+              if (!day) return <div key={`empty-${idx}`} className="min-h-[60px] xl:min-h-[84px] border-b border-r border-green-50" />;
 
               const bookings = bMap[day] || [];
               const isToday  = isCurrentMonth && today.getDate() === day;
@@ -233,43 +194,47 @@ export default function CalendarView() {
               return (
                 <div
                   key={day}
-                  onClick={() => setSelectedDay(day === selectedDay ? null : day)}
-                  className={`min-h-[84px] p-2 border-b border-r border-green-50 cursor-pointer transition-colors
+                  onClick={() => {
+                    setSelectedDay(day === selectedDay ? null : day);
+                    setShowPanel(true);
+                  }}
+                  className={`min-h-[60px] xl:min-h-[84px] p-1.5 xl:p-2 border-b border-r border-green-50 cursor-pointer transition-colors
                     ${isSel ? "bg-green-50" : "hover:bg-slate-50"}`}
                 >
                   {/* Day number */}
                   {isToday ? (
-                    <div className="w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-[11px] font-bold mb-1">
+                    <div className="w-5 h-5 xl:w-6 xl:h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold mb-1">
                       {day}
                     </div>
                   ) : (
-                    <div
-                      className={`text-[13px] font-medium mb-1 leading-none ${
-                        isSel ? "text-green-600 font-bold" : "text-slate-500"
-                      }`}
-                    >
+                    <div className={`text-[11px] xl:text-[13px] font-medium mb-1 leading-none ${isSel ? "text-green-600 font-bold" : "text-slate-500"}`}>
                       {day}
                     </div>
                   )}
 
-                  {/* Booking pills */}
-                  {bookings.slice(0, 2).map((b) => (
-                    <div
-                      key={b.id}
-                      className={`text-[10px] px-1.5 py-0.5 mb-0.5 rounded font-semibold truncate ${
-                        b.hall === "a"
-                          ? "bg-red-200 text-red-900"
-                          : "bg-blue-200 text-blue-900"
-                      }`}
-                    >
-                      {b.client.split("&")[0].trim()}
-                    </div>
-                  ))}
+                  {/* Pills — hidden on very small, shown on sm+ */}
+                  <div className="hidden sm:block">
+                    {bookings.slice(0, 2).map((b) => (
+                      <div
+                        key={b.id}
+                        className={`text-[9px] xl:text-[10px] px-1 py-0.5 mb-0.5 rounded font-semibold truncate ${
+                          b.hall === "a" ? "bg-red-200 text-red-900" : "bg-blue-200 text-blue-900"
+                        }`}
+                      >
+                        {b.client.split("&")[0].trim()}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Dot indicators on mobile */}
+                  <div className="flex gap-0.5 sm:hidden flex-wrap">
+                    {bookings.slice(0, 3).map((b) => (
+                      <span key={b.id} className={`w-1.5 h-1.5 rounded-full ${b.hall === "a" ? "bg-red-400" : "bg-blue-400"}`} />
+                    ))}
+                  </div>
 
                   {bookings.length > 2 && (
-                    <div className="text-[10px] text-slate-400">
-                      +{bookings.length - 2} more
-                    </div>
+                    <div className="text-[9px] text-slate-400 hidden sm:block">+{bookings.length - 2}</div>
                   )}
                 </div>
               );
@@ -278,33 +243,37 @@ export default function CalendarView() {
         </div>
 
         {/* ── Side panel ── */}
-        <div className="bg-white rounded-2xl border border-green-100 p-5">
-          <p className="font-semibold text-[15px] text-gray-800 mb-4">
-            {selectedDay
-              ? `${MONTH_NAMES[mo]} ${selectedDay}, ${yr}`
-              : "Select a date"}
-          </p>
+        {/* Desktop: always visible | Mobile: shown after selecting a day */}
+        <div className={`bg-white rounded-2xl border border-green-100 p-4 xl:block ${showPanel || selectedDay ? "block" : "hidden xl:block"}`}>
+          <div className="flex items-center justify-between mb-4">
+            <p className="font-semibold text-sm text-gray-800">
+              {selectedDay ? `${MONTH_NAMES[mo]} ${selectedDay}, ${yr}` : "Select a date"}
+            </p>
+            {/* Close button on mobile */}
+            {showPanel && (
+              <button
+                className="xl:hidden text-slate-400 hover:text-slate-600 text-lg leading-none"
+                onClick={() => { setShowPanel(false); setSelectedDay(null); }}
+              >✕</button>
+            )}
+          </div>
 
           {!selectedDay && (
-            <p className="text-[13px] text-slate-400 text-center pt-8">
-              Click any date to see its bookings
-            </p>
+            <p className="text-xs text-slate-400 text-center pt-8">Click any date to see its bookings</p>
           )}
 
           {selectedDay && selectedBookings.length === 0 && (
-            <p className="text-[13px] text-slate-400 text-center pt-8">
-              No bookings for this date
-            </p>
+            <p className="text-xs text-slate-400 text-center pt-8">No bookings for this date</p>
           )}
 
-          <div className="overflow-y-auto max-h-[520px]">
+          <div className="overflow-y-auto max-h-[400px] xl:max-h-[520px]">
             {selectedBookings.map((b) => (
               <BookingChip key={b.id} booking={b} />
             ))}
           </div>
         </div>
-      </div>
 
+      </div>
     </div>
   );
 }

@@ -180,7 +180,6 @@ export default function DarbarReceiptForm() {
   const { register, handleSubmit, watch, reset, setValue } = useForm({
     defaultValues: defaultForm,
   });
-
   const printRef = useRef();
   const formData = watch();
 
@@ -193,7 +192,6 @@ export default function DarbarReceiptForm() {
   const onSubmit = async (data) => {
     try {
       console.log("Receipt data:", data);
-
       const fixedData = {
         rNo: data.rNo,
         date: data.date,

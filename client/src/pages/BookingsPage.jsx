@@ -7,6 +7,7 @@ import BookingModal from "../components/BookingModal";
 import StatsSection from "../components/StatsSection";
 import FiltersSection from "../components/FiltersSection";
 import BookingsList from "../components/BookingsList";
+import bookingService from "../services/booking.service";
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
@@ -26,29 +27,6 @@ const emptyForm = {
   package: "Standard"
 };
 
-const formatDateForInput = (date) => {
-  if (!date) return "";
-  try {
-    // Handle both ISO strings and Date objects
-    let d;
-    if (typeof date === 'string') {
-      // If it's already YYYY-MM-DD format, return as is
-      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
-      // Parse ISO string in UTC
-      d = new Date(date + 'Z');
-    } else {
-      d = new Date(date);
-    }
-    // Use UTC values to avoid timezone shifts
-    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(d.getUTCDate()).padStart(2, "0");
-    const year = d.getUTCFullYear();
-    return `${year}-${month}-${day}`;
-  } catch (e) {
-    console.error('Date format error:', e);
-    return "";
-  }
-};
 
 export default function Bookings({ showToast }) {
   const [modal, setModal] = useState(null);
@@ -57,22 +35,13 @@ export default function Bookings({ showToast }) {
   const [saveLoading, setSaveLoading] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: fetchedBookings = [], isLoading, error } = useQuery({
-    queryKey: ["bookings"],
-    queryFn: async () => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/booking/allBookings`);
-        return response.data.success ? response.data.bookings : [];
-      } catch (err) {
-        console.error("Error fetching bookings:", err);
-        showToast?.("Failed to load bookings");
-        return [];
-      }
-    }
-  });
+  const { data: rawBookings = [], isLoading , error } = useQuery({
+  queryKey: ["bookings"],
+  queryFn:  bookingService.getAllBookings,
+});
 
-  const bookings = fetchedBookings?.map(b => {
-    // Properly handle date conversion
+  const bookings = rawBookings?.map(b => {
+
     let formattedDate = "";
     if (b.date) {
       const dateObj = new Date(b.date);
@@ -96,78 +65,27 @@ export default function Bookings({ showToast }) {
   const closeModal = () => setModal(null);
 
   const handleSave = async (form) => {
-    if (!form.client || !form.date || !form.phone || !form.event || !form.package) {
-      showToast?.("Please fill in all required fields");
-      return;
+  if (!form.client || !form.date || !form.phone || !form.event || !form.package) {
+    showToast?.("Please fill in all required fields");
+    return;
+  }
+  try {
+    setSaveLoading(true);
+    if (modal.mode === "new") {
+      await bookingService.createBooking(form);
+      showToast?.("Booking created successfully!");
+    } else {
+      await bookingService.updateBooking(form);
+      showToast?.("Booking updated successfully!");
     }
-    try {
-      setSaveLoading(true);
-
-      if (modal.mode === "new") {
-        try {
-          const response = await axios.post(`${API_BASE_URL}/booking/createBooking`, {
-            event: form.event,
-            date: form.date,
-            packageName: form.package,
-            phone: form.phone,
-            client: form.client,
-            guests: form.guests,
-            venue: form.venue,
-            totalAmount: form.totalAmount,
-            advancePaid: form.advancePaid,
-            paymentMethod: form.paymentMethod,
-            paymentNote: form.paymentNote,
-            status: form.status
-          });
-
-          if (response.data.success) {
-            showToast?.("Booking created successfully!");
-            closeModal();
-            queryClient.invalidateQueries({ queryKey: ["bookings"] });
-          } else {
-            throw new Error(response.data.message || "Failed to create booking");
-          }
-        } catch (err) {
-          console.error("Error creating booking:", err);
-          showToast?.("Failed to save booking");
-        }
-      } else {
-        try {
-          const response = await axios.put(`${API_BASE_URL}/booking/updateBooking`, {
-            id: form.id,
-            event: form.event,
-            date: form.date,
-            packageName: form.package,
-            phone: form.phone,
-            client: form.client,
-            guests: form.guests,
-            venue: form.venue,
-            totalAmount: form.totalAmount,
-            advancePaid: form.advancePaid,
-            paymentMethod: form.paymentMethod,
-            paymentNote: form.paymentNote,
-            status: form.status
-          });
-
-          if (response.data.success) {
-            showToast?.("Booking updated successfully!");
-            closeModal();
-            queryClient.invalidateQueries({ queryKey: ["bookings"] });
-          } else {
-            throw new Error(response.data.message || "Failed to update booking");
-          }
-        } catch (err) {
-          console.error("Error updating booking:", err);
-          showToast?.("Failed to update booking");
-        }
-      }
-    } catch (err) {
-      console.error("Error in handleSave:", err);
-      showToast?.("Failed to save booking");
-    } finally {
-      setSaveLoading(false);
-    }
-  };
+    closeModal();
+    queryClient.invalidateQueries({ queryKey: ["bookings"] });
+  } catch {
+    showToast?.("Failed to save booking");
+  } finally {
+    setSaveLoading(false);
+  }
+};
 
   const filtered = bookings
     .filter(b => filter === "All" || b.status === filter)
