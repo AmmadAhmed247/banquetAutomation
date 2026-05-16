@@ -1,3 +1,4 @@
+const { boolean } = require("drizzle-orm/gel-core");
 const {pgTable, integer, serial,varchar, text, timestamp , numeric, time} = require("drizzle-orm/pg-core")
 
 const user = pgTable("users", {
@@ -40,8 +41,22 @@ const packages = pgTable("packages", {
     price: integer("package_price").notNull()
 })
 
+
+const clients=pgTable("clients",{
+    id:serial("id").primaryKey().notNull().unique(),
+    name:varchar("name",{length:100}).notNull().unique(),
+    email:varchar("email",{length:100}).notNull().unique(),
+    phone:varchar("phone",{length:11}).notNull().unique(),
+    password:varchar("password").notNull(),
+    banquet_name:varchar("banquet_name").notNull(),
+    role: varchar("role", { length: 20 }).default("admin"),
+    is_active:boolean("is_active").default(true),
+    created_at:timestamp("created_at").defaultNow()
+
+})
+
 module.exports = {
     user,
     booking,
-    packages
+    packages,clients
 }

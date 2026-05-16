@@ -8,6 +8,13 @@
       "when": 1778698228101,
       "tag": "0000_glamorous_supernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778929869132,
+      "tag": "0001_freezing_dagger",
+      "breakpoints": true
     }
   ]
 }

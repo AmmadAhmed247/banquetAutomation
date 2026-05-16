@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   MessageCircle,
@@ -12,10 +12,22 @@ import {
   ReceiptIcon
 } from "lucide-react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-
+import axios from "axios"
 export default function RootLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [ready, setReady] = useState(false);
+
+useEffect(() => {
+  axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
+    withCredentials: true,  // axios uses this, not credentials:"include"
+  })
+    .then(() => setReady(true))
+    .catch(() => navigate("/login"));
+}, []);
+
+if (!ready) return null;
+  
 
   const tools = [
     // { name: "Inbox", path: "inbox", icon: MessageCircle },

@@ -50,7 +50,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="text-right">
-          <p className="text-slate-400 text-sm font-medium">Karachi • April 19, 2026</p>
+          <p className="text-slate-400 text-sm font-medium">{new Date().toLocaleString()}</p>
         </div>
       </div>
 
