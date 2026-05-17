@@ -4,7 +4,7 @@ const router = express.Router();
 const {getAllClients , createClient , getClientById , updateClient , deleteClient } = require("../controllers/clients.controller");
 
 // CREATE
-router.post("/", createClient);
+router.post("/create", createClient);
 
 // GET ALL
 router.get("/", getAllClients);
