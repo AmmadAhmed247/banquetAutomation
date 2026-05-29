@@ -9,7 +9,8 @@ import {
   Image,
   Bell,
   Settings,
-  ReceiptIcon
+  ReceiptIcon,
+  DollarSign
 } from "lucide-react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios"
@@ -36,6 +37,7 @@ if (!ready) return null;
     { name: "Calendar", path: "calendar", icon: Calendar },
     { name: "Bookings", path: "bookings", icon: CalendarCheck },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon },
+    { name: "Management System", path: "management", icon: DollarSign },
     // { name: "Gallery", path: "gallery", icon: Image },
     // { name: "Reminders", path: "reminders", icon: Bell },
     // { name: "Settings", path: "settings", icon: Settings },

@@ -9,6 +9,7 @@ import Recipt from "./components/Recipt";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/loginPage";
 import Gallery from "./pages/Gallery";
+import Management from "./pages/Management";
 const ComingSoon = ({ pageName }) => {
   return (
     <div className="flex items-center justify-center h-[80vh]">
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
       {
         path: "gallery-page",
         element: <Gallery />,
+      },
+      {
+        path: "management",
+        element: <ComingSoon pageName="Management Page" />,
       },
     ],
   },
