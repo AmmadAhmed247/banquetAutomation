@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import contactService from "../services/contacts.service";
 
 const INITIAL_CONTACTS = [
   { id: 1, name: "Ayesha & Bilal", phone: "+92 300 1234567", tag: "Confirmed", weddingDate: "2025-03-15", event: "Wedding", package: "Premium", avatar: "AB", lastMsg: "Thank you so much!", lastTime: "2h ago", unread: 0 },
@@ -7,11 +9,11 @@ const INITIAL_CONTACTS = [
 ];
 
 const TAG_STYLES = {
-  Confirmed:   "bg-emerald-100 text-emerald-700",
-  Inquiry:     "bg-amber-100 text-amber-700",
+  Confirmed: "bg-emerald-100 text-emerald-700",
+  Inquiry: "bg-amber-100 text-amber-700",
   "Follow-up": "bg-blue-100 text-blue-700",
-  Booked:      "bg-violet-100 text-violet-700",
-  Cancelled:   "bg-red-100 text-red-700",
+  Booked: "bg-violet-100 text-violet-700",
+  Cancelled: "bg-red-100 text-red-700",
 };
 
 const TAGS = Object.keys(TAG_STYLES);
@@ -22,13 +24,20 @@ export default function Contacts({ showToast }) {
   const [contacts, setContacts] = useState(INITIAL_CONTACTS);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [errors, setErrors] = useState({});
   const [deleteId, setDeleteId] = useState(null);
 
   const filtered = contacts.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
   );
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    defaultValues: EMPTY_FORM,
+  });
 
   const validate = () => {
     const e = {};
@@ -38,33 +47,48 @@ export default function Contacts({ showToast }) {
     return e;
   };
 
-  const handleSave = () => {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    const initials = form.name.split(/[\s&]+/).filter(Boolean).map(w => w[0]).join("").toUpperCase().slice(0, 2);
-    setContacts(prev => [...prev, {
-      ...form,
-      id: Date.now(),
-      avatar: initials,
-      lastMsg: "New contact added",
-      lastTime: "Just now",
-      unread: 0,
-    }]);
+  const onSubmit = async (data) => {
+    const initials = data.name
+      .split(/[\s&]+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+
+    await contactService.addClient(data)
+
+    setContacts((prev) => [
+      ...prev,
+      {
+        ...data,
+        id: Date.now(),
+        avatar: initials,
+        lastMsg: "New contact added",
+        lastTime: "Just now",
+        unread: 0,
+      },
+    ]);
+
+
+    reset();
     setModal(false);
-    setForm(EMPTY_FORM);
-    setErrors({});
     showToast?.("✓ Contact added successfully!");
   };
-
   const handleDelete = () => {
     setContacts(prev => prev.filter(c => c.id !== deleteId));
     setDeleteId(null);
     showToast?.("Contact removed.");
   };
 
-  const openModal = () => { setForm(EMPTY_FORM); setErrors({}); setModal(true); };
-  const closeModal = () => { setModal(false); setErrors({}); };
+  const openModal = () => {
+    setModal(true);
+  };
 
+  const closeModal = () => {
+    setModal(false);
+    reset();
+  };
   return (
     <div className="p-8 min-h-screen bg-slate-50">
       {/* Google Font */}
@@ -181,116 +205,148 @@ export default function Contacts({ showToast }) {
 
       {/* ── ADD CLIENT MODAL ── */}
       {modal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-body">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-xl font-bold text-slate-800">Add New Client</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Fill in the client's details below</p>
-              </div>
-              <button onClick={closeModal} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-
-              {/* Name */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Client Name <span className="text-red-400">*</span>
-                </label>
-                <input
-                  value={form.name}
-                  onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setErrors(er => ({ ...er, name: "" })); }}
-                  placeholder="e.g. Ayesha & Bilal"
-                  className={`w-full px-4 py-2.5 rounded-xl border text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition ${errors.name ? "border-red-300 bg-red-50 focus:ring-red-100" : "border-slate-200 bg-slate-50 focus:border-emerald-400 focus:ring-emerald-100"}`}
-                />
-                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Phone Number <span className="text-red-400">*</span>
-                </label>
-                <input
-                  value={form.phone}
-                  onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(er => ({ ...er, phone: "" })); }}
-                  placeholder="+92 300 1234567"
-                  className={`w-full px-4 py-2.5 rounded-xl border text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition ${errors.phone ? "border-red-300 bg-red-50 focus:ring-red-100" : "border-slate-200 bg-slate-50 focus:border-emerald-400 focus:ring-emerald-100"}`}
-                />
-                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
-              </div>
-
-              {/* Event */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Event Type</label>
-                <input
-                  value={form.event}
-                  onChange={e => setForm(f => ({ ...f, event: e.target.value }))}
-                  placeholder="e.g. Wedding, Bridal Shoot, Nikkah"
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
-                />
-              </div>
-
-              {/* Row: Package + Tag */}
-              <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-body">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+              {/* Modal Header */}
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Package</label>
-                  <select
-                    value={form.package}
-                    onChange={e => setForm(f => ({ ...f, package: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
-                  >
-                    {PACKAGES.map(p => <option key={p}>{p}</option>)}
-                  </select>
+                  <h2 className="font-display text-xl font-bold text-slate-800">Add New Client</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Fill in the client's details below</p>
                 </div>
+                <button onClick={closeModal} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+
+                {/* Name */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Status</label>
-                  <select
-                    value={form.tag}
-                    onChange={e => setForm(f => ({ ...f, tag: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
-                  >
-                    {TAGS.map(t => <option key={t}>{t}</option>)}
-                  </select>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                    Client Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    {...register("name", { required: "Name is Required!" })}
+                    placeholder="e.g. Ayesha & Bilal"
+                    className={`w-full px-4 py-2.5 rounded-xl border text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition ${errors.name ? "border-red-300 bg-red-50 focus:ring-red-100" : "border-slate-200 bg-slate-50 focus:border-emerald-400 focus:ring-emerald-100"}`}
+                  />
+                  {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                    Phone Number <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    {...register("phone", { required: "Phone No is Required!" })}
+                    placeholder="+92 300 1234567"
+                    className={`w-full px-4 py-2.5 rounded-xl border text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition ${errors.phone ? "border-red-300 bg-red-50 focus:ring-red-100" : "border-slate-200 bg-slate-50 focus:border-emerald-400 focus:ring-emerald-100"}`}
+                  />
+                  {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+                </div>
+
+                {/* Event */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Event Type</label>
+                  <input
+                    {...register("event", { required: "Event Name is Required!" })}
+                    placeholder="e.g. Wedding, Bridal Shoot, Nikkah"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
+                  />
+                </div>
+
+                {/* Row: Package + Tag */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                      Package
+                    </label>
+
+                    <select
+                      {...register("package", { required: "Package is required" })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>
+                        Select a package
+                      </option>
+
+                      {PACKAGES.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+
+                    {errors.package && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.package.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                      Status
+                    </label>
+
+                    <select
+                      {...register("tag", { required: "Status is required" })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>
+                        Select status
+                      </option>
+
+                      {TAGS.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+
+                    {errors.tag && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.tag.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Wedding Date */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Wedding Date</label>
+                  <input
+                    type="date"
+                    {...register("weddingDate", { required: "Wedding Date is Required!" })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-700 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
+                  />
                 </div>
               </div>
 
-              {/* Wedding Date */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Wedding Date</label>
-                <input
-                  type="date"
-                  value={form.weddingDate}
-                  onChange={e => setForm(f => ({ ...f, weddingDate: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-700 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
-                />
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-semibold rounded-xl shadow-md shadow-emerald-100 transition-all duration-150 text-sm"
+                >
+                  Save Client
+                </button>
+                <button
+                  onClick={closeModal}
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium transition"
+                >
+                  Cancel
+                </button>
               </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
-              <button
-                onClick={handleSave}
-                className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-semibold rounded-xl shadow-md shadow-emerald-100 transition-all duration-150 text-sm"
-              >
-                Save Client
-              </button>
-              <button
-                onClick={closeModal}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium transition"
-              >
-                Cancel
-              </button>
             </div>
           </div>
-        </div>
+        </form>
       )}
 
       {/* ── DELETE CONFIRM MODAL ── */}

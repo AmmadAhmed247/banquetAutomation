@@ -1,9 +1,10 @@
 import axios from "axios";
+import api from "../api/api";
 
 const receiptService = {
     sendReceipt: async (data)=> {
         try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/receipt/sendReceipt`, data)
+            const res = await api.post('api/receipt/sendReceipt', data)
             const responseData = res.data
             console.log(responseData)
             return responseData

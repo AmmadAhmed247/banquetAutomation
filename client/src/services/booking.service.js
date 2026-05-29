@@ -1,20 +1,21 @@
 import api from "../api/api";
-import axios from "axios";
 const bookingService = {
 
   getAllBookings: async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/booking/allBookings`);
+      const res = await api.get('/api/booking/allBookings');
+    
       return res.data.bookings || [];
     } catch (error) {
       console.error("Error fetching bookings:", error);
       throw error;
     }
   },
+  
 
   createBooking: async (form) => {
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/booking/createBooking`, {
+      const res = await api.post('/api/booking/createBooking', {
         event:         form.event,
         date:          form.date,
         packageName:   form.package,
@@ -37,7 +38,7 @@ const bookingService = {
 
   updateBooking: async (form) => {
     try {
-      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/booking/updateBooking`, {
+      const res = await api.put('/api/booking/updateBooking', {
         id:            form.id,
         event:         form.event,
         date:          form.date,
