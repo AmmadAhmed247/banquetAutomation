@@ -21,7 +21,7 @@ export default function RootLayout() {
 
 useEffect(() => {
   axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
-    withCredentials: true,  // axios uses this, not credentials:"include"
+    withCredentials: true,  
   })
     .then(() => setReady(true))
     .catch(() => navigate("/login"));

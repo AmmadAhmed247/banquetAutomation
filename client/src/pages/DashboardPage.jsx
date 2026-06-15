@@ -5,20 +5,16 @@ import {
   Users,
   Calendar,
   CalendarCheck,
-  Image,
-  Bell,
-  Settings,
+
   ReceiptIcon,
   DollarSign
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { BOOKINGS } from "../data/mockData";
+
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-
   const tools = [
-    
     { name: "Contacts", path: "contacts", icon: Users, desc: "Manage your studio" },
     { name: "Calendar", path: "calendar", icon: Calendar, desc: "Manage your studio" },
     { name: "Bookings", path: "bookings", icon: CalendarCheck, desc: "Manage your studio" },
@@ -28,14 +24,12 @@ export default function DashboardPage() {
     // { name: "Reminders", path: "reminders", icon: Bell, desc: "Manage your studio" },
     // { name: "Settings", path: "settings", icon: Settings, desc: "Manage your studio" },
   ];
-
   const stats = [
     { label: "Total Clients", val: "48", trend: "+3 this week", icon: Users },
     { label: "Weddings", val: "6", trend: "2 upcoming", icon: Calendar },
     { label: "Messages", val: "312", trend: "Today", icon: MessageCircle },
     { label: "Auto Replies", val: "89", trend: "This week", icon: Zap },
   ];
-
   const alerts = [
     { type: "red", msg: "Ahmed & Sana Raza — Wedding in 2 days! Auto reminder queued.", action: "Send Now" },
     { type: "amber", msg: "Sara & Ali Khan — Cold drinks addon reminder due in 1 day.", action: "Send" },

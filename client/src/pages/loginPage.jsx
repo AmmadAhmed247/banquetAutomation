@@ -28,7 +28,7 @@ const LoginPage = () => {
         {/* Brand */}
         <div className="flex items-center gap-2 mb-8 justify-center">
           <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold text-base">B</span>
+            <span className="text-white font-bold text-base">D</span>
           </div>
         </div>
 
