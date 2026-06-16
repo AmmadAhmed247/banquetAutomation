@@ -1,56 +1,56 @@
 import React, { useEffect, useState } from "react";
 import {
   LayoutDashboard,
-  MessageCircle,
-  Zap,
   Users,
   Calendar,
   CalendarCheck,
-  Image,
-  Bell,
-  Settings,
   ReceiptIcon,
   DollarSign
 } from "lucide-react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import axios from "axios"
+import axios from "axios";
+
 export default function RootLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [ready, setReady] = useState(false);
 
-useEffect(() => {
-  axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
-    withCredentials: true,  
-  })
-    .then(() => setReady(true))
-    .catch(() => navigate("/login"));
-}, []);
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
+          withCredentials: true,
+        });
+        setReady(true);
+      } catch (error) {
+        // If API fails (not logged in / not premium), kick them back to login
+        navigate("/login");
+      }
+    };
 
-if (!ready) return null;
-  
+    checkAuth();
+  }, [navigate]);
+
+  if (!ready) return null; // Prevents premium UI flash while checking auth
 
   const tools = [
-    // { name: "Inbox", path: "inbox", icon: MessageCircle },
-    // { name: "Auto Reply Bot", path: "autobot", icon: Zap },
     { name: "Contacts", path: "contacts", icon: Users },
     { name: "Calendar", path: "calendar", icon: Calendar },
     { name: "Bookings", path: "bookings", icon: CalendarCheck },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon },
     { name: "Management System", path: "management", icon: DollarSign },
-    // { name: "Gallery", path: "gallery", icon: Image },
-    // { name: "Reminders", path: "reminders", icon: Bell },
-    // { name: "Settings", path: "settings", icon: Settings },
   ];
 
-  const isOnDashboard = location.pathname === "/";
+  // UPDATED: Check if they are on the main dashboard page
+  const isOnDashboard = location.pathname === "/dashboard" || location.pathname === "/dashboard/";
 
   return (
     <div className="flex h-screen bg-[#fcfdfd] overflow-hidden font-sans">
       {!isOnDashboard && (
         <aside className="w-24 bg-white border-r border-emerald-50 flex flex-col items-center py-6 animate-in slide-in-from-left duration-500">
+          {/* UPDATED: Navigates back to main dashboard view */}
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")} 
             className="group flex flex-col items-center gap-1 mb-10 transition-all hover:scale-105"
           >
             <div className="w-12 h-12 bg-slate-700 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-slate-200 group-hover:bg-green-600 transition-colors">
@@ -64,33 +64,38 @@ if (!ready) return null;
           <div className="w-8 h-[1px] bg-slate-100 mb-8" />
 
           <nav className="flex flex-col gap-6 flex-1">
-            {tools.map((t) => (
-              <button
-                key={t.path}
-                onClick={() => navigate(`/${t.path}`)}
-                className="group relative flex items-center justify-center"
-              >
-                <div
-                  className={`
-              p-3.5 rounded-2xl transition-all duration-300
-              ${
-                location.pathname === `/${t.path}`
-                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100 scale-110"
-                  : "text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"
-              }
-            `}
-                >
-                  <t.icon
-                    size={22}
-                    strokeWidth={location.pathname === `/${t.path}` ? 2.5 : 2}
-                  />
-                </div>
+            {tools.map((t) => {
+              // UPDATED: Create absolute path for comparison and navigation
+              const fullPath = `/dashboard/${t.path}`;
+              const isActive = location.pathname === fullPath;
 
-                <span className="absolute left-20 bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl z-50 uppercase tracking-widest">
-                  {t.name}
-                </span>
-              </button>
-            ))}
+              return (
+                <button
+                  key={t.path}
+                  onClick={() => navigate(fullPath)} // UPDATED
+                  className="group relative flex items-center justify-center"
+                >
+                  <div
+                    className={`
+                      p-3.5 rounded-2xl transition-all duration-300
+                      ${isActive
+                        ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100 scale-110"
+                        : "text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"
+                      }
+                    `}
+                  >
+                    <t.icon
+                      size={22}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                  </div>
+
+                  <span className="absolute left-20 bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl z-50 uppercase tracking-widest">
+                    {t.name}
+                  </span>
+                </button>
+              );
+            })}
           </nav>
 
           <div className="mt-auto pt-6 border-t border-slate-50 w-full flex flex-col items-center gap-2">

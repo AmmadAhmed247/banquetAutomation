@@ -22,7 +22,7 @@ const ComingSoon = ({ pageName }) => {
 };
 export const router = createBrowserRouter([
   {
-    path: "/home",
+    path: "/",
     element: <HomePage />,
   },
   {
@@ -30,11 +30,11 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    path: "/",
-    element: <RootLayout />,
+    path: "/dashboard",
+    element: <RootLayout />, 
     children: [
       {
-        path: "/",
+        index: true, 
         element: <DashboardPage />,
       },
       {
