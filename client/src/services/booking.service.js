@@ -59,6 +59,17 @@ const bookingService = {
       throw error;
     }
   },
+  deleteBooking: async (id) => {
+  try {
+    const res = await api.delete('/api/booking/deleteBooking', {
+      data: { id }
+    });
+    return res.data;
+  } catch (error) {
+    console.error("Error deleting booking:", error);
+    throw error;
+  }
+},
 
 };
 

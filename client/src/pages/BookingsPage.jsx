@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PlusCircle, AlertCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-
+import toast from "react-hot-toast";
 import BookingModal from "../components/BookingModal";
 import StatsSection from "../components/StatsSection";
 import FiltersSection from "../components/FiltersSection";
@@ -10,7 +10,6 @@ import BookingsList from "../components/BookingsList";
 import bookingService from "../services/booking.service";
 
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
 const emptyForm = {
   client: "",
@@ -35,13 +34,13 @@ export default function Bookings({ showToast }) {
   const [saveLoading, setSaveLoading] = useState(false);
   const queryClient = useQueryClient();
 
+
   const { data: rawBookings = [], isLoading , error } = useQuery({
   queryKey: ["bookings"],
   queryFn:  bookingService.getAllBookings,
 });
 
   const bookings = rawBookings?.map(b => {
-
     let formattedDate = "";
     if (b.date) {
       const dateObj = new Date(b.date);
@@ -85,6 +84,38 @@ export default function Bookings({ showToast }) {
   } finally {
     setSaveLoading(false);
   }
+};
+const handleDelete = (booking) => {
+  toast((t) => (
+    <div className="flex items-center gap-3">
+      <p className="text-sm text-green-900">
+        Delete booking for <span className="font-semibold">{booking.client}</span>?
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={async () => {
+            toast.dismiss(t.id);
+            try {
+              await bookingService.deleteBooking(booking.id);
+              toast.success("Booking deleted successfully!");
+              queryClient.invalidateQueries({ queryKey: ["bookings"] });
+            } catch {
+              toast.error("Failed to delete booking");
+            }
+          }}
+          className="text-xs font-semibold bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 px-3 py-1.5 rounded-lg"
+        >
+          Delete
+        </button>
+        <button
+          onClick={() => toast.dismiss(t.id)}
+          className="text-xs font-semibold bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  ), { duration: Infinity });
 };
 
   const filtered = bookings
@@ -136,6 +167,7 @@ export default function Bookings({ showToast }) {
         filteredBookings={filtered}
         isLoading={isLoading}
         onEdit={openEdit}
+        onDelete={handleDelete}
       />
 
       {/* Modal */}

@@ -215,6 +215,35 @@ async function UpdateBooking(bookingId, bookingData) {
         }
     }
 }
+async function DeleteBooking(bookingId) {
+    try {
+        const deletedBooking = await db
+        .delete(booking)
+        .where(eq(booking.id, bookingId))
+        .returning()
+
+        if(!deletedBooking || deletedBooking.length === 0){
+            return {
+                success: false,
+                message: "Booking Not Found!"
+            }
+        }
+
+        return {
+            success: true,
+            booking: deletedBooking[0],
+            message: "Booking deleted successfully!"
+        }
+
+    } catch (error) {
+        console.log("Error In Booking Delete (Service): ", error)
+        return {
+            success: false,
+            message: "Failed to delete booking",
+            error: error.message
+        }
+    }
+}
 
 function parseWhatsAppMessage(body, phone) {
   if (!body?.toUpperCase().startsWith("BOOK:")) return null;
@@ -238,5 +267,6 @@ module.exports = {
     GetAllBookings,
     GetAllBookingsUnfiltered,
     UpdateBooking,
-    parseWhatsAppMessage
+    parseWhatsAppMessage,
+    DeleteBooking
 }

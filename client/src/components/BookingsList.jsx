@@ -1,4 +1,4 @@
-import { Loader, Pencil, CalendarDays, Phone, Users, MapPin, Tag, CreditCard } from "lucide-react";
+import { Loader, Pencil, CalendarDays, Phone, Users, MapPin, Tag, CreditCard, Delete } from "lucide-react";
 
 const statusConfig = {
   Confirmed: { bg: "bg-green-100", text: "text-green-700", border: "border-green-200", bar: "bg-green-500" },
@@ -29,7 +29,7 @@ function PaymentBar({ total, advance }) {
 }
 
 // ── CARD (below xl) ──────────────────────────────────────────────────────────
-function BookingCard({ booking, onEdit }) {
+function BookingCard({ booking, onEdit , onDelete }) {
   const sc = statusConfig[booking.status] || statusConfig.Pending;
   return (
     <div className="bg-white border border-green-100 rounded-2xl shadow-sm overflow-hidden">
@@ -52,6 +52,13 @@ function BookingCard({ booking, onEdit }) {
             >
               <Pencil size={13} />
             </button>
+            <button
+              onClick={() => onDelete(booking)}
+              className="p-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-xl transition-all"
+            >
+              <Delete size={13} />
+            </button>
+            
           </div>
         </div>
 
@@ -102,13 +109,13 @@ function BookingCard({ booking, onEdit }) {
 }
 
 // ── TABLE (xl and above) ─────────────────────────────────────────────────────
-function BookingsTable({ filteredBookings, onEdit }) {
+function BookingsTable({ filteredBookings, onEdit , onDelete }) {
   return (
     <div className="bg-white border border-green-100 rounded-2xl overflow-hidden shadow-sm">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-green-50/60 border-b border-green-100">
-            {["Client", "Event", "Date", "Guests", "Venue", "Total", "Payment", "Payment Note", "Status",  ""].map((h) => (
+            {["Client", "Event", "Date", "Guests", "Venue", "Total", "Payment", "Payment Note", "Status",  "", ""].map((h) => (
               <th key={h} className="text-left text-[10px] font-semibold text-green-500 uppercase tracking-wider px-4 py-3">
                 {h}
               </th>
@@ -169,6 +176,14 @@ function BookingsTable({ filteredBookings, onEdit }) {
                     <Pencil size={11} /> Edit
                   </button>
                 </td>
+                  <td className="px-4 py-3.5">
+                  <button
+                    onClick={() => onDelete(booking)}
+                    className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all"
+                  >
+                    <Delete size={11} /> Delete
+                  </button>
+                </td>
 
               </tr>
             );
@@ -180,7 +195,7 @@ function BookingsTable({ filteredBookings, onEdit }) {
 }
 
 // MAIN EXPORT 
-export default function BookingsList({ filteredBookings, isLoading, onEdit }) {
+export default function BookingsList({ filteredBookings, isLoading, onEdit , onDelete }) {
   if (isLoading && filteredBookings.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -202,13 +217,13 @@ export default function BookingsList({ filteredBookings, isLoading, onEdit }) {
       {/* Card grid — below xl */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:hidden">
         {filteredBookings.map((booking) => (
-          <BookingCard key={booking.id} booking={booking} onEdit={onEdit} />
+          <BookingCard key={booking.id} booking={booking} onEdit={onEdit}  onDelete={onDelete} />
         ))}
       </div>
 
       {/* Table — xl and above */}
       <div className="hidden xl:block">
-        <BookingsTable filteredBookings={filteredBookings} onEdit={onEdit} />
+        <BookingsTable filteredBookings={filteredBookings} onEdit={onEdit} onDelete={onDelete} />
       </div>
     </>
   );
