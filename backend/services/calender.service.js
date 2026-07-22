@@ -1,3 +1,10 @@
+const { createCanvas } = require("canvas");
+const { db } = require("../config/db");
+const { booking } = require("../model/schema");
+const { and, gte, lte } = require("drizzle-orm");
+const fs = require("fs");
+const path = require("path");
+
 async function generateCalendarImage(year, month) {
     if (!year || !month) {
         throw new Error(`Invalid inputs: year=${year}, month=${month}`);
@@ -92,4 +99,5 @@ async function generateCalendarImage(year, month) {
     return outputPath;
 }
 
-module.exports = { generateCalendarImage }
+
+module.exports = { generateCalendarImage };
