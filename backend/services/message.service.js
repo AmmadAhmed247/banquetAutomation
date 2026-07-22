@@ -5,7 +5,18 @@ const { generateReceipt } = require("./recipt.service");
 
 
 async function getHelpMessage() {
-  return `Available commands:\n\nCALENDAR - View availability\nGALLERY - View our gallery\nSUPPORT - Talk to a human\nHELP - Show this menu`;
+  return `
+    🏛️ Darbar Banquet Assistant Menu
+    Welcome to Darbar Banquet! Please review our available commands below to get started:
+    
+    📅 CALENDAR — View our real-time availability and open dates
+
+    📸 GALLERY — Browse photos of our stunning venue setups
+
+    🎧 SUPPORT — Connect directly with a human representative
+
+    ❓ HELP — Display this interactive menu
+  `;
 }
 
 async function getPackagesMessage() {
@@ -43,13 +54,13 @@ async function getReceiptMessage(phone, data) {
 async function getCalendarMessage(phone) {
   try {
     const now = new Date();
-  await generateCalendarImage(now.getFullYear(), now.getMonth() + 1);
+    await generateCalendarImage(now.getFullYear(), now.getMonth() + 1);
 
-  await sendMediaMessage(
-    phone,
-    "Here is our availability for this month!\n\n🔴 Red = Booked\n⚪ White = Available\n",
-    `${process.env.BASE_URL}/public/calendar.png`
-  );
+    await sendMediaMessage(
+      phone,
+      "Here is our availability for this month!\n\n🔴 Red = Booked\n⚪ White = Available\n",
+      `${process.env.BASE_URL}/public/calendar.png`
+    );
   } catch (error) {
     console.log("An Error Occured: ", error)
   }
