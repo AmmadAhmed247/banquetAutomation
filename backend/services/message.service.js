@@ -26,6 +26,8 @@ async function getReceiptMessage(phone, data) {
 
   const mediaUrl = `${process.env.BASE_URL}/public/${fileName}`;
 
+  console.log(mediaUrl)
+
   await sendMediaMessage(
     phone,
     "Here is your booking receipt!",

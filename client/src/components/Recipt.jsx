@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { Printer, RotateCcw, User, Phone, MapPin, CalendarDays, Users, Building2, Wallet, CreditCard, PiggyBank } from "lucide-react";
 import receiptService from "../services/receipt.service";
+import toast from "react-hot-toast";
 
 const defaultForm = {
   rNo: "",
@@ -214,7 +215,9 @@ export default function DarbarReceiptForm() {
 
       const result = await receiptService.sendReceipt(formattedData)
 
-      console.log(result)
+      if(result?.success === true) {
+        toast.success("Receipt Sent!")
+      }
 
     } catch (error) {
       console.log("An Error Occured: ", error)

@@ -4,12 +4,15 @@ import {
   ChevronDown, BarChart3, Calendar, DollarSign, Package,
   SlidersHorizontal, X, ArrowUpRight, Inbox
 } from "lucide-react";
+import { getAllBookings } from "../lib/hooks/booking.hook";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const EXPENSE_CATEGORIES = ["Catering","Decoration","Audio / Lights","Staff Wages","Cleaning","Maintenance","Utilities","Marketing","Miscellaneous"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const EXPENSE_CATEGORIES = ["Catering", "Decoration", "Audio / Lights", "Staff Wages", "Cleaning", "Maintenance", "Utilities", "Marketing", "Miscellaneous"];
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
+
+
 
 function currency(n) {
   return "₨ " + Number(n || 0).toLocaleString("en-PK");
@@ -21,37 +24,37 @@ function pct(a, b) {
 
 // ── seed data ─────────────────────────────────────────────────────────────────
 const SEED_BOOKINGS = [
-  { id: 1,  hall: "Hall A", client: "Rania & Omar",    event: "Wedding",    date: "2026-05-03", revenue: 275000 },
-  { id: 2,  hall: "Hall B", client: "Sana & Bilal",    event: "Nikkah",     date: "2026-05-03", revenue: 120000 },
-  { id: 3,  hall: "Hall A", client: "Fatima & Usman",  event: "Wedding",    date: "2026-05-14", revenue: 310000 },
-  { id: 4,  hall: "Hall B", client: "Ayesha & Hassan", event: "Reception",  date: "2026-05-20", revenue: 180000 },
-  { id: 5,  hall: "Hall A", client: "Zara & Khalid",   event: "Mehndi",     date: "2026-06-05", revenue: 145000 },
-  { id: 6,  hall: "Hall B", client: "Sara & Ahmed",    event: "Wedding",    date: "2026-06-12", revenue: 290000 },
-  { id: 7,  hall: "Hall A", client: "Hira & Faisal",   event: "Wedding",    date: "2026-06-19", revenue: 340000 },
-  { id: 8,  hall: "Hall B", client: "Mariam & Tariq",  event: "Reception",  date: "2026-07-08", revenue: 160000 },
+  { id: 1, hall: "Hall A", client: "Rania & Omar", event: "Wedding", date: "2026-05-03", revenue: 275000 },
+  { id: 2, hall: "Hall B", client: "Sana & Bilal", event: "Nikkah", date: "2026-05-03", revenue: 120000 },
+  { id: 3, hall: "Hall A", client: "Fatima & Usman", event: "Wedding", date: "2026-05-14", revenue: 310000 },
+  { id: 4, hall: "Hall B", client: "Ayesha & Hassan", event: "Reception", date: "2026-05-20", revenue: 180000 },
+  { id: 5, hall: "Hall A", client: "Zara & Khalid", event: "Mehndi", date: "2026-06-05", revenue: 145000 },
+  { id: 6, hall: "Hall B", client: "Sara & Ahmed", event: "Wedding", date: "2026-06-12", revenue: 290000 },
+  { id: 7, hall: "Hall A", client: "Hira & Faisal", event: "Wedding", date: "2026-06-19", revenue: 340000 },
+  { id: 8, hall: "Hall B", client: "Mariam & Tariq", event: "Reception", date: "2026-07-08", revenue: 160000 },
 ];
 
 const SEED_EXPENSES = [
-  { id: 1, bookingId: 1, category: "Catering",       label: "Dinner for 400 guests",   amount: 140000 },
-  { id: 2, bookingId: 1, category: "Decoration",     label: "Floral stage setup",      amount: 55000  },
-  { id: 3, bookingId: 1, category: "Audio / Lights", label: "Sound & LED lighting",    amount: 30000  },
-  { id: 4, bookingId: 1, category: "Staff Wages",    label: "Serving staff × 20",      amount: 24000  },
-  { id: 5, bookingId: 2, category: "Catering",       label: "Lunch for 150 guests",    amount: 52000  },
-  { id: 6, bookingId: 2, category: "Decoration",     label: "Basic floral décor",      amount: 18000  },
-  { id: 7, bookingId: 3, category: "Catering",       label: "Dinner for 500 guests",   amount: 175000 },
-  { id: 8, bookingId: 3, category: "Decoration",     label: "Premium décor package",   amount: 72000  },
-  { id: 9, bookingId: 3, category: "Staff Wages",    label: "Full crew",               amount: 30000  },
-  { id:10, bookingId: 4, category: "Catering",       label: "Dinner buffet",           amount: 88000  },
-  { id:11, bookingId: 4, category: "Audio / Lights", label: "AV setup",                amount: 22000  },
-  { id:12, bookingId: 5, category: "Decoration",     label: "Mehndi stage & lights",   amount: 48000  },
-  { id:13, bookingId: 5, category: "Catering",       label: "Snacks & dinner",         amount: 38000  },
-  { id:14, bookingId: 6, category: "Catering",       label: "Full wedding dinner",     amount: 155000 },
-  { id:15, bookingId: 6, category: "Decoration",     label: "Luxury floral package",   amount: 65000  },
-  { id:16, bookingId: 7, category: "Catering",       label: "Dinner for 550 guests",   amount: 192000 },
-  { id:17, bookingId: 7, category: "Decoration",     label: "Grand stage décor",       amount: 82000  },
-  { id:18, bookingId: 7, category: "Staff Wages",    label: "Premium crew",            amount: 36000  },
-  { id:19, bookingId: 8, category: "Catering",       label: "Buffet dinner",           amount: 74000  },
-  { id:20, bookingId: 8, category: "Decoration",     label: "Standard décor",          amount: 28000  },
+  { id: 1, bookingId: 1, category: "Catering", label: "Dinner for 400 guests", amount: 140000 },
+  { id: 2, bookingId: 1, category: "Decoration", label: "Floral stage setup", amount: 55000 },
+  { id: 3, bookingId: 1, category: "Audio / Lights", label: "Sound & LED lighting", amount: 30000 },
+  { id: 4, bookingId: 1, category: "Staff Wages", label: "Serving staff × 20", amount: 24000 },
+  { id: 5, bookingId: 2, category: "Catering", label: "Lunch for 150 guests", amount: 52000 },
+  { id: 6, bookingId: 2, category: "Decoration", label: "Basic floral décor", amount: 18000 },
+  { id: 7, bookingId: 3, category: "Catering", label: "Dinner for 500 guests", amount: 175000 },
+  { id: 8, bookingId: 3, category: "Decoration", label: "Premium décor package", amount: 72000 },
+  { id: 9, bookingId: 3, category: "Staff Wages", label: "Full crew", amount: 30000 },
+  { id: 10, bookingId: 4, category: "Catering", label: "Dinner buffet", amount: 88000 },
+  { id: 11, bookingId: 4, category: "Audio / Lights", label: "AV setup", amount: 22000 },
+  { id: 12, bookingId: 5, category: "Decoration", label: "Mehndi stage & lights", amount: 48000 },
+  { id: 13, bookingId: 5, category: "Catering", label: "Snacks & dinner", amount: 38000 },
+  { id: 14, bookingId: 6, category: "Catering", label: "Full wedding dinner", amount: 155000 },
+  { id: 15, bookingId: 6, category: "Decoration", label: "Luxury floral package", amount: 65000 },
+  { id: 16, bookingId: 7, category: "Catering", label: "Dinner for 550 guests", amount: 192000 },
+  { id: 17, bookingId: 7, category: "Decoration", label: "Grand stage décor", amount: 82000 },
+  { id: 18, bookingId: 7, category: "Staff Wages", label: "Premium crew", amount: 36000 },
+  { id: 19, bookingId: 8, category: "Catering", label: "Buffet dinner", amount: 74000 },
+  { id: 20, bookingId: 8, category: "Decoration", label: "Standard décor", amount: 28000 },
 ];
 
 // ── sub-components ────────────────────────────────────────────────────────────
@@ -60,10 +63,10 @@ function KpiCard({ label, value, sub, icon: Icon, trend, type = "neutral" }) {
   const styles = {
     neutral: { bg: "bg-white", border: "border-emerald-100/60", iconBg: "bg-emerald-50/50", iconText: "text-emerald-600", text: "text-stone-400" },
     premium: { bg: "bg-emerald-600", border: "border-emerald-700", iconBg: "bg-emerald-700", iconText: "text-emerald-200", text: "text-emerald-100" },
-    danger:  { bg: "bg-white", border: "border-emerald-100/60", iconBg: "bg-rose-50", iconText: "text-rose-600", text: "text-stone-400" },
+    danger: { bg: "bg-white", border: "border-emerald-100/60", iconBg: "bg-rose-50", iconText: "text-rose-600", text: "text-stone-400" },
   };
   const s = styles[type];
-  
+
   return (
     <div className={`${s.bg} border ${s.border} rounded-xl p-6 transition-all duration-300 hover:shadow-sm`}>
       <div className="flex items-center justify-between mb-4">
@@ -133,12 +136,14 @@ function MonthBar({ month, revenue, expense, profit, maxRevenue }) {
 //  MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Management() {
-  const [bookings]    = useState(SEED_BOOKINGS);
+  // const [bookings] = useState(SEED_BOOKINGS);
   const [expenses, setExpenses] = useState(SEED_EXPENSES);
-  const [selectedYear, setSelectedYear]       = useState(CURRENT_YEAR);
-  const [selectedMonth, setSelectedMonth]     = useState(null);      // null = all
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [selectedMonth, setSelectedMonth] = useState(null);      // null = all
   const [selectedBookingId, setSelectedBookingId] = useState(null);  // for expense panel
-  const [hallFilter, setHallFilter]           = useState("all");
+  const [hallFilter, setHallFilter] = useState("all");
+
+  const { data: bookings } = getAllBookings()
 
   // new expense form
   const [newExp, setNewExp] = useState({ category: EXPENSE_CATEGORIES[0], label: "", amount: "" });
@@ -148,9 +153,9 @@ export default function Management() {
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       const d = new Date(b.date);
-      const yearMatch  = d.getFullYear() === selectedYear;
+      const yearMatch = d.getFullYear() === selectedYear;
       const monthMatch = selectedMonth === null || d.getMonth() === selectedMonth;
-      const hallMatch  = hallFilter === "all" || b.hall === hallFilter;
+      const hallMatch = hallFilter === "all" || b.hall === hallFilter;
       return yearMatch && monthMatch && hallMatch;
     });
   }, [bookings, selectedYear, selectedMonth, hallFilter]);
@@ -168,8 +173,8 @@ export default function Management() {
   const totalExpense = filteredBookings.reduce((s, b) => {
     return s + (expensesByBooking[b.id] || []).reduce((a, e) => a + Number(e.amount), 0);
   }, 0);
-  const totalProfit  = totalRevenue - totalExpense;
-  const margin       = pct(totalProfit, totalRevenue);
+  const totalProfit = totalRevenue - totalExpense;
+  const margin = pct(totalProfit, totalRevenue);
 
   const monthlyData = useMemo(() => {
     return MONTHS.map((m, idx) => {
@@ -213,13 +218,13 @@ export default function Management() {
 
   const selectedBooking = bookings.find((b) => b.id === selectedBookingId);
   const selectedBookingExpenses = selectedBookingId ? (expensesByBooking[selectedBookingId] || []) : [];
-  const selectedBookingRevenue  = selectedBooking?.revenue || 0;
-  const selectedBookingExpense  = selectedBookingExpenses.reduce((s, e) => s + Number(e.amount), 0);
-  const selectedBookingProfit   = selectedBookingRevenue - selectedBookingExpense;
+  const selectedBookingRevenue = selectedBooking?.revenue || 0;
+  const selectedBookingExpense = selectedBookingExpenses.reduce((s, e) => s + Number(e.amount), 0);
+  const selectedBookingProfit = selectedBookingRevenue - selectedBookingExpense;
 
   return (
     <div className="min-h-screen bg-emerald-50/20 text-stone-900 p-6 md:p-8 antialiased font-sans selection:bg-emerald-100">
-      
+
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 mb-8 pb-6 border-b border-emerald-100/70">
         <div>
@@ -233,7 +238,7 @@ export default function Management() {
         <div className="flex flex-wrap gap-3 items-center">
           {/* Hall filter */}
           <div className="bg-emerald-50 p-1 rounded-lg flex gap-0.5 border border-emerald-100/50">
-            {["all","Hall A","Hall B"].map((h) => (
+            {["all", "Hall A", "Hall B"].map((h) => (
               <button key={h} onClick={() => setHallFilter(h)}
                 className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all
                   ${hallFilter === h
@@ -390,7 +395,7 @@ export default function Management() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-emerald-50/30 border-b border-emerald-100/70">
-                  {["Client Profiling","Asset","Type","Target Date","Gross Yield","Operational Cost","Net Yield",""].map((h) => (
+                  {["Client Profiling", "Asset", "Type", "Target Date", "Gross Yield", "Operational Cost", "Net Yield", ""].map((h) => (
                     <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
                       {h}
                     </th>
@@ -423,7 +428,7 @@ export default function Management() {
                       </td>
                       <td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td>
                       <td className="px-5 py-3.5 text-[12px] text-stone-400 font-light">
-                        {new Date(b.date).toLocaleDateString("en-PK", { day:"numeric", month:"short" })}
+                        {new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
                       </td>
                       <td className="px-5 py-3.5 text-[13px] font-serif font-medium text-stone-800">{currency(b.revenue)}</td>
                       <td className="px-5 py-3.5 text-[13px] font-serif text-rose-600">{currency(bExp)}</td>
@@ -464,7 +469,7 @@ export default function Management() {
                     <span className="text-[9px] font-semibold uppercase tracking-wider bg-emerald-100/70 px-2 py-0.5 rounded text-emerald-800 border border-emerald-200/50">{selectedBooking?.hall}</span>
                     <p className="font-serif text-base font-normal text-stone-900 mt-1.5">{selectedBooking?.client}</p>
                     <p className="text-[11px] text-stone-400 mt-0.5">
-                      {selectedBooking?.event} · {new Date(selectedBooking?.date).toLocaleDateString("en-PK", { day:"numeric", month:"short", year:"numeric" })}
+                      {selectedBooking?.event} · {new Date(selectedBooking?.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
                     </p>
                   </div>
                   <button onClick={() => setSelectedBookingId(null)} className="text-stone-400 hover:text-stone-900 p-1">

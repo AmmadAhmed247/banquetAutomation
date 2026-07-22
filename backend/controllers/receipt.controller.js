@@ -44,6 +44,7 @@ async function SendReceiptMessage(req, res) {
       ? phone
       : `whatsapp:+${phone.replace(/\D/g, "").replace(/^0/, "92")}`;
 
+
     const receipt = await getReceiptMessage(formattedPhone, {
       rNo,
       date,
