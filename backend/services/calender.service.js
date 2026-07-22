@@ -1,17 +1,11 @@
-const { createCanvas } = require("canvas");
-const { db } = require("../config/db");
-const { booking } = require("../model/schema");
-const { and, gte, lte } = require("drizzle-orm");
-const fs = require("fs");
-const path = require("path");
-
 async function generateCalendarImage(year, month) {
     if (!year || !month) {
         throw new Error(`Invalid inputs: year=${year}, month=${month}`);
     }
 
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 0);
+    // Force strict UTC start/end boundaries for database queries
+    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
     // Only need booked dates from bookings table
     const booked = await db
@@ -19,11 +13,14 @@ async function generateCalendarImage(year, month) {
         .from(booking)
         .where(and(gte(booking.date, start), lte(booking.date, end)));
 
+    // Safely extract day of month in UTC
     const bookedDays = booked
         .map(b => b?.date)
         .filter(Boolean)
-        .map(d => d.getDate());
-
+        .map(d => {
+            const dateObj = typeof d === "string" ? new Date(d) : d;
+            return dateObj.getUTCDate(); // Ensure UTC extraction
+        });
 
     const canvas = createCanvas(600, 500);
     const ctx = canvas.getContext("2d");
@@ -31,13 +28,16 @@ async function generateCalendarImage(year, month) {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, 600, 500);
 
-    // Header
+    // Header (Use UTC for string formatting to prevent shifts)
     ctx.fillStyle = "#10b981";
     ctx.fillRect(0, 0, 600, 70);
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 28px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(`${start.toLocaleString("default", { month: "long" })} ${year}`, 300, 45);
+    
+    // Formatter forced to UTC
+    const monthName = start.toLocaleString("default", { month: "long", timeZone: "UTC" });
+    ctx.fillText(`${monthName} ${year}`, 300, 45);
 
     // Day headers
     ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((d, i) => {
@@ -46,11 +46,12 @@ async function generateCalendarImage(year, month) {
         ctx.fillText(d, 50 + i * 80, 100);
     });
 
-    // Dates
-    const firstDay = start.getDay();
+    // Dates - calculate day-of-week using UTC
+    const firstDay = start.getUTCDay();
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
     let row = 0;
 
-    for (let day = 1; day <= end.getDate(); day++) {
+    for (let day = 1; day <= daysInMonth; day++) {
         const col = (firstDay + day - 1) % 7;
         if (day > 1 && col === 0) row++;
 
@@ -90,6 +91,3 @@ async function generateCalendarImage(year, month) {
 
     return outputPath;
 }
-
-
-module.exports = { generateCalendarImage };
