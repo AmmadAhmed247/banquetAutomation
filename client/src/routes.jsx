@@ -8,7 +8,6 @@ import SettingsPage from "./pages/SettingsPage";
 import Recipt from "./components/Recipt";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/loginPage";
-import Gallery from "./pages/Gallery";
 import Management from "./pages/Management";
 const ComingSoon = ({ pageName }) => {
   return (
@@ -56,10 +55,6 @@ export const router = createBrowserRouter([
       {
         path: "settings",
         element: <ComingSoon pageName="Settings Page" />,
-      },
-      {
-        path: "gallery-page",
-        element: <Gallery />,
       },
       {
         path: "management",
