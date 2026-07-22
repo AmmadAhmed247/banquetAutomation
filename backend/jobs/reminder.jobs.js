@@ -2,8 +2,7 @@ const cron = require("node-cron")
 const { db } = require("../config/db")
 const { booking, user } = require("../model/schema")
 const { and, gte, lte, eq } = require("drizzle-orm")
-const { sendMessage } = require("../services/twillo.service")
-
+const { sendMessage } = require("../services/meta.service.")
 
 async function sendBookingReminders() {
     try {
