@@ -7,15 +7,15 @@ const { generateReceipt } = require("./recipt.service");
 async function getHelpMessage() {
   return `
     🏛️ Darbar Banquet Assistant Menu
-    Welcome to Darbar Banquet! Please review our available commands below to get started:
-    
-    📅 CALENDAR — View our real-time availability and open dates
+Welcome to Darbar Banquet! Please review our available commands below to get started:
 
-    📸 GALLERY — Browse photos of our stunning venue setups
+📅 CALENDAR — View our real-time availability and open dates
 
-    🎧 SUPPORT — Connect directly with a human representative
+📸 GALLERY — Browse photos of our stunning venue setups
 
-    ❓ HELP — Display this interactive menu
+🎧 SUPPORT — Connect directly with a human representative
+
+❓ HELP — Display this interactive menu
   `;
 }
 

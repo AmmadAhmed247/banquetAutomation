@@ -36,8 +36,8 @@ function drawFanLogo(ctx, cx, cy, r) {
 
 const cleanPhone = (phone = "") => {
   return phone
-    .replace("whatsapp:", "") 
-    .replace("+92", "0");     
+    .replace("whatsapp:", "")
+    .replace("+92", "0");
 };
 
 function generateReceipt(data = {}) {
@@ -208,7 +208,7 @@ function generateReceipt(data = {}) {
 
   fs.writeFileSync(outputPath, canvas.toBuffer("image/png"));
 
-  return outputPath;
+  return { fileName, outputPath }; // ← return both
 }
 
 module.exports = { generateReceipt };
