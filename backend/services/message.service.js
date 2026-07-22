@@ -1,11 +1,11 @@
 const { getAllPackages } = require("../services/package.service");
-const { sendMessage, sendMediaMessage } = require("../services/twillo.service");
+const { sendMessage, sendMediaMessage } = require("./meta.service.");
 const { generateCalendarImage } = require("../services/calender.service");
 const { generateReceipt } = require("./recipt.service");
 
 
 async function getHelpMessage() {
-  return `Available commands:\n\nCALENDAR - View availability\nPACKAGES - View our packages\nGALLERY - View our gallery\nBOOK: Date | Event | Package - Create a booking\nSUPPORT - Talk to a human\nHELP - Show this menu`;
+  return `Available commands:\n\nCALENDAR - View availability\nGALLERY - View our gallery\nSUPPORT - Talk to a human\nHELP - Show this menu`;
 }
 
 async function getPackagesMessage() {

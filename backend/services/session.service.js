@@ -12,8 +12,25 @@ function clearSession(phone) {
   sessions.delete(phone);
 }
 
+let activeHandoffCustomer = null;
+
+function getActiveHandoffCustomer() {
+    return activeHandoffCustomer;
+}
+
+function setActiveHandoffCustomer(phone) {
+    activeHandoffCustomer = phone;
+}
+
+function clearActiveHandoffCustomer() {
+    activeHandoffCustomer = null;
+}
+
 module.exports = {
     getSession,
     setSession,
-    clearSession
+    clearSession,
+    getActiveHandoffCustomer,
+    setActiveHandoffCustomer,
+    clearActiveHandoffCustomer
 }

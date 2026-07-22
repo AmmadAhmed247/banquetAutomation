@@ -1,7 +1,7 @@
 const { eq } = require("drizzle-orm");
 const { db } = require("../config/db");
 const { booking } = require("../model/schema");
-const { sendMessage } = require("./twillo.service");
+const { sendMessage } = require("./meta.service.");
 const { getOrCreateUser } = require("./user.service");
 
 async function CreateBooking(bookingData) {
