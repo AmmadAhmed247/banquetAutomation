@@ -4,7 +4,7 @@ const { booking } = require("../model/schema");
 const { and, gte, lte, eq }  = require("drizzle-orm");
 const fs = require("fs");
 const path = require("path");
-
+const { uploadBuffer } = require("../utils/uploadToImagekit");
 async function generateCalendarImage(year, month, hall) {
     if (!year || !month || !hall) {
         throw new Error(`Invalid inputs: year=${year}, month=${month}, hall=${hall}`);
@@ -96,11 +96,10 @@ async function generateCalendarImage(year, month, hall) {
     ctx.fillStyle = "#64748b";
     ctx.fillText("Available", 358, 465);
 
-    const fileName = `calendar-${hall.replace(/\s+/g, '')}-${year}-${month}.png`;
-    const outputPath = path.join(__dirname, "../public", fileName);
-    fs.writeFileSync(outputPath, canvas.toBuffer("image/png"));
-
-    return { fileName, outputPath };
+     const fileName = `calendar-${hall.replace(/\s+/g, '')}-${year}-${month}.png`;
+     const buffer = canvas.toBuffer("image/png");
+    const uploaded = await uploadBuffer(buffer, fileName, "/calendars");
+     return { fileName, url: uploaded.url, fileId: uploaded.fileId };
 }
 
 

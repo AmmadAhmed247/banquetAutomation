@@ -1,6 +1,8 @@
 const { createCanvas } = require("canvas");
 const fs = require("fs");
 const path = require("path");
+const { uploadBuffer } = require("../utils/uploadToImagekit");
+
 
 function drawFan(ctx, cx, cy, r) {
   const colors = ['rgba(198,40,40,0.10)', 'rgba(26,35,126,0.09)', 'rgba(230,200,180,0.12)'];
@@ -40,7 +42,7 @@ const cleanPhone = (phone = "") => {
     .replace("+92", "0");
 };
 
-function generateReceipt(data = {}) {
+async function generateReceipt(data = {}) {
   const W = 794;
   const H = 1050;
 
@@ -204,11 +206,11 @@ function generateReceipt(data = {}) {
 
   // Save to public folder
   const fileName = `receipt-${Date.now()}.png`;
-  const outputPath = path.join(__dirname, "../public", fileName);
+  
+  const buffer = canvas.toBuffer("image/png");
+  const uploaded = await uploadBuffer(buffer, fileName, "/receipts");
 
-  fs.writeFileSync(outputPath, canvas.toBuffer("image/png"));
-
-  return { fileName, outputPath }; // ← return both
+  return { fileName, url: uploaded.url, fileId: uploaded.fileId };
 }
 
 module.exports = { generateReceipt };

@@ -59,6 +59,13 @@ async function SendReceiptMessage(req, res) {
       advance,
       balance,
     });
+    if (!receipt.success) {
+  return res.status(502).json({
+    success: false,
+    message: "Failed to send WhatsApp message",
+    error: receipt.message,
+  });
+}
 
     return res.status(200).json({
       success: true,
@@ -71,8 +78,11 @@ async function SendReceiptMessage(req, res) {
     return res.status(500).json({
       success: false,
       message: "Server Error",
+    
     });
+    
   }
+  
 }
 
 module.exports = {

@@ -33,8 +33,9 @@ async function getPackagesMessage() {
 }
 
 async function getReceiptMessage(phone, data) {
-  const { fileName } = generateReceipt(data);
-  const mediaUrl = `${process.env.BASE_URL}/public/${fileName}`;
+  const { fileName, url } = await generateReceipt(data); 
+  const mediaUrl = url;  
+
   const u = await getUserByPhone(phone);
   const withinWindow = isWithinWindow(u?.last_inbound_at);
 
@@ -54,7 +55,7 @@ async function getReceiptMessage(phone, data) {
     return { success: false, fileName, error: result.message };
   }
 
-  return { success: true, fileName };
+  return { success: true, fileName, mediaUrl };
 }
 
 
