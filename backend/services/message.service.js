@@ -61,12 +61,11 @@ async function getReceiptMessage(phone, data) {
 
 async function getCalendarMessage(phone, hall, year, month) {
   try {
-    const { fileName } = await generateCalendarImage(year, month, hall);
-
+    const { url } = await generateCalendarImage(year, month, hall);
     await sendMediaMessage(
       phone,
       `Here is ${hall}'s availability!\n\n${hall === "Hall B" ? "🔵 Blue" : "🔴 Red"} = Booked\n⚪ White = Available`,
-      `${process.env.BASE_URL}/public/${fileName}` // ← use the actual generated filename
+      url 
     );
   } catch (error) {
     console.log("An Error Occurred: ", error);
@@ -77,7 +76,7 @@ async function getCalendarMessage(phone, hall, year, month) {
 function getGalleryMessage() {
   return `View our gallery here:\nhttps://your-website.com/gallery
 
-Or follow us on Instagram:\nhttps://instagram.com/your-handle`
+      Or follow us on Instagram:\nhttps://instagram.com/your-handle`
 }
 
 async function SendMessageToUser(phone, message) {
