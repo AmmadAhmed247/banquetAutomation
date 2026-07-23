@@ -73,7 +73,7 @@ async function sendReceiptTemplate(phone, mediaUrl, { clientName, functionName, 
         to,
         type: "template",
         template: {
-          name: "receipt",
+          name: "receipt2",
           language: { code: "en" },
           components: [
             { type: "header", parameters: [{ type: "image", image: { link: mediaUrl } }] },
