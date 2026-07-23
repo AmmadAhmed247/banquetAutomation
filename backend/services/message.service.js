@@ -1,5 +1,5 @@
 const { getAllPackages } = require("../services/package.service");
-const { sendMessage, sendMediaMessage , sendReceiptTemplate } = require("./meta.service.");
+const { sendMessage, sendMediaMessage, sendReceiptTemplate } = require("./meta.service.");
 const { generateCalendarImage } = require("../services/calender.service");
 const { generateReceipt } = require("./recipt.service");
 const { getUserByPhone, isWithinWindow } = require("./session.service");
@@ -56,18 +56,19 @@ async function getReceiptMessage(phone, data) {
 
   return { success: true, fileName };
 }
-async function getCalendarMessage(phone) {
+
+
+async function getCalendarMessage(phone, hall, year, month) {
   try {
-    const now = new Date();
-    await generateCalendarImage(now.getFullYear(), now.getMonth() + 1);
+    const { fileName } = await generateCalendarImage(year, month, hall);
 
     await sendMediaMessage(
       phone,
-      "Here is our availability for this month!\n\n🔴 Red = Booked\n⚪ White = Available\n",
-      `${process.env.BASE_URL}/public/calendar.png`
+      `Here is ${hall}'s availability!\n\n${hall === "Hall B" ? "🔵 Blue" : "🔴 Red"} = Booked\n⚪ White = Available`,
+      `${process.env.BASE_URL}/public/${fileName}` // ← use the actual generated filename
     );
   } catch (error) {
-    console.log("An Error Occured: ", error)
+    console.log("An Error Occurred: ", error);
   }
 }
 
