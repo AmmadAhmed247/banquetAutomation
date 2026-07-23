@@ -1,3 +1,7 @@
+const { db } = require("../config/db");
+const { user } = require("../model/schema");
+const { eq } = require("drizzle-orm");
+
 const sessions = new Map()
 
 function getSession(phone){
@@ -25,10 +29,29 @@ function setActiveHandoffCustomer(phone) {
 function clearActiveHandoffCustomer() {
     activeHandoffCustomer = null;
 }
+async function updateLastInbound(phone) {
+  await db.update(user)
+    .set({ last_inbound_at: new Date() })
+    .where(eq(user.phone, phone));
+}
+
+async function getUserByPhone(phone) {
+  const [u] = await db.select().from(user).where(eq(user.phone, phone));
+  return u;
+}
+
+function isWithinWindow(lastInboundAt) {
+  if (!lastInboundAt) return false;
+  return (Date.now() - new Date(lastInboundAt).getTime()) < 24 * 60 * 60 * 1000;
+}
+
 
 module.exports = {
     getSession,
     setSession,
+    updateLastInbound,
+    isWithinWindow,
+    getUserByPhone,
     clearSession,
     getActiveHandoffCustomer,
     setActiveHandoffCustomer,

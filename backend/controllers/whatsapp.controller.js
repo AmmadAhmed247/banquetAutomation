@@ -1,9 +1,12 @@
 const { parseIncoming, sendMessage } = require("../services/meta.service.")
-const { getSession, setSession, clearSession, getActiveHandoffCustomer, setActiveHandoffCustomer } = require("../services/session.service")
+const { getSession, setSession, clearSession, getActiveHandoffCustomer, setActiveHandoffCustomer , updateLastInbound } = require("../services/session.service")
 const { getOrCreateUser } = require("../services/user.service")
 const { parseWhatsAppMessage, CreateBooking } = require("../services/booking.service")
 const { getHelpMessage, getPackagesMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage } = require("../services/message.service")
 const { createOrGetConversation, addAdminToConversation } = require("../services/conversation.service");
+
+
+
 
 async function handleWhatsappWebhook(req, res) {
     res.sendStatus(200); // acknowledge Meta immediately — must respond fast, before any async work
@@ -13,7 +16,7 @@ async function handleWhatsappWebhook(req, res) {
 
     const { phone, body } = parsed;
     const keyword = body.toUpperCase().trim();
-
+    await updateLastInbound(phone);
     try {
         const session = getSession(phone);
 

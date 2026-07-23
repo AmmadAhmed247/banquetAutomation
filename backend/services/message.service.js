@@ -1,7 +1,9 @@
 const { getAllPackages } = require("../services/package.service");
-const { sendMessage, sendMediaMessage } = require("./meta.service.");
+const { sendMessage, sendMediaMessage , sendReceiptTemplate } = require("./meta.service.");
 const { generateCalendarImage } = require("../services/calender.service");
 const { generateReceipt } = require("./recipt.service");
+const { getUserByPhone, isWithinWindow } = require("./session.service");
+
 
 
 async function getHelpMessage() {
@@ -32,25 +34,28 @@ async function getPackagesMessage() {
 
 async function getReceiptMessage(phone, data) {
   const { fileName } = generateReceipt(data);
-
-  console.log("Receipt generated:", fileName);
-
   const mediaUrl = `${process.env.BASE_URL}/public/${fileName}`;
+  const u = await getUserByPhone(phone);
+  const withinWindow = isWithinWindow(u?.last_inbound_at);
 
-  console.log(mediaUrl)
+  let result;
+  if (withinWindow) {
+    result = await sendMediaMessage(phone, "Here is your booking receipt!", mediaUrl);
+  } else {
+    result = await sendReceiptTemplate(phone, mediaUrl, {
+      clientName: data.clientName,
+      functionName: data.functionName,
+      date: data.date,
+    });
+  }
 
-  await sendMediaMessage(
-    phone,
-    "Here is your booking receipt!",
-    mediaUrl
-  );
+  if (!result.success) {
+    console.error("Receipt delivery failed:", result.message);
+    return { success: false, fileName, error: result.message };
+  }
 
-  return {
-    success: true,
-    fileName,
-  };
+  return { success: true, fileName };
 }
-
 async function getCalendarMessage(phone) {
   try {
     const now = new Date();

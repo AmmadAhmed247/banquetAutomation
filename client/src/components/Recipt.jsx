@@ -1,8 +1,9 @@
-import { useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useRef } from "react";
+import { set, useForm } from "react-hook-form";
 import { Printer, RotateCcw, User, Phone, MapPin, CalendarDays, Users, Building2, Wallet, CreditCard, PiggyBank } from "lucide-react";
 import receiptService from "../services/receipt.service";
 import toast from "react-hot-toast";
+
 
 const defaultForm = {
   rNo: "",
@@ -38,6 +39,7 @@ const inp = "w-full border border-green-200 rounded-xl px-3.5 py-2.5 text-sm tex
 const sel = "w-full border border-green-200 rounded-xl px-3.5 py-2.5 text-sm text-green-900 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 appearance-none cursor-pointer";
 
 function ReceiptPreview({ data }) {
+  
   const balance = (() => {
     const l = parseFloat(String(data.lumpSum).replace(/,/g, "")) || 0;
     const a = parseFloat(String(data.advance).replace(/,/g, "")) || 0;
@@ -178,9 +180,12 @@ const formatWhatsAppNumber = (phone) => {
 }
 
 export default function DarbarReceiptForm() {
+  const [isSubmitting, setIsSubmitting] = useState(false);   // ← ADD THIS LINE
   const { register, handleSubmit, watch, reset, setValue } = useForm({
     defaultValues: defaultForm,
   });
+ 
+
   const printRef = useRef();
   const formData = watch();
 
@@ -191,6 +196,8 @@ export default function DarbarReceiptForm() {
   };
 
   const onSubmit = async (data) => {
+    if (isSubmitting) return; 
+    setIsSubmitting(true);
     try {
       console.log("Receipt data:", data);
       const fixedData = {
@@ -221,6 +228,8 @@ export default function DarbarReceiptForm() {
 
     } catch (error) {
       console.log("An Error Occured: ", error)
+    }finally{
+      setIsSubmitting(false);
     }
   };
 
@@ -369,11 +378,13 @@ export default function DarbarReceiptForm() {
                 <RotateCcw size={14} /> Reset
               </button>
               <button
-                type="submit"
-                className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-3 rounded-xl shadow-md shadow-green-200 transition-all duration-200 cursor-pointer border-none"
-              >
-                <Printer size={15} /> Send Receipt
-              </button>
+  disabled={isSubmitting}
+  type="submit"
+  className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-3 rounded-xl shadow-md shadow-green-200 transition-all duration-200 cursor-pointer border-none disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+>
+  <Printer size={15} /> 
+  {isSubmitting ? "Sending..." : "Send Receipt"}
+</button>
             </div>
           </form>
 
