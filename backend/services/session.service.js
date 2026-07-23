@@ -30,9 +30,13 @@ function clearActiveHandoffCustomer() {
     activeHandoffCustomer = null;
 }
 async function updateLastInbound(phone) {
-  await db.update(user)
-    .set({ last_inbound_at: new Date() })
-    .where(eq(user.phone, phone));
+  try {
+    await db.update(user)
+      .set({ last_inbound_at: new Date() })
+      .where(eq(user.phone, phone));
+  } catch (err) {
+    console.error("updateLastInbound failed:", err.message);
+  }
 }
 
 async function getUserByPhone(phone) {
