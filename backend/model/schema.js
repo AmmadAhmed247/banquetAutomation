@@ -1,62 +1,63 @@
 const { boolean } = require("drizzle-orm/gel-core");
-const {pgTable, integer, serial,varchar, text, timestamp , numeric, time} = require("drizzle-orm/pg-core")
+const { pgTable, integer, serial, varchar, text, timestamp, numeric, time } = require("drizzle-orm/pg-core")
 
 const user = pgTable("users", {
     id: serial("id").primaryKey().notNull(),
-    name: varchar("name", {length: 100}),
+    name: varchar("name", { length: 100 }),
     phone: text("phone").notNull().unique(),
-    created_at: timestamp("created_at").defaultNow()
+    created_at: timestamp("created_at").defaultNow(),
+    last_inbound_at: timestamp("last_inbound_at")
 })
 const booking = pgTable("bookings", {
-  id:serial("id").primaryKey().notNull(),
-  userId:integer("user_id").references(() => user.id),
- 
-  // Client Info
-  client:varchar("client", { length: 150 }).notNull(),
-  phone:varchar("phone", { length: 50 }).notNull(),
-  guests:integer("guests").notNull().default(0),
- 
-  // Event Details
-  date:timestamp("date", { length: 50 }).notNull(),
-  event:varchar("event", { length: 100 }).notNull(),
-  package_name:varchar("package_name", { length: 100 }).notNull(),
-  venue:varchar("venue", { length: 100 }).notNull(),
-  status:varchar("status", { length: 50 }).notNull().default("Pending"),
- 
-  // Payment Details
-  total_amount:numeric("total_amount", { precision: 12, scale: 2 }).notNull().default("0"),
-  advance_paid:numeric("advance_paid", { precision: 12, scale: 2 }).notNull().default("0"),
-  payment_method: varchar("payment_method", { length: 50 }).notNull().default("Cash"),
-  payment_note:varchar("payment_note", { length: 255 }),
- 
-  // Timestamps
-  created_at:timestamp("created_at").defaultNow(),
-  updated_at:timestamp("updated_at").defaultNow(),
+    id: serial("id").primaryKey().notNull(),
+    userId: integer("user_id").references(() => user.id),
+
+    // Client Info
+    client: varchar("client", { length: 150 }).notNull(),
+    phone: varchar("phone", { length: 50 }).notNull(),
+    guests: integer("guests").notNull().default(0),
+
+    // Event Details
+    date: timestamp("date", { length: 50 }).notNull(),
+    event: varchar("event", { length: 100 }).notNull(),
+    package_name: varchar("package_name", { length: 100 }).notNull(),
+    venue: varchar("venue", { length: 100 }).notNull(),
+    status: varchar("status", { length: 50 }).notNull().default("Pending"),
+
+    // Payment Details
+    total_amount: numeric("total_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    advance_paid: numeric("advance_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+    payment_method: varchar("payment_method", { length: 50 }).notNull().default("Cash"),
+    payment_note: varchar("payment_note", { length: 255 }),
+
+    // Timestamps
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at").defaultNow(),
 });
 
 const packages = pgTable("packages", {
     id: serial("id").primaryKey().notNull(),
-    package_name: varchar("package_name", {length: 100}).notNull(),
+    package_name: varchar("package_name", { length: 100 }).notNull(),
     time: time("event_time").notNull(),
     price: integer("package_price").notNull()
 })
 
 
-const clients=pgTable("clients",{
-    id:serial("id").primaryKey().notNull().unique(),
-    name:varchar("name",{length:100}).notNull().unique(),
-    email:varchar("email",{length:100}).notNull().unique(),
-    phone:varchar("phone",{length:11}).notNull().unique(),
-    password:varchar("password").notNull(),
-    banquet_name:varchar("banquet_name").notNull(),
+const clients = pgTable("clients", {
+    id: serial("id").primaryKey().notNull().unique(),
+    name: varchar("name", { length: 100 }).notNull().unique(),
+    email: varchar("email", { length: 100 }).notNull().unique(),
+    phone: varchar("phone", { length: 11 }).notNull().unique(),
+    password: varchar("password").notNull(),
+    banquet_name: varchar("banquet_name").notNull(),
     role: varchar("role", { length: 20 }).default("admin"),
-    is_active:boolean("is_active").default(true),
-    created_at:timestamp("created_at").defaultNow()
+    is_active: boolean("is_active").default(true),
+    created_at: timestamp("created_at").defaultNow()
 
 })
 
 module.exports = {
     user,
     booking,
-    packages,clients
+    packages, clients
 }

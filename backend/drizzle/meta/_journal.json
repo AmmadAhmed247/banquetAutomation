@@ -15,6 +15,13 @@
       "when": 1778929869132,
       "tag": "0001_freezing_dagger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784808653476,
+      "tag": "0002_foamy_swordsman",
+      "breakpoints": true
     }
   ]
 }
