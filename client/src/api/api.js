@@ -1,6 +1,6 @@
 import axios from "axios"
 
 export default axios.create({
-    baseURL: "https://banquet-automation.vercel.app",
+    baseURL: "http://localhost:3000",
     withCredentials: true,
 })      

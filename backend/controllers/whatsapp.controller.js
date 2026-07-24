@@ -2,51 +2,91 @@ const { parseIncoming, sendMessage } = require("../services/meta.service.")
 const { getSession, setSession, clearSession, getActiveHandoffCustomer, setActiveHandoffCustomer, updateLastInbound } = require("../services/session.service")
 const { getOrCreateUser } = require("../services/user.service")
 const { parseWhatsAppMessage, CreateBooking } = require("../services/booking.service")
-const { getHelpMessage, getPackagesMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage } = require("../services/message.service")
+const { getHelpMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage } = require("../services/message.service")
 const { createOrGetConversation, addAdminToConversation } = require("../services/conversation.service");
 
-
-
-
 async function handleWhatsappWebhook(req, res) {
-    res.sendStatus(200); // acknowledge Meta immediately — must respond fast, before any async work
+    res.sendStatus(200); // acknowledge Meta immediately
 
     const parsed = parseIncoming(req);
-    if (!parsed) return; // e.g. a status update, not an actual message
+    if (!parsed) return; 
 
     const { phone, body } = parsed;
-    const keyword = body.toUpperCase().trim();
+    const cleanBody = body.trim();
+    const keyword = cleanBody.toUpperCase();
     await updateLastInbound(phone);
+    
     try {
-        const session = getSession(phone);
+        let session = getSession(phone);
 
-        if (keyword === "HELP") {
-            const msg = await getHelpMessage();
-            return sendMessage(phone, msg);
+        // 1. Handle Brand New Users or Missing Sessions
+        if (!session) {
+            const result = await getOrCreateUser(phone, null);
+            
+            setSession(phone, { step: "selecting_hall", name: result?.user?.name || null });
+            
+            return sendMessage(
+                phone, 
+                `Welcome to Darbar Banquet! How can we help you today?\n\nPlease choose your preferred hall:\n\n*1* or *A* — Hall A (Capacity: 650)\n*2* or *B* — Hall B (Capacity: 200)`
+            );
         }
 
-        if (keyword === "PACKAGES") {
-            const msg = await getPackagesMessage();
-            return sendMessage(phone, msg);
+        // 2. Handle Hall Selection Step (Accepts 1, 2, A, B, or full names)
+        if (session.step === "selecting_hall") {
+            let hall = null;
+            if (keyword === "1" || keyword === "A" || keyword === "HALL A") hall = "Hall A";
+            if (keyword === "2" || keyword === "B" || keyword === "HALL B") hall = "Hall B";
+
+            if (!hall) {
+                return sendMessage(
+                    phone,
+                    `Please choose the correct option from the list below:\n\n` +
+                    `*1* or *A* — Hall A (Capacity: 650)\n` +
+                    `*2* or *B* — Hall B (Capacity: 200)\n\n` +
+                    `Please reply with a valid option.`
+                );
+            }
+
+            setSession(phone, { ...session, step: "ready", active_hall: hall });
+            
+            return sendMessage(
+                phone,
+                `You have selected *${hall}*!\n\nHere are your available options:\n\n` +
+                `*1* — CALENDAR (View availability)\n` +
+                `*2* — GALLERY (See venue photos)\n` +
+                `*3* — SUPPORT (Talk to a human)\n` +
+                `*4* — HELP (Show this menu)\n\n` +
+                `(Type *SWITCH* or *HALL* anytime to change halls)`
+            );
         }
 
-        if (keyword === "GALLERY") {
+        // 3. Global commands
+        if (keyword === "HELP" || keyword === "4") {
+            return sendMessage(
+                phone,
+                `Darbar Banquet Assistant Menu\n\n` +
+                `Please choose an option below:\n\n` +
+                `*1* — CALENDAR (View availability)\n` +
+                `*2* — GALLERY (See venue photos)\n` +
+                `*3* — SUPPORT (Talk to a human)\n` +
+                `*4* — HELP (Show this menu)\n\n` +
+                `(Type *SWITCH* or *HALL* anytime to change halls)`
+            );
+        }
+
+        if (keyword === "GALLERY" || keyword === "2") {
             const msg = await getGalleryMessage();
             return sendMessage(phone, msg);
         }
 
-        if (keyword === "CALENDAR") {
-            setSession(phone, { ...session, step: "awaiting_hall" });
-            return sendMessage(phone, "Which hall would you like to check?\n\nReply *A* for Hall A\nReply *B* for Hall B");
+        if (keyword === "CALENDAR" || keyword === "1") {
+            setSession(phone, { ...session, step: "awaiting_month" });
+            return sendMessage(phone, `Which month would you like to see for *${session.active_hall || "Hall A"}*? (e.g. *July* or *7*)`);
         }
 
-
-        if (keyword === "SUPPORT") {
+        if (keyword === "SUPPORT" || keyword === "3") {
             const result = await getOrCreateUser(phone, null);
             const name = result?.user?.name || session?.name || "Unknown";
-
-            console.log(result)
-            console.log(session)
 
             await sendMessage(
                 process.env.ADMIN_PHONE,
@@ -58,77 +98,79 @@ async function handleWhatsappWebhook(req, res) {
             return sendMessage(phone, "Connecting you to our team. A team member will reply shortly.\n\nSend HELP to return to the bot.");
         }
 
-        if (!session) {
-            const result = await getOrCreateUser(phone, null);
-
-            if (result.isNew) {
-                setSession(phone, { step: "awaiting_name" });
-                return sendMessage(phone, "Welcome to Hall Automation! What's your name?\n\nSend HELP to see available commands.");
-            } else {
-                setSession(phone, { step: "ready", name: result.user.name });
-                return sendMessage(phone, `Welcome back ${result.user.name}!\n\nSend HELP to see available commands.`);
-            }
+        // Allow user to switch halls at any time
+        if (keyword === "HALL" || keyword === "SWITCH") {
+            setSession(phone, { ...session, step: "selecting_hall" });
+            return sendMessage(
+                phone,
+                `Please choose your preferred hall:\n\n` +
+                `*1* or *A* — Hall A (Capacity: 650)\n` +
+                `*2* or *B* — Hall B (Capacity: 200)`
+            );
         }
 
-        if (session.step === "awaiting_name") {
-            await getOrCreateUser(phone, body);
-            setSession(phone, { step: "ready", name: body });
-            return sendMessage(phone, `Thanks ${body}! Send HELP to see what you can do.`);
-        }
-
-        if (session.step === "ready") {
-            const data = parseWhatsAppMessage(body, phone);
-
-            if (data) {
-                await CreateBooking({ ...data, client: session.name, phone });
-                return sendMessage(phone, `Booking confirmed for ${session.name}!\n\nEvent: ${data.event}\nDate: ${data.date}\nPackage: ${data.package}\n\nWe'll be in touch soon.`);
-            }
-            return sendMessage(phone, "Command not recognised. Send HELP to see available commands.");
-        }
-
+        // 4. Handle Human Handoff Step
         if (session?.step === "human_handoff") {
-            if (keyword === "HELP") {
+            if (keyword === "HELP" || keyword === "4") {
                 clearSession(phone);
-                const msg = await getHelpMessage();
-                return sendMessage(phone, msg);
+                return sendMessage(
+                    phone,
+                    `Darbar Banquet Assistant Menu\n\n` +
+                    `Please choose an option below:\n\n` +
+                    `*1* — CALENDAR (View availability)\n` +
+                    `*2* — GALLERY (See venue photos)\n` +
+                    `*3* — SUPPORT (Talk to a human)\n` +
+                    `*4* — HELP (Show this menu)`
+                );
             }
             return;
         }
 
-        if (session?.step === "awaiting_hall") {
-            let hall = null;
-            if (keyword === "A" || keyword === "HALL A") hall = "Hall A";
-            if (keyword === "B" || keyword === "HALL B") hall = "Hall B";
-
-            if (!hall) {
-                return sendMessage(phone, "Please reply with *A* or *B* to select a hall.");
-            }
-
-            setSession(phone, { ...session, step: "awaiting_month", hall });
-            return sendMessage(phone, `Got it — ${hall}.\n\nWhich month would you like to see? (e.g. *August* or *8*)`);
-        }
-
+        // 5. Handle Calendar Month Step
         if (session?.step === "awaiting_month") {
             const monthNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
             let monthNum = null;
 
-            const asNumber = parseInt(body.trim(), 10);
+            const asNumber = parseInt(cleanBody, 10);
             if (!isNaN(asNumber) && asNumber >= 1 && asNumber <= 12) {
                 monthNum = asNumber;
             } else {
-                const idx = monthNames.indexOf(body.trim().toLowerCase());
+                const idx = monthNames.indexOf(cleanBody.toLowerCase());
                 if (idx !== -1) monthNum = idx + 1;
             }
 
             if (!monthNum) {
-                return sendMessage(phone, "Please reply with a valid month, like *August* or *8*.");
+                return sendMessage(phone, "Please reply with a valid month, like *July* or *7*.");
             }
 
             const year = new Date().getFullYear();
-            await getCalendarMessage(phone, session.hall, year, monthNum);
+            const hallToQuery = session.hall || session.active_hall || "Hall A";
+            await getCalendarMessage(phone, hallToQuery, year, monthNum);
 
-            setSession(phone, { ...session, step: "ready" }); // back to normal flow
+            setSession(phone, { ...session, step: "ready" }); 
             return;
+        }
+
+        // 6. Ready State / Fallback for unrecognized keywords
+        if (session.step === "ready") {
+            const data = parseWhatsAppMessage(body, phone);
+
+            if (data) {
+                await CreateBooking({ ...data, client: session.name || "Customer", phone });
+                return sendMessage(phone, `Booking confirmed for ${session.name || "Customer"}!\n\nEvent: ${data.event}\nDate: ${data.date}\nPackage: ${data.package}\n\nWe'll be in touch soon.`);
+            }
+            
+            // Clean vertical format for incorrect main menu inputs
+            return sendMessage(
+                phone,
+                `Please choose the correct menu option from the list below:\n\n` +
+                `*1* — CALENDAR (View availability)\n` +
+                `*2* — GALLERY (See venue photos)\n` +
+                `*3* — SUPPORT (Talk to a human)\n` +
+                `*4* — HELP (Show this menu)\n\n` +
+                `(Type *SWITCH* or *HALL* anytime to change halls) \n\n `
+                
+            );
         }
 
         if (phone === process.env.ADMIN_PHONE && keyword === "END") {

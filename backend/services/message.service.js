@@ -8,16 +8,16 @@ const { getUserByPhone, isWithinWindow } = require("./session.service");
 
 async function getHelpMessage() {
   return `
-     Darbar Banquet Assistant Menu
+Darbar Banquet Assistant Menu
 Welcome to Darbar Banquet! Please review our available commands below to get started:
 
- CALENDAR — View our real-time availability and open dates
+CALENDAR — View our real-time availability and open dates
 
- GALLERY — Browse photos of our stunning venue setups
+GALLERY — Browse photos of our stunning venue setups
 
- SUPPORT — Connect directly with a human representative
+SUPPORT — Connect directly with a human representative
 
-❓ HELP — Display this interactive menu
+HELP — Display this interactive menu
   `;
 }
 
