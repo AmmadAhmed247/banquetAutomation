@@ -9,6 +9,8 @@ import Recipt from "./components/Recipt";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/loginPage";
 import Management from "./pages/Management";
+import ProtectedRoute from "./components/ProtectedRoute";
+import NotFoundPage from "./pages/NotFoundPage";
 const ComingSoon = ({ pageName }) => {
   return (
     <div className="flex items-center justify-center h-[80vh]">
@@ -30,7 +32,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <RootLayout />, 
+    element: (
+      <ProtectedRoute>
+        <RootLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true, 
@@ -61,5 +67,9 @@ export const router = createBrowserRouter([
         element: <Management />,
       },
     ],
+  },
+  {
+    path: "*",
+    element: <NotFoundPage />,
   },
 ]);

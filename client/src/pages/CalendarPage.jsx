@@ -24,7 +24,10 @@ function BookingChip({ booking }) {
 }
 
 export default function CalendarView() {
-  const [current, setCurrent]     = useState(new Date(2026, 4, 1));
+  const [current, setCurrent] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
   const [selectedDay, setSelectedDay] = useState(null);
   const [view, setView]           = useState("both");
   const [showPanel, setShowPanel] = useState(false); // mobile side panel toggle

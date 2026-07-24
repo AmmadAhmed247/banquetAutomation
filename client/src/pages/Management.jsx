@@ -143,7 +143,7 @@ export default function Management() {
   const [selectedBookingId, setSelectedBookingId] = useState(null);  // for expense panel
   const [hallFilter, setHallFilter] = useState("all");
 
-  const { data: bookings } = getAllBookings()
+  const { data: bookings = [] } = getAllBookings() || {};
 
   // new expense form
   const [newExp, setNewExp] = useState({ category: EXPENSE_CATEGORIES[0], label: "", amount: "" });

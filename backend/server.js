@@ -18,7 +18,7 @@ dotenv.config()
 
 // CORS Configuration
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:3000","https://banquet-automation.vercel.app"],
+  origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000","https://banquet-automation.vercel.app"],
   credentials: true
 }))
 

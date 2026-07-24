@@ -1,37 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   LayoutDashboard,
   Users,
   Calendar,
   CalendarCheck,
   ReceiptIcon,
-  DollarSign
+  DollarSign,
+  LogOut
 } from "lucide-react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function RootLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [ready, setReady] = useState(false);
+  const { logout, isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
-          withCredentials: true,
-        });
-        setReady(true);
-      } catch (error) {
-        // If API fails (not logged in / not premium), kick them back to login
-        navigate("/login");
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
-
-  if (!ready) return null; // Prevents premium UI flash while checking auth
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
 
   const tools = [
     { name: "Contacts", path: "contacts", icon: Users },
@@ -98,11 +86,23 @@ export default function RootLayout() {
             })}
           </nav>
 
-          <div className="mt-auto pt-6 border-t border-slate-50 w-full flex flex-col items-center gap-2">
+          <div className="mt-auto pt-6 border-t border-slate-50 w-full flex flex-col items-center gap-4">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             <span className="text-[8px] font-black text-slate-300 uppercase">
               Live
             </span>
+            <button
+              onClick={handleLogout}
+              className="group relative flex items-center justify-center w-full"
+              title="Logout"
+            >
+              <div className="p-3.5 rounded-2xl transition-all duration-300 text-slate-400 hover:bg-red-50 hover:text-red-600 w-12 h-12 flex items-center justify-center">
+                <LogOut size={22} strokeWidth={2} />
+              </div>
+              <span className="absolute left-20 bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl z-50 uppercase tracking-widest">
+                Logout
+              </span>
+            </button>
           </div>
         </aside>
       )}

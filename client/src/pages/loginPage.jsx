@@ -2,22 +2,23 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { LogIn, Lock, Mail, AlertCircle } from "lucide-react"; // Modern icon replacements
-import axios from "axios";
+import api from "../api/api";
+import { useAuth } from "../contexts/AuthContext";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login: setAuthUser } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   
   const { mutate: login, isPending, error } = useMutation({
     mutationFn: (form) =>
-      axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/auth/login`,
-        form,
-        { withCredentials: true }
-      ),
-    onSuccess: () => navigate("/dashboard"),
+      api.post("/api/auth/login", form),
+    onSuccess: (response) => {
+      setAuthUser(response.data.client || response.data.user);
+      navigate("/dashboard");
+    },
   });
 
   const submit = (e) => {
