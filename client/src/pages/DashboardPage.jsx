@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     try {
      
-      await api.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`, {}, {
+      await api.post(`/api/auth/logout`, {}, {
         withCredentials: true, 
       });
     } catch (error) {

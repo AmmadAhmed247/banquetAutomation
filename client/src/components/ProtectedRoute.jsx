@@ -1,19 +1,9 @@
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    console.log("ProtectedRoute - loading:", loading, "isAuthenticated:", isAuthenticated);
-    
-    if (!loading && !isAuthenticated) {
-      console.log("ProtectedRoute - redirecting to /login");
-      navigate("/login", { replace: true });
-    }
-  }, [loading, isAuthenticated, navigate]);
 
   if (loading) {
     return (
@@ -28,9 +18,8 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated) {
-    console.log("ProtectedRoute - not authenticated, returning null");
-    return null;
+  if (!loading && !isAuthenticated) {
+    return <Navigate to="/login" replace />;
   }
 
   return children;
