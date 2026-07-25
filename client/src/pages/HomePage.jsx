@@ -370,11 +370,7 @@ export default function HomePage() {
           style={{ background: "radial-gradient(circle, #DCF5E4 0%, transparent 70%)" }}
         />
 
-        <Reveal>
-          <div className="inline-flex items-center gap-2 bg-[#F2FBF5] border border-[#DCEFE3] text-[#0B7A38] text-[11.5px] font-mono font-medium px-3.5 py-1.5 rounded-full mb-8">
-            Web · Mobile · AI Automation · Lead Generation
-          </div>
-        </Reveal>
+        
 
         <Reveal delay={100}>
           <h1 className="font-serif text-[42px] sm:text-[54px] lg:text-[68px] font-semibold text-[#0B1F17] leading-[1.05] tracking-tight max-w-3xl mb-6">

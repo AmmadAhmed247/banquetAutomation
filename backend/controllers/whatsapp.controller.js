@@ -27,7 +27,7 @@ async function handleWhatsappWebhook(req, res) {
             
             return sendMessage(
                 phone, 
-                `Welcome to Darbar Banquet! How can we help you today?\n\nPlease choose your preferred hall:\n\n*1* or *A* — Hall A (Capacity: 650)\n*2* or *B* — Hall B (Capacity: 200)`
+                `Welcome to Darbar Banquet! \n\nPlease choose your preferred hall:\n\n*1* : Banquet A (Capacity: 650)\n*2* : Banquet B (Capacity: 200)`
             );
         }
 
@@ -41,8 +41,8 @@ async function handleWhatsappWebhook(req, res) {
                 return sendMessage(
                     phone,
                     `Please choose the correct option from the list below:\n\n` +
-                    `*1* or *A* — Hall A (Capacity: 650)\n` +
-                    `*2* or *B* — Hall B (Capacity: 200)\n\n` +
+                    `*1* : Banquet A (Capacity: 650) (Capacity: 650)\n` +
+                    `*2* : Banquet B (Capacity: 200)\n\n` +
                     `Please reply with a valid option.`
                 );
             }
@@ -104,8 +104,8 @@ async function handleWhatsappWebhook(req, res) {
             return sendMessage(
                 phone,
                 `Please choose your preferred hall:\n\n` +
-                `*1* or *A* — Hall A (Capacity: 650)\n` +
-                `*2* or *B* — Hall B (Capacity: 200)`
+                `*1* : Banquet A (Capacity: 650)\n` +
+                `*2* : Banquet B (Capacity: 200)`
             );
         }
 

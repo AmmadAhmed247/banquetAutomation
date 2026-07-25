@@ -1,9 +1,13 @@
 import { useState, useMemo } from "react";
 import {
-  TrendingUp, TrendingDown, Plus, Trash2, Receipt,
-  ChevronDown, BarChart3, Calendar, DollarSign, Package,
-  SlidersHorizontal, X, ArrowUpRight, Inbox
+  TrendingUp, Plus, Trash2, Receipt,
+  ChevronDown, BarChart3, DollarSign, Package,
+  SlidersHorizontal, X, ArrowUpRight, Inbox, Calendar
 } from "lucide-react";
+import {
+  ComposedChart, Area, Line, BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from "recharts";
 import { getAllBookings } from "../lib/hooks/booking.hook";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -12,14 +16,24 @@ const EXPENSE_CATEGORIES = ["Catering", "Decoration", "Audio / Lights", "Staff W
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
 
-
-
 function currency(n) {
   return "₨ " + Number(n || 0).toLocaleString("en-PK");
+}
+function compactCurrency(n) {
+  const v = Number(n || 0);
+  if (Math.abs(v) >= 1000) return `₨${Math.round(v / 1000)}K`;
+  return `₨${v}`;
 }
 function pct(a, b) {
   if (!b) return 0;
   return Math.round((a / b) * 100);
+}
+function daysUntil(dateStr) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  return Math.round((d - today) / 86400000);
 }
 
 // ── seed data ─────────────────────────────────────────────────────────────────
@@ -57,31 +71,49 @@ const SEED_EXPENSES = [
   { id: 20, bookingId: 8, category: "Decoration", label: "Standard décor", amount: 28000 },
 ];
 
-// ── sub-components ────────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, sub, icon: Icon, trend, type = "neutral" }) {
-  const styles = {
-    neutral: { bg: "bg-white", border: "border-emerald-100/60", iconBg: "bg-emerald-50/50", iconText: "text-emerald-600", text: "text-stone-400" },
-    premium: { bg: "bg-emerald-600", border: "border-emerald-700", iconBg: "bg-emerald-700", iconText: "text-emerald-200", text: "text-emerald-100" },
-    danger: { bg: "bg-white", border: "border-emerald-100/60", iconBg: "bg-rose-50", iconText: "text-rose-600", text: "text-stone-400" },
-  };
-  const s = styles[type];
-
+// ── shared chart tooltip ────────────────────────────────────────────────────
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
   return (
-    <div className={`${s.bg} border ${s.border} rounded-xl p-6 transition-all duration-300 hover:shadow-sm`}>
+    <div className="bg-white border border-stone-200 rounded-lg shadow-md px-3.5 py-2.5 text-[12px]">
+      <p className="font-semibold text-stone-800 mb-1.5">{label}</p>
+      <div className="flex flex-col gap-1">
+        {payload.map((p) => (
+          <div key={p.dataKey} className="flex items-center justify-between gap-6">
+            <span className="flex items-center gap-1.5 text-stone-500">
+              <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+              {p.name}
+            </span>
+            <span className="font-medium text-stone-800">{currency(p.value)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── sub-components ────────────────────────────────────────────────────────────
+function KpiCard({ label, value, sub, icon: Icon, trend}) {
+  return (
+    <div className="bg-white border border-stone-200 rounded-xl p-6 transition-shadow duration-200 hover:shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <span className={`text-[11px] font-medium uppercase tracking-wider ${type === "premium" ? "text-emerald-100" : "text-stone-400"}`}>{label}</span>
-        <div className={`w-9 h-9 ${s.iconBg} rounded-lg flex items-center justify-center transition-colors`}>
-          <Icon size={16} className={s.iconText} />
+        <span className="text-[11px] font-medium uppercase tracking-wider text-stone-400">{label}</span>
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-green-400`}>
+          <Icon size={16} className="text-white" />
         </div>
       </div>
       <div>
-        <p className={`font-serif text-2xl font-normal tracking-tight ${type === "premium" ? "text-white" : "text-stone-900"}`}>{value}</p>
-        <div className="flex items-center justify-between mt-1">
-          <p className={`text-[12px] font-light ${type === "premium" ? "text-emerald-100/80" : "text-stone-400"}`}>{sub}</p>
+        <p className="text-2xl font-semibold tracking-tight text-stone-900">{value}</p>
+        <div className="flex items-center justify-between mt-1.5">
+          <p className="text-[12px] text-stone-400">{sub}</p>
           {trend !== undefined && (
-            <span className={`text-[11px] font-medium tracking-tight px-1.5 py-0.5 rounded ${type === "premium" ? "bg-emerald-700 text-white" : "bg-emerald-50 text-emerald-700"}`}>
-              {trend}% margin
+            <span
+              className={`text-[11px] font-semibold tracking-tight px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                trend >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
+              }`}
+            >
+              <TrendingUp size={11} className={trend < 0 ? "rotate-180" : ""} />
+              {Math.abs(trend)}%
             </span>
           )}
         </div>
@@ -92,13 +124,13 @@ function KpiCard({ label, value, sub, icon: Icon, trend, type = "neutral" }) {
 
 function ExpenseRow({ expense, onDelete }) {
   return (
-    <div className="flex items-center gap-4 py-3 border-b border-emerald-50 last:border-0 group">
+    <div className="flex items-center gap-4 py-3 border-b border-stone-100 last:border-0 group">
       <div className="flex flex-col flex-1 min-w-0">
         <span className="text-[13px] font-medium text-stone-800 truncate">{expense.label}</span>
         <span className="text-[10px] font-semibold tracking-wider text-emerald-600 uppercase mt-0.5">{expense.category}</span>
       </div>
       <div className="flex items-center gap-3 flex-shrink-0">
-        <span className="text-[13px] font-serif text-stone-900 font-medium">{currency(expense.amount)}</span>
+        <span className="text-[13px] text-stone-900 font-semibold">{currency(expense.amount)}</span>
         <button onClick={() => onDelete(expense.id)}
           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-stone-300 hover:text-rose-600 rounded">
           <Trash2 size={14} />
@@ -108,26 +140,31 @@ function ExpenseRow({ expense, onDelete }) {
   );
 }
 
-function MonthBar({ month, revenue, expense, profit, maxRevenue }) {
-  const revPct = maxRevenue ? Math.round((revenue / maxRevenue) * 100) : 0;
-  const expPct = maxRevenue ? Math.round((expense / maxRevenue) * 100) : 0;
+function EventRow({ booking }) {
+  const d = daysUntil(booking.date);
+  const status =
+    d < 0 ? { label: "Past", cls: "bg-stone-100 text-stone-500" }
+    : d === 0 ? { label: "Today", cls: "bg-amber-50 text-amber-700" }
+    : d <= 7 ? { label: "This week", cls: "bg-blue-50 text-blue-700" }
+    : { label: "Upcoming", cls: "bg-stone-100 text-stone-500" };
+
+  const dotColor = booking.hall === "Hall A" ? "bg-emerald-500" : "bg-teal-500";
+
   return (
-    <div className="flex flex-col gap-2 group cursor-pointer">
-      <div className="flex items-end gap-[3px] h-28 relative">
-        <div className="flex-1 flex items-end gap-[2px] h-full bg-emerald-50/30 rounded-t-md p-1">
-          <div
-            className="flex-1 bg-emerald-600 rounded-[2px] transition-all duration-500 hover:bg-emerald-700"
-            style={{ height: `${revPct}%`, minHeight: revenue ? 4 : 0 }}
-            title={`Revenue: ${currency(revenue)}`}
-          />
-          <div
-            className="flex-1 bg-emerald-200 rounded-[2px] transition-all duration-500 hover:bg-emerald-300"
-            style={{ height: `${expPct}%`, minHeight: expense ? 4 : 0 }}
-            title={`Expenses: ${currency(expense)}`}
-          />
-        </div>
+    <div className="flex items-center gap-3 py-3 border-b border-stone-100 last:border-0">
+      <div className={`w-9 h-9 rounded-full ${dotColor}/10 flex items-center justify-center flex-shrink-0`}>
+        <Calendar size={15} className={booking.hall === "Hall A" ? "text-emerald-600" : "text-teal-600"} />
       </div>
-      <p className="text-[11px] text-center text-stone-400 font-medium tracking-tight">{month}</p>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[13px] font-medium text-stone-800 truncate">{booking.client}</span>
+          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${status.cls}`}>{status.label}</span>
+        </div>
+        <p className="text-[11px] text-stone-400 mt-0.5">{booking.hall} · {booking.event}</p>
+      </div>
+      <span className="text-[11px] text-stone-400 flex-shrink-0">
+        {new Date(booking.date).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
+      </span>
     </div>
   );
 }
@@ -136,18 +173,16 @@ function MonthBar({ month, revenue, expense, profit, maxRevenue }) {
 //  MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Management() {
-  // const [bookings] = useState(SEED_BOOKINGS);
   const [expenses, setExpenses] = useState(SEED_EXPENSES);
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
-  const [selectedMonth, setSelectedMonth] = useState(null);      // null = all
-  const [selectedBookingId, setSelectedBookingId] = useState(null);  // for expense panel
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [hallFilter, setHallFilter] = useState("all");
 
   const { data: bookings = [] } = getAllBookings() || {};
 
-  // new expense form
   const [newExp, setNewExp] = useState({ category: EXPENSE_CATEGORIES[0], label: "", amount: "" });
-  const [addingTo, setAddingTo] = useState(null); // bookingId
+  const [addingTo, setAddingTo] = useState(null);
 
   // ── derived ─────────────────────────────────────────────────────────────────
   const filteredBookings = useMemo(() => {
@@ -176,6 +211,7 @@ export default function Management() {
   const totalProfit = totalRevenue - totalExpense;
   const margin = pct(totalProfit, totalRevenue);
 
+  // Revenue vs Expenses trend (line + area)
   const monthlyData = useMemo(() => {
     return MONTHS.map((m, idx) => {
       const bks = bookings.filter((b) => {
@@ -185,11 +221,23 @@ export default function Management() {
       });
       const rev = bks.reduce((s, b) => s + b.revenue, 0);
       const exp = bks.reduce((s, b) => s + (expensesByBooking[b.id] || []).reduce((a, e) => a + Number(e.amount), 0), 0);
-      return { month: m, revenue: rev, expense: exp, profit: rev - exp, bookings: bks.length };
+      return { month: m, Revenue: rev, Expenses: exp, profit: rev - exp, bookings: bks.length };
     });
   }, [bookings, expenses, selectedYear, hallFilter, expensesByBooking]);
 
-  const maxRevenue = Math.max(...monthlyData.map((m) => m.revenue), 1);
+  // Hall A vs Hall B monthly comparison (grouped bars)
+  const hallMonthlyData = useMemo(() => {
+    return MONTHS.map((m, idx) => {
+      const forHall = (hall) =>
+        bookings
+          .filter((b) => {
+            const d = new Date(b.date);
+            return d.getFullYear() === selectedYear && d.getMonth() === idx && b.hall === hall;
+          })
+          .reduce((s, b) => s + b.revenue, 0);
+      return { month: m, "Hall A": forHall("Hall A"), "Hall B": forHall("Hall B") };
+    });
+  }, [bookings, selectedYear]);
 
   const categoryBreakdown = useMemo(() => {
     const map = {};
@@ -200,6 +248,13 @@ export default function Management() {
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [filteredBookings, expensesByBooking]);
+
+  const upcomingEvents = useMemo(() => {
+    return [...bookings]
+      .filter((b) => daysUntil(b.date) >= 0)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(0, 5);
+  }, [bookings]);
 
   // ── actions ──────────────────────────────────────────────────────────────────
   function addExpense(bookingId) {
@@ -223,52 +278,52 @@ export default function Management() {
   const selectedBookingProfit = selectedBookingRevenue - selectedBookingExpense;
 
   return (
-    <div className="min-h-screen bg-emerald-50/20 text-stone-900 p-6 md:p-8 antialiased font-sans selection:bg-emerald-100">
+    <div className="min-h-screen bg-stone-50 text-stone-900 p-6 md:p-8 antialiased selection:bg-emerald-100">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+      `}</style>
 
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 mb-8 pb-6 border-b border-emerald-100/70">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 mb-8 pb-6 border-b border-stone-200">
         <div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700/80">Management Suite</span>
-          <h1 className="font-serif text-3xl font-normal tracking-tight text-stone-900 mt-1">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-600">Management Suite</span>
+          <h1 className="text-2xl font-semibold tracking-tight text-stone-900 mt-1">
             Expense & Profit Ledger
           </h1>
         </div>
 
-        {/* Filters Matrix */}
         <div className="flex flex-wrap gap-3 items-center">
-          {/* Hall filter */}
-          <div className="bg-emerald-50 p-1 rounded-lg flex gap-0.5 border border-emerald-100/50">
+          <div className="bg-stone-100 p-1 rounded-lg flex gap-0.5 border border-stone-200">
             {["all", "Hall A", "Hall B"].map((h) => (
               <button key={h} onClick={() => setHallFilter(h)}
                 className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all
                   ${hallFilter === h
-                    ? "bg-white text-emerald-800 shadow-2xs font-semibold"
-                    : "text-stone-500 hover:text-emerald-700"}`}>
+                    ? "bg-white text-stone-900 shadow-sm font-semibold"
+                    : "text-stone-500 hover:text-stone-800"}`}>
                 {h === "all" ? "Both Halls" : h}
               </button>
             ))}
           </div>
 
-          {/* Year selector */}
           <div className="relative">
             <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-emerald-100 rounded-lg text-[12px] font-medium text-stone-700 outline-none focus:border-emerald-400 cursor-pointer">
+              className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-stone-200 rounded-lg text-[12px] font-medium text-stone-700 outline-none focus:border-emerald-400 cursor-pointer">
               {YEARS.map((y) => <option key={y}>{y}</option>)}
             </select>
-            <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-600/60 pointer-events-none" />
+            <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
           </div>
 
-          {/* Month Custom Pills */}
           <div className="flex gap-1 overflow-x-auto max-w-full pb-1 xl:pb-0">
             <button onClick={() => setSelectedMonth(null)}
               className={`px-3 py-1.5 rounded-lg border text-[11px] font-medium tracking-tight transition-all
-                ${selectedMonth === null ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-stone-500 border-emerald-100 hover:border-emerald-300"}`}>
+                ${selectedMonth === null ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-500 border-stone-200 hover:border-stone-300"}`}>
               All Months
             </button>
             {MONTHS.map((m, i) => (
               <button key={m} onClick={() => setSelectedMonth(i === selectedMonth ? null : i)}
                 className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-medium tracking-tight transition-all
-                  ${selectedMonth === i ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-stone-500 border-emerald-100 hover:border-emerald-300"}`}>
+                  ${selectedMonth === i ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-500 border-stone-200 hover:border-stone-300"}`}>
                 {m}
               </button>
             ))}
@@ -278,75 +333,117 @@ export default function Management() {
 
       {/* ── KPI Grid ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <KpiCard label="Total Gross Revenue" value={currency(totalRevenue)} sub={`${filteredBookings.length} Bookings retained`} icon={ArrowUpRight} type="neutral" />
-        <KpiCard label="Aggregated Costs" value={currency(totalExpense)} sub="Operational expenses" icon={Receipt} type="danger" />
-        <KpiCard label="Net System Profit" value={currency(totalProfit)} sub={totalProfit >= 0 ? "Margin optimization steady" : "Deficit performance"} icon={DollarSign} type="premium" trend={margin} />
-        <KpiCard label="Average Yield / Event" value={currency(filteredBookings.length ? Math.round(totalProfit / filteredBookings.length) : 0)} sub="Distributed performance" icon={Package} type="neutral" />
+        <KpiCard label="Total Gross Revenue" value={currency(totalRevenue)} sub={`${filteredBookings.length} bookings`} icon={ArrowUpRight} badgeColor="bg-blue-600" />
+        <KpiCard label="Aggregated Costs" value={currency(totalExpense)} sub="Operational expenses" icon={Receipt} badgeColor="bg-rose-500" />
+        <KpiCard label="Net System Profit" value={currency(totalProfit)} sub={totalProfit >= 0 ? "Margin holding steady" : "Running at a deficit"} icon={DollarSign} badgeColor="bg-emerald-600" trend={margin} />
+        <KpiCard label="Average Yield / Event" value={currency(filteredBookings.length ? Math.round(totalProfit / filteredBookings.length) : 0)} sub="Per booking" icon={Package} badgeColor="bg-violet-600" />
       </div>
 
-      {/* ── Overviews ────────────────────────────────────────────────────────── */}
+      {/* ── Trend + Activity ─────────────────────────────────────────────────── */}
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
 
-        {/* Chart Component Card */}
-        <div className="bg-white rounded-xl border border-emerald-100 p-6">
+        <div className="bg-white rounded-xl border border-stone-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-serif text-lg font-normal text-stone-900">Performance Index Overview</h2>
-              <p className="text-[11px] text-stone-400 mt-0.5 uppercase tracking-wider">Emerald bar = Gross revenue  ·  Soft green = System outlays</p>
+              <h2 className="text-[15px] font-semibold text-stone-900">Revenue vs Expenses</h2>
+              <p className="text-[11px] text-stone-400 mt-0.5">
+                {currency(totalRevenue)} booked against {currency(totalExpense)} in costs · {selectedYear}
+              </p>
             </div>
             <BarChart3 size={16} className="text-emerald-600" />
           </div>
-          <div className="grid grid-cols-12 gap-3 items-end pt-4 border-b border-emerald-50 pb-2">
-            {monthlyData.map((m) => (
-              <MonthBar key={m.month} {...m} maxRevenue={maxRevenue} />
-            ))}
-          </div>
 
-          {/* Secondary Table Elements */}
-          <div className="mt-6">
-            <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
-              {monthlyData.filter((m) => m.revenue > 0).map((m) => (
-                <div key={m.month} className="flex items-center justify-between text-[12px] p-2 rounded-lg hover:bg-emerald-50/40 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <span className="font-semibold text-stone-800 w-8">{m.month}</span>
-                    <span className="text-stone-400 text-[11px]">{m.bookings} operations</span>
-                  </div>
-                  <div className="flex gap-6 text-right">
-                    <span className="text-stone-400 font-light">{currency(m.revenue)}</span>
-                    <span className={`font-serif font-medium ${m.profit >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
-                      {m.profit >= 0 ? "+" : ""}{currency(m.profit)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <ComposedChart data={monthlyData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
+              <defs>
+                <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#059669" stopOpacity={0.22} />
+                  <stop offset="100%" stopColor="#059669" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke="#F1F1EF" />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#A8A29E" }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={compactCurrency} tick={{ fontSize: 11, fill: "#A8A29E" }} axisLine={false} tickLine={false} width={48} />
+              <Tooltip content={<ChartTooltip />} />
+              <Legend
+                verticalAlign="top"
+                align="right"
+                height={28}
+                iconType="circle"
+                iconSize={8}
+                wrapperStyle={{ fontSize: 12, color: "#78716C" }}
+              />
+              <Area type="monotone" dataKey="Revenue" stroke="#059669" strokeWidth={2} fill="url(#revFill)" />
+              <Line type="monotone" dataKey="Expenses" stroke="#A8A29E" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* Cost Matrix Distribution */}
-        <div className="bg-white rounded-xl border border-emerald-100 p-6 flex flex-col justify-between">
+        <div className="bg-white rounded-xl border border-stone-200 p-6 flex flex-col">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-[15px] font-semibold text-stone-900">Upcoming Events</h2>
+          </div>
+          <p className="text-[11px] text-stone-400 mb-3">{upcomingEvents.length} scheduled</p>
+
+          <div className="flex-1">
+            {upcomingEvents.length === 0 ? (
+              <div className="text-center py-12">
+                <Inbox size={24} className="text-stone-200 mx-auto mb-2" />
+                <p className="text-stone-400 text-[12px]">No upcoming bookings</p>
+              </div>
+            ) : (
+              upcomingEvents.map((b) => <EventRow key={b.id} booking={b} />)
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Hall Performance + Category Breakdown ───────────────────────────── */}
+      <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
+
+        <div className="bg-white rounded-xl border border-stone-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-[15px] font-semibold text-stone-900">Hall Performance</h2>
+              <p className="text-[11px] text-stone-400 mt-0.5">Monthly revenue, Hall A vs Hall B · {selectedYear}</p>
+            </div>
+          </div>
+
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={hallMonthlyData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }} barGap={4}>
+              <CartesianGrid vertical={false} stroke="#F1F1EF" />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#A8A29E" }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={compactCurrency} tick={{ fontSize: 11, fill: "#A8A29E" }} axisLine={false} tickLine={false} width={48} />
+              <Tooltip content={<ChartTooltip />} />
+              <Legend verticalAlign="top" align="right" height={28} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: "#78716C" }} />
+              <Bar dataKey="Hall A" fill="#059669" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="Hall B" fill="#0D9488" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-xl border border-stone-200 p-6 flex flex-col justify-between">
           <div>
-            <h2 className="font-serif text-lg font-normal text-stone-900 mb-5">Expense Segments</h2>
+            <h2 className="text-[15px] font-semibold text-stone-900 mb-5">Expense Breakdown</h2>
             {categoryBreakdown.length === 0 ? (
               <div className="text-center py-12">
-                <Inbox size={24} className="text-emerald-200 mx-auto mb-2" />
-                <p className="text-stone-400 text-[12px]">No logs captured</p>
+                <Inbox size={24} className="text-stone-200 mx-auto mb-2" />
+                <p className="text-stone-400 text-[12px]">No expenses logged</p>
               </div>
             ) : (
               <div className="flex flex-col gap-4 max-h-[220px] overflow-y-auto pr-1">
                 {categoryBreakdown.map(([cat, amt]) => {
                   const p = pct(amt, totalExpense);
                   return (
-                    <div key={cat} className="group">
+                    <div key={cat}>
                       <div className="flex justify-between items-baseline mb-1">
                         <span className="text-[12px] font-medium text-stone-700">{cat}</span>
-                        <span className="text-[11px] font-mono text-emerald-700 font-medium">{p}%</span>
+                        <span className="text-[11px] font-semibold text-emerald-700">{p}%</span>
                       </div>
-                      <div className="w-full h-[3px] bg-emerald-50 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-600 rounded-full transition-all duration-500"
-                          style={{ width: `${p}%` }} />
+                      <div className="w-full h-[5px] bg-stone-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: `${p}%` }} />
                       </div>
-                      <p className="text-[11px] text-stone-400 mt-1 font-serif">{currency(amt)}</p>
+                      <p className="text-[11px] text-stone-400 mt-1">{currency(amt)}</p>
                     </div>
                   );
                 })}
@@ -354,23 +451,22 @@ export default function Management() {
             )}
           </div>
 
-          {/* Minimal Border Layout Chart */}
-          <div className="mt-6 pt-5 border-t border-emerald-50">
+          <div className="mt-6 pt-5 border-t border-stone-100">
             <div className="flex items-center gap-4">
               <div className="relative w-12 h-12 flex-shrink-0">
                 <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                  <circle cx="18" cy="18" r="16" fill="none" stroke="#f0fdf4" strokeWidth="2.5" />
+                  <circle cx="18" cy="18" r="16" fill="none" stroke="#F0FDF4" strokeWidth="2.5" />
                   <circle cx="18" cy="18" r="16" fill="none" stroke="#059669" strokeWidth="2.5"
-                    strokeDasharray={`${Math.max(0, margin)} ${100 - Math.max(0, margin)}`} />
+                    strokeDasharray={`${Math.max(0, margin)} ${100 - Math.max(0, margin)}`} strokeLinecap="round" />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-emerald-800">
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-stone-900">
                   {margin}%
                 </span>
               </div>
               <div>
-                <p className="text-[12px] font-medium text-stone-800">System Performance</p>
+                <p className="text-[12px] font-medium text-stone-800">Profit Margin</p>
                 <p className="text-[11px] text-emerald-700 mt-0.5 font-medium">
-                  {margin >= 40 ? "Excellent distribution" : margin >= 25 ? "Healthy asset yield" : "Cost pressure action"}
+                  {margin >= 40 ? "Excellent distribution" : margin >= 25 ? "Healthy yield" : "Costs need attention"}
                 </p>
               </div>
             </div>
@@ -378,35 +474,34 @@ export default function Management() {
         </div>
       </div>
 
-      {/* ── Core Spreadsheet & Inspector Panel ──────────────────────────────── */}
+      {/* ── Ledger & Inspector ───────────────────────────────────────────────── */}
       <div className="grid lg:grid-cols-[1fr_380px] gap-6 items-start">
 
-        {/* Master Ledger List */}
-        <div className="bg-white rounded-xl border border-emerald-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-emerald-50 flex justify-between items-center">
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center">
             <div>
-              <h2 className="font-serif text-lg font-normal text-stone-900">Ledger Distribution</h2>
-              <p className="text-[11px] text-stone-400 mt-0.5">Toggle rows to evaluate custom line allocations</p>
+              <h2 className="text-[15px] font-semibold text-stone-900">Booking Ledger</h2>
+              <p className="text-[11px] text-stone-400 mt-0.5">Select a row to inspect or add line costs</p>
             </div>
-            <SlidersHorizontal size={14} className="text-emerald-600" />
+            <SlidersHorizontal size={14} className="text-stone-400" />
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-emerald-50/30 border-b border-emerald-100/70">
-                  {["Client Profiling", "Asset", "Type", "Target Date", "Gross Yield", "Operational Cost", "Net Yield", ""].map((h) => (
+                <tr className="bg-stone-50 border-b border-stone-100">
+                  {["Client", "Hall", "Event", "Date", "Revenue", "Costs", "Profit", ""].map((h) => (
                     <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-emerald-50/60">
+              <tbody className="divide-y divide-stone-100">
                 {filteredBookings.length === 0 && (
                   <tr>
                     <td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">
-                      No statements found matching your targets.
+                      No bookings found for these filters.
                     </td>
                   </tr>
                 )}
@@ -417,28 +512,27 @@ export default function Management() {
                   return (
                     <tr key={b.id}
                       onClick={() => setSelectedBookingId(isSel ? null : b.id)}
-                      className={`cursor-pointer transition-all duration-150
-                        ${isSel ? "bg-emerald-50/40" : "hover:bg-emerald-50/10"}`}>
+                      className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-emerald-50/50" : "hover:bg-stone-50"}`}>
                       <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}</td>
                       <td className="px-5 py-3.5">
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded border
-                          ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-800 border-emerald-100" : "bg-teal-50 text-teal-800 border-teal-100"}`}>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border
+                          ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>
                           {b.hall}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td>
-                      <td className="px-5 py-3.5 text-[12px] text-stone-400 font-light">
+                      <td className="px-5 py-3.5 text-[12px] text-stone-400">
                         {new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
                       </td>
-                      <td className="px-5 py-3.5 text-[13px] font-serif font-medium text-stone-800">{currency(b.revenue)}</td>
-                      <td className="px-5 py-3.5 text-[13px] font-serif text-rose-600">{currency(bExp)}</td>
-                      <td className={`px-5 py-3.5 text-[13px] font-serif font-medium ${bPro >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+                      <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(b.revenue)}</td>
+                      <td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(bExp)}</td>
+                      <td className={`px-5 py-3.5 text-[13px] font-semibold ${bPro >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
                         {bPro >= 0 ? "+" : ""}{currency(bPro)}
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <button
                           onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }}
-                          className="text-[11px] font-medium px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors">
+                          className="text-[11px] font-medium px-2.5 py-1 bg-stone-50 text-stone-700 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors">
                           + Add Expense
                         </button>
                       </td>
@@ -450,24 +544,22 @@ export default function Management() {
           </div>
         </div>
 
-        {/* Secondary Metric Inspector */}
-        <div className="bg-white rounded-xl border border-emerald-100 flex flex-col overflow-hidden">
+        <div className="bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden">
           {!selectedBookingId ? (
             <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
-              <div className="w-12 h-12 bg-emerald-50/50 rounded-full flex items-center justify-center mb-3">
-                <Receipt size={16} className="text-emerald-600" />
+              <div className="w-12 h-12 bg-stone-50 rounded-full flex items-center justify-center mb-3">
+                <Receipt size={16} className="text-stone-400" />
               </div>
-              <p className="text-[13px] font-medium text-stone-700">Statement Not Loaded</p>
-              <p className="text-[11px] text-stone-400 mt-1 max-w-[200px]">Select any transaction record to inspect or adjust line costs.</p>
+              <p className="text-[13px] font-medium text-stone-700">No booking selected</p>
+              <p className="text-[11px] text-stone-400 mt-1 max-w-[200px]">Select a row to inspect or adjust its costs.</p>
             </div>
           ) : (
             <>
-              {/* Panel Inspector Header */}
-              <div className="p-5 border-b border-emerald-50 bg-emerald-50/20">
+              <div className="p-5 border-b border-stone-100 bg-stone-50/60">
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-[9px] font-semibold uppercase tracking-wider bg-emerald-100/70 px-2 py-0.5 rounded text-emerald-800 border border-emerald-200/50">{selectedBooking?.hall}</span>
-                    <p className="font-serif text-base font-normal text-stone-900 mt-1.5">{selectedBooking?.client}</p>
+                    <span className="text-[9px] font-semibold uppercase tracking-wider bg-stone-100 px-2 py-0.5 rounded text-stone-600 border border-stone-200">{selectedBooking?.hall}</span>
+                    <p className="text-[14px] font-semibold text-stone-900 mt-1.5">{selectedBooking?.client}</p>
                     <p className="text-[11px] text-stone-400 mt-0.5">
                       {selectedBooking?.event} · {new Date(selectedBooking?.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
                     </p>
@@ -477,25 +569,23 @@ export default function Management() {
                   </button>
                 </div>
 
-                {/* Micro metrics matrix */}
                 <div className="grid grid-cols-3 gap-2 mt-4">
                   {[
-                    { label: "Gross Yield", value: currency(selectedBookingRevenue), cls: "text-stone-800" },
-                    { label: "Costs Filed", value: currency(selectedBookingExpense), cls: "text-rose-600" },
-                    { label: "Net Allocation", value: currency(selectedBookingProfit), cls: selectedBookingProfit >= 0 ? "text-emerald-700 font-medium" : "text-rose-600" },
+                    { label: "Revenue", value: currency(selectedBookingRevenue), cls: "text-stone-800" },
+                    { label: "Costs", value: currency(selectedBookingExpense), cls: "text-rose-600" },
+                    { label: "Profit", value: currency(selectedBookingProfit), cls: selectedBookingProfit >= 0 ? "text-emerald-700" : "text-rose-600" },
                   ].map((k) => (
-                    <div key={k.label} className="bg-white rounded-lg p-2.5 border border-emerald-100/40">
+                    <div key={k.label} className="bg-white rounded-lg p-2.5 border border-stone-100">
                       <p className="text-[9px] text-stone-400 uppercase tracking-tight mb-1">{k.label}</p>
-                      <p className={`text-[12px] font-serif ${k.cls}`}>{k.value}</p>
+                      <p className={`text-[12px] font-semibold ${k.cls}`}>{k.value}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Expense List Display */}
               <div className="flex-1 overflow-y-auto px-5 py-2 max-h-64">
                 {selectedBookingExpenses.length === 0 ? (
-                  <p className="text-[12px] text-stone-400 text-center py-8">No specific operational outlays logged.</p>
+                  <p className="text-[12px] text-stone-400 text-center py-8">No costs logged for this booking.</p>
                 ) : (
                   selectedBookingExpenses.map((e) => (
                     <ExpenseRow key={e.id} expense={e} onDelete={deleteExpense} />
@@ -503,35 +593,34 @@ export default function Management() {
                 )}
               </div>
 
-              {/* Add form updates */}
-              <div className="border-t border-emerald-50 p-4 bg-emerald-50/10">
+              <div className="border-t border-stone-100 p-4 bg-stone-50/40">
                 {addingTo === selectedBookingId ? (
                   <div className="flex flex-col gap-2">
                     <select value={newExp.category} onChange={(e) => setNewExp({ ...newExp, category: e.target.value })}
-                      className="w-full px-3 py-1.5 border border-emerald-100 rounded-lg text-[12px] outline-none focus:border-emerald-500 bg-white text-stone-700">
+                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 bg-white text-stone-700">
                       {EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
                     </select>
                     <input value={newExp.label} onChange={(e) => setNewExp({ ...newExp, label: e.target.value })}
                       placeholder="Line item description"
-                      className="w-full px-3 py-1.5 border border-emerald-100 rounded-lg text-[12px] outline-none focus:border-emerald-500 placeholder:text-stone-300" />
+                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 placeholder:text-stone-300" />
                     <input type="number" value={newExp.amount} onChange={(e) => setNewExp({ ...newExp, amount: e.target.value })}
                       placeholder="Amount (₨)"
-                      className="w-full px-3 py-1.5 border border-emerald-100 rounded-lg text-[12px] outline-none focus:border-emerald-500 placeholder:text-stone-300 font-serif" />
+                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 placeholder:text-stone-300" />
                     <div className="flex gap-2 mt-1">
                       <button onClick={() => addExpense(selectedBookingId)}
                         className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg transition-colors">
                         Add Expense
                       </button>
                       <button onClick={() => setAddingTo(null)}
-                        className="px-3 py-1.5 bg-white text-stone-600 border border-emerald-100 text-[12px] font-medium rounded-lg hover:bg-emerald-50 transition-colors">
+                        className="px-3 py-1.5 bg-white text-stone-600 border border-stone-200 text-[12px] font-medium rounded-lg hover:bg-stone-50 transition-colors">
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
                   <button onClick={() => setAddingTo(selectedBookingId)}
-                    className="w-full py-2 border border-dashed border-emerald-200 rounded-lg text-[12px] font-medium text-emerald-700 hover:border-emerald-400 hover:bg-white transition-all flex items-center justify-center gap-1.5">
-                    <Plus size={13} /> Add Line Outlay
+                    className="w-full py-2 border border-dashed border-stone-300 rounded-lg text-[12px] font-medium text-stone-600 hover:border-emerald-400 hover:text-emerald-700 hover:bg-white transition-all flex items-center justify-center gap-1.5">
+                    <Plus size={13} /> Add Line Cost
                   </button>
                 )}
               </div>
@@ -539,7 +628,6 @@ export default function Management() {
           )}
         </div>
       </div>
-
     </div>
   );
 }
