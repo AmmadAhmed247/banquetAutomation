@@ -15,8 +15,49 @@ function BookingChip({ booking }) {
         Hall {booking.hall.toUpperCase()}
       </p>
       <p className="text-xs font-semibold text-gray-900 mb-0.5">{booking.client}</p>
-      <p className="text-[11px] text-slate-500">{booking.event} &bull; {booking.package}</p>
-      <p className={`text-[10px] mt-1 font-semibold ${isA ? "text-red-700" : "text-blue-700"}`}>
+      <p className="text-[11px] text-slate-500 mb-2">{booking.event} • {booking.package}</p>
+      
+      {/* Additional details */}
+      <div className="space-y-1.5 text-[10px] mb-2 pb-2 border-b border-opacity-20" style={{ borderColor: isA ? "#dc2626" : "#2563eb" }}>
+        {booking.phone && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Phone:</span>
+            <span className="font-medium text-gray-800">{booking.phone}</span>
+          </div>
+        )}
+        {booking.guests && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Guests:</span>
+            <span className="font-medium text-gray-800">{booking.guests}</span>
+          </div>
+        )}
+        {booking.totalAmount && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Total:</span>
+            <span className="font-medium text-gray-800">PKR {Number(booking.totalAmount).toLocaleString()}</span>
+          </div>
+        )}
+        {booking.advancePaid && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Advance:</span>
+            <span className="font-medium text-gray-800">PKR {Number(booking.advancePaid).toLocaleString()}</span>
+          </div>
+        )}
+        {booking.advanceDueDate && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Due Date:</span>
+            <span className="font-medium text-gray-800">{new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
+          </div>
+        )}
+        {booking.paymentMethod && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Method:</span>
+            <span className="font-medium text-gray-800">{booking.paymentMethod}</span>
+          </div>
+        )}
+      </div>
+
+      <p className={`text-[10px] font-semibold ${isA ? "text-red-700" : "text-blue-700"}`}>
         {booking.status}
       </p>
     </div>
@@ -43,13 +84,20 @@ export default function CalendarView() {
       b.venue?.toLowerCase().includes("hall a") ? "a" :
       b.venue?.toLowerCase().includes("hall b") ? "b" : "a";
     return {
-      id:      b.id,
-      hall:    hallChar,
-      date:    `${year}-${month}-${day}`,
-      client:  b.client,
-      event:   b.event,
-      package: b.package_name || b.package,
-      status:  b.status,
+      id:              b.id,
+      hall:            hallChar,
+      date:            `${year}-${month}-${day}`,
+      client:          b.client,
+      event:           b.event,
+      package:         b.package_name || b.package,
+      status:          b.status,
+      phone:           b.phone,
+      guests:          b.guests,
+      totalAmount:     b.total_amount || b.totalAmount,
+      advancePaid:     b.advance_paid || b.advancePaid,
+      advanceDueDate:  b.advance_due_date || b.advanceDueDate,
+      paymentMethod:   b.payment_method || b.paymentMethod,
+      paymentNote:     b.payment_note || b.paymentNote,
     };
   });
 

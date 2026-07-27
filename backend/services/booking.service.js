@@ -11,11 +11,12 @@ async function CreateBooking(bookingData) {
             date,
             packageName,
             phone,
-            client = client || "New Client",
+            client = "New Client",
             guests = 0,
             venue,
             totalAmount = 0,
             advancePaid = 0,
+            advanceDueDate = null,   
             paymentMethod = "Cash",
             paymentNote = "",
             status = "Pending"
@@ -45,6 +46,7 @@ async function CreateBooking(bookingData) {
             venue: venue,
             total_amount: totalAmount.toString(),
             advance_paid: advancePaid.toString(),
+            advance_due_date: advanceDueDate ? new Date(advanceDueDate) : null,   // ← added
             payment_method: paymentMethod,
             payment_note: paymentNote,
             status: status
@@ -58,28 +60,15 @@ async function CreateBooking(bookingData) {
             }
         }
 
-        // Send message, but don't fail if it errors
         try {
             await sendMessage(phone, `Your booking for ${newBooking.event} on ${newBooking.date} has been confirmed by our team!`)
         } catch (msgError) {
             console.log("Warning: Failed to send message:", msgError.message)
         }
 
-        await db
-        .update(booking)
-        .set({
-            status: "Confirmed"
-        })
-        .where(eq(booking.id, newBooking.id))
-
-        const updatedBooking = await db
-        .select()
-        .from(booking)
-        .where(eq(booking.id, newBooking.id))
-
         return {
             success: true,
-            booking: updatedBooking[0],
+            booking: newBooking,
             message: "Booking created successfully!"
         }
 
@@ -163,13 +152,11 @@ async function UpdateBooking(bookingId, bookingData) {
             venue,
             totalAmount = 0,
             advancePaid = 0,
+            advanceDueDate = null,   
             paymentMethod = "Cash",
             paymentNote = "",
             status = "Pending"
         } = bookingData
-
-        console.log("Updating booking with ID:", bookingId)
-        console.log("Update data:", bookingData)
 
         const updatedBooking = await db
         .update(booking)
@@ -183,6 +170,7 @@ async function UpdateBooking(bookingId, bookingData) {
             venue: venue,
             total_amount: totalAmount.toString(),
             advance_paid: advancePaid.toString(),
+            advance_due_date: advanceDueDate ? new Date(advanceDueDate) : null,   
             payment_method: paymentMethod,
             payment_note: paymentNote,
             status: status,
@@ -190,6 +178,7 @@ async function UpdateBooking(bookingId, bookingData) {
         })
         .where(eq(booking.id, bookingId))
         .returning()
+
 
         console.log("Updated booking result:", updatedBooking)
 

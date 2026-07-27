@@ -67,10 +67,11 @@ function BookingCard({ booking, onEdit , onDelete }) {
         {/* Grid fields */}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { icon: Tag,          label: "Event",  value: booking.event },
-            { icon: CalendarDays, label: "Date",   value: new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) },
-            { icon: Users,        label: "Guests", value: booking.guests },
-            { icon: MapPin,       label: "Venue",  value: booking.venue },
+            { icon: Tag,          label: "Event",    value: booking.event },
+            { icon: CalendarDays, label: "Date",     value: booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
+            { icon: CalendarDays, label: "Advance Due", value: booking.advanceDueDate ? new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
+            { icon: Users,        label: "Guests",   value: booking.guests },
+            { icon: MapPin,       label: "Venue",    value: booking.venue },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="bg-zinc-100 rounded-xl p-2.5 min-w-0">
               <div className="flex items-center gap-1 mb-0.5">
@@ -115,7 +116,7 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-green-50/60 border-b border-green-100">
-            {["Client", "Event", "Date", "Guests", "Venue", "Total", "Payment", "Payment Note", "Status",  "", ""].map((h) => (
+            {["Client", "Event", "Date", "Advance Due", "Guests", "Venue", "Total", "Payment", "Payment Note", "Status",  "", ""].map((h) => (
               <th key={h} className="text-left text-[10px] font-semibold text-green-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">
                 {h}
               </th>
@@ -139,7 +140,10 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
                 </td>
 
                 <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
-                  {new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                  {booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
+                  {booking.advanceDueDate ? new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
 
                 <td className="px-4 py-3.5 text-green-800">{booking.guests}</td>

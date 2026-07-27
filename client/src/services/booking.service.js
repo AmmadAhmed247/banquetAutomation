@@ -16,18 +16,19 @@ const bookingService = {
   createBooking: async (form) => {
     try {
       const res = await api.post('/api/booking/createBooking', {
-        event:         form.event,
-        date:          form.date,
-        packageName:   form.package,
-        phone:         form.phone,
-        client:        form.client,
-        guests:        form.guests,
-        venue:         form.venue,
-        totalAmount:   form.totalAmount,
-        advancePaid:   form.advancePaid,
-        paymentMethod: form.paymentMethod,
-        paymentNote:   form.paymentNote,
-        status:        form.status,
+        event:          form.event,
+        date:           form.date,
+        packageName:    form.package,
+        phone:          form.phone,
+        client:         form.client,
+        guests:         form.guests,
+        venue:          form.venue,
+        totalAmount:    form.totalAmount,
+        advancePaid:    form.advancePaid,
+        advanceDueDate: form.advanceDueDate,   
+        paymentMethod:  form.paymentMethod,
+        paymentNote:    form.paymentNote,
+        status:         form.status,
       });
       return res.data;
     } catch (error) {
@@ -39,19 +40,20 @@ const bookingService = {
   updateBooking: async (form) => {
     try {
       const res = await api.put('/api/booking/updateBooking', {
-        id:            form.id,
-        event:         form.event,
-        date:          form.date,
-        packageName:   form.package,
-        phone:         form.phone,
-        client:        form.client,
-        guests:        form.guests,
-        venue:         form.venue,
-        totalAmount:   form.totalAmount,
-        advancePaid:   form.advancePaid,
-        paymentMethod: form.paymentMethod,
-        paymentNote:   form.paymentNote,
-        status:        form.status,
+        id:             form.id,
+        event:          form.event,
+        date:           form.date,
+        packageName:    form.package,
+        phone:          form.phone,
+        client:         form.client,
+        guests:         form.guests,
+        venue:          form.venue,
+        totalAmount:    form.totalAmount,
+        advancePaid:    form.advancePaid,
+        advanceDueDate: form.advanceDueDate,   
+        paymentMethod:  form.paymentMethod,
+        paymentNote:    form.paymentNote,
+        status:         form.status,
       });
       return res.data;
     } catch (error) {

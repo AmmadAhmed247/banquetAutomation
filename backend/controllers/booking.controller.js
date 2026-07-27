@@ -2,7 +2,10 @@ const { CreateBooking, GetAllBookings, GetAllBookingsUnfiltered, UpdateBooking ,
 
 async function CreateUserBooking(req,res) {
     try {
-        const {event, date, packageName, phone, client, guests, venue, totalAmount, advancePaid, paymentMethod, paymentNote, status} = req.body
+        const {event, date, packageName, phone, client, guests, venue, totalAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status} = req.body
+
+        console.log("Create Booking Request body:", req.body)
+        console.log("Create Booking advanceDueDate:", advanceDueDate)
 
         if(!event || !packageName || !date || !phone || !client || !venue){
             return res.status(400).json({
@@ -20,6 +23,7 @@ async function CreateUserBooking(req,res) {
             venue,
             totalAmount: totalAmount || 0,
             advancePaid: advancePaid || 0,
+            advanceDueDate: advanceDueDate || null,   
             paymentMethod: paymentMethod || "Cash",
             paymentNote: paymentNote || "",
             status: status || "Pending"
@@ -80,9 +84,9 @@ async function GetAllBookingsAdmin(req, res) {
 
 async function UpdateUserBooking(req, res) {
     try {
-        const { id, event, date, packageName, phone, client, guests, venue, totalAmount, advancePaid, paymentMethod, paymentNote, status } = req.body
+        const { id, event, date, packageName, phone, client, guests, venue, totalAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status } = req.body
 
-        console.log("Update Booking Request:", { id, event, date, packageName, phone, client, guests, venue, totalAmount, advancePaid, paymentMethod, paymentNote, status })
+        console.log("Update Booking Request:", { id, event, date, packageName, phone, client, guests, venue, totalAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status })
 
         if(!id){
             return res.status(400).json({
@@ -106,6 +110,7 @@ async function UpdateUserBooking(req, res) {
             venue,
             totalAmount: totalAmount || 0,
             advancePaid: advancePaid || 0,
+            advanceDueDate: advanceDueDate || null,   
             paymentMethod: paymentMethod || "Cash",
             paymentNote: paymentNote || "",
             status: status || "Pending"
@@ -123,6 +128,8 @@ async function UpdateUserBooking(req, res) {
         return res.status(500).json({ message: "Internal server error", error: error.message })
     }
 }
+
+
 async function DeleteUserBooking(req, res) {
     try {
         const { id } = req.body

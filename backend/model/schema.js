@@ -27,6 +27,7 @@ const booking = pgTable("bookings", {
   // Payment Details
   total_amount:numeric("total_amount", { precision: 12, scale: 2 }).notNull().default("0"),
   advance_paid:numeric("advance_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+  advance_due_date:timestamp("advance_due_date"), 
   payment_method: varchar("payment_method", { length: 50 }).notNull().default("Cash"),
   payment_note:varchar("payment_note", { length: 255 }),
  

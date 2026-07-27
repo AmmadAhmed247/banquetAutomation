@@ -1,13 +1,22 @@
 import { useState } from "react";
 import { PlusCircle, AlertCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import toast from "react-hot-toast";
 import BookingModal from "../components/BookingModal";
 import StatsSection from "../components/StatsSection";
 import FiltersSection from "../components/FiltersSection";
 import BookingsList from "../components/BookingsList";
 import bookingService from "../services/booking.service";
+
+function formatDateInput(value) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 
 
@@ -21,11 +30,11 @@ const emptyForm = {
   venue: "Hall A",
   totalAmount: "",
   advancePaid: "",
+  advanceDueDate: "",   
   paymentMethod: "Cash",
   paymentNote: "",
   package: "Standard"
 };
-
 
 export default function Bookings({ showToast }) {
   const [modal, setModal] = useState(null);
@@ -41,20 +50,16 @@ export default function Bookings({ showToast }) {
 });
 
   const bookings = rawBookings?.map(b => {
-    let formattedDate = "";
-    if (b.date) {
-      const dateObj = new Date(b.date);
-      const month = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
-      const day = String(dateObj.getUTCDate()).padStart(2, "0");
-      const year = dateObj.getUTCFullYear();
-      formattedDate = `${year}-${month}-${day}`;
-    }
+    const formattedDate = formatDateInput(b.date);
+    const formattedDueDate = formatDateInput(b.advance_due_date || b.advanceDueDate);
+
     return {
       ...b,
       totalAmount: b.total_amount || b.totalAmount,
       advancePaid: b.advance_paid || b.advancePaid,
+      advanceDueDate: formattedDueDate || b.advanceDueDate || "",
       paymentNote: b.payment_note || b.paymentNote,
-      date: formattedDate,
+      date: formattedDate || b.date || "",
       package: b.package_name || b.package,
     };
   }) || [];

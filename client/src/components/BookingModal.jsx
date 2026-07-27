@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CalendarDays, Phone, Users,
   PlusCircle, X, CreditCard, ChevronDown, Loader, Save, Pencil
@@ -7,6 +7,25 @@ import {
 function formatPKR(val) {
   if (!val && val !== 0) return "—";
   return "PKR " + Number(val).toLocaleString("en-PK");
+}
+
+function formatDateInput(value) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeBooking(booking) {
+  if (!booking) return {};
+  return {
+    ...booking,
+    date: booking.date ? formatDateInput(booking.date) : "",
+    advanceDueDate: booking.advanceDueDate ?? ((booking.advance_due_date ? formatDateInput(booking.advance_due_date) : "") || ""),
+  };
 }
 
 function Field({ label, children }) {
@@ -27,7 +46,11 @@ const PAYMENT_METHODS = ["Cash", "Bank Transfer", "Online", "Cheque"];
 const STATUSES = ["Pending", "Confirmed", "Cancelled"];
 
 export default function BookingModal({ booking, onClose, onSave, isNew, isLoading }) {
-  const [form, setForm] = useState(booking);
+  const [form, setForm] = useState(() => normalizeBooking(booking));
+  useEffect(() => {
+    setForm(normalizeBooking(booking));
+  }, [booking]);
+
   const f = (key, val) => setForm(p => ({ ...p, [key]: val }));
   const remaining = Number(form.totalAmount || 0) - Number(form.advancePaid || 0);
   const pct = form.totalAmount ? Math.min(100, Math.round((Number(form.advancePaid || 0) / Number(form.totalAmount)) * 100)) : 0;
@@ -110,27 +133,30 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
           {/* Payment Details */}
           <section>
             <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <CreditCard size={12} /> Payment Details
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Total Amount (PKR)">
-                <input type="number" placeholder="e.g. 850000" value={form.totalAmount} onChange={e => f("totalAmount", e.target.value)} className={inputCls} disabled={isLoading} />
-              </Field>
-              <Field label="Advance Paid (PKR)">
-                <input type="number" placeholder="e.g. 300000" value={form.advancePaid} onChange={e => f("advancePaid", e.target.value)} className={inputCls} disabled={isLoading} />
-              </Field>
-              <Field label="Payment Method">
-                <div className="relative">
-                  <select value={form.paymentMethod} onChange={e => f("paymentMethod", e.target.value)} className={selectCls} disabled={isLoading}>
-                    {PAYMENT_METHODS.map(o => <option key={o}>{o}</option>)}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none" />
-                </div>
-              </Field>
-              <Field label="Payment Note">
-                <input type="text" placeholder="e.g. Token received" value={form.paymentNote || ""} onChange={e => f("paymentNote", e.target.value)} className={inputCls} disabled={isLoading} />
-              </Field>
-            </div>
+    <CreditCard size={12} /> Payment Details
+  </p>
+  <div className="grid grid-cols-2 gap-4">
+    <Field label="Total Amount (PKR)">
+      <input type="number" placeholder="e.g. 850000" value={form.totalAmount} onChange={e => f("totalAmount", e.target.value)} className={inputCls} disabled={isLoading} />
+    </Field>
+    <Field label="Advance Paid (PKR)">
+      <input type="number" placeholder="e.g. 300000" value={form.advancePaid} onChange={e => f("advancePaid", e.target.value)} className={inputCls} disabled={isLoading} />
+    </Field>
+    <Field label="Advance Due Date">
+      <input type="date" value={form.advanceDueDate || ""} onChange={e => f("advanceDueDate", e.target.value)} className={inputCls} disabled={isLoading} />
+    </Field>
+    <Field label="Payment Method">
+      <div className="relative">
+        <select value={form.paymentMethod} onChange={e => f("paymentMethod", e.target.value)} className={selectCls} disabled={isLoading}>
+          {PAYMENT_METHODS.map(o => <option key={o}>{o}</option>)}
+        </select>
+        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none" />
+      </div>
+    </Field>
+    <Field label="Payment Note">
+      <input type="text" placeholder="e.g. Token received" value={form.paymentNote || ""} onChange={e => f("paymentNote", e.target.value)} className={inputCls} disabled={isLoading} />
+    </Field>
+  </div>
 
             {/* Live Payment Preview */}
             {form.totalAmount ? (
