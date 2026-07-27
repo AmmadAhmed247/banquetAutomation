@@ -28,16 +28,14 @@ const expenseService = {
   },
 
   deleteExpense: async (id) => {
-    try {
-      const res = await api.delete('/api/expense/deleteExpense', {
-        data: { id }
-      });
-      return res.data;
-    } catch (error) {
-      console.error("Error deleting expense:", error);
-      throw error;
-    }
-  },
+  try {
+    const res = await api.delete(`/api/expense/deleteExpense/${id}`);
+    return res.data;
+  } catch (error) {
+    console.error("Error deleting expense:", error);
+    throw error;
+  }
+},
 
 };
 
