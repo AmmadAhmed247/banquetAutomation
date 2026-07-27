@@ -9,6 +9,8 @@ import {
   CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 import { getAllBookings } from "../lib/hooks/booking.hook";
+import { getAllExpenses, useCreateExpense, useDeleteExpense } from "../lib/hooks/expense.hook";
+
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -36,10 +38,7 @@ function daysUntil(dateStr) {
   return Math.round((d - today) / 86400000);
 }
 
-// Normalizes a raw booking row from the API (Drizzle `booking` schema:
-// id, userId, client, phone, guests, date, event, package_name, venue, status,
-// total_amount, advance_paid, payment_method, payment_note, created_at, updated_at)
-// into the { hall, client, event, date, revenue } shape this component uses.
+
 function normalizeBooking(b) {
   return {
     id: b.id,
@@ -73,7 +72,7 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 // ── sub-components ────────────────────────────────────────────────────────────
-function KpiCard({ label, value, sub, icon: Icon, trend}) {
+function KpiCard({ label, value, sub, icon: Icon, trend }) {
   return (
     <div className="bg-white border border-stone-200 rounded-xl p-6 transition-shadow duration-200 hover:shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -88,9 +87,8 @@ function KpiCard({ label, value, sub, icon: Icon, trend}) {
           <p className="text-[12px] text-stone-400">{sub}</p>
           {trend !== undefined && (
             <span
-              className={`text-[11px] font-semibold tracking-tight px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
-                trend >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
-              }`}
+              className={`text-[11px] font-semibold tracking-tight px-1.5 py-0.5 rounded flex items-center gap-0.5 ${trend >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
+                }`}
             >
               <TrendingUp size={11} className={trend < 0 ? "rotate-180" : ""} />
               {Math.abs(trend)}%
@@ -124,9 +122,9 @@ function EventRow({ booking }) {
   const d = daysUntil(booking.date);
   const status =
     d < 0 ? { label: "Past", cls: "bg-stone-100 text-stone-500" }
-    : d === 0 ? { label: "Today", cls: "bg-amber-50 text-amber-700" }
-    : d <= 7 ? { label: "This week", cls: "bg-blue-50 text-blue-700" }
-    : { label: "Upcoming", cls: "bg-stone-100 text-stone-500" };
+      : d === 0 ? { label: "Today", cls: "bg-amber-50 text-amber-700" }
+        : d <= 7 ? { label: "This week", cls: "bg-blue-50 text-blue-700" }
+          : { label: "Upcoming", cls: "bg-stone-100 text-stone-500" };
 
   const dotColor = booking.hall === "Hall A" ? "bg-emerald-500" : "bg-teal-500";
 
@@ -153,7 +151,9 @@ function EventRow({ booking }) {
 //  MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Management() {
-  const [expenses, setExpenses] = useState([]); // real expenses wiring to be added later
+  const { data: expenses = [] } = getAllExpenses();
+  const createExpenseMutation = useCreateExpense();
+  const deleteExpenseMutation = useDeleteExpense();
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
@@ -239,19 +239,25 @@ export default function Management() {
 
   // ── actions ──────────────────────────────────────────────────────────────────
   function addExpense(bookingId) {
-    if (!newExp.label || !newExp.amount) return;
-    setExpenses((prev) => [
-      ...prev,
-      { id: Date.now(), bookingId, category: newExp.category, label: newExp.label, amount: Number(newExp.amount) },
-    ]);
+    try {
+          if (!newExp.label || !newExp.amount) return;
+    createExpenseMutation.mutate({
+      bookingId,
+      category: newExp.category,
+      label: newExp.label,
+      amount: Number(newExp.amount),
+    });
     setNewExp({ category: EXPENSE_CATEGORIES[0], label: "", amount: "" });
     setAddingTo(null);
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   function deleteExpense(id) {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+    deleteExpenseMutation.mutate(id);
   }
-
+  
   const selectedBooking = bookings.find((b) => b.id === selectedBookingId);
   const selectedBookingExpenses = selectedBookingId ? (expensesByBooking[selectedBookingId] || []) : [];
   const selectedBookingRevenue = selectedBooking?.revenue || 0;

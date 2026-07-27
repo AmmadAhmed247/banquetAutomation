@@ -10,6 +10,7 @@ const messageRouter = require("./routes/message.route")
 const receiptRouter = require("./routes/receipt.route")
 const clientRoute=require("./routes/clients.route")
 const authRoute=require("./routes/auth.route")
+const expenseRouter = require("./routes/expense.route")
 const cookieParser = require("cookie-parser");
 const path = require("path");
 require("./jobs/reminder.jobs")
@@ -44,6 +45,7 @@ app.use("/api/message", messageRouter)
 app.use("/api/receipt", receiptRouter)
 app.use("/api/auth", authRoute)
 app.use("/api/client", clientRoute)
+app.use("/api/expense", expenseRouter)
 
 app.listen(3000, ()=> {
     console.log("Server Is Running At 3000")

@@ -57,8 +57,19 @@ const clients=pgTable("clients",{
 
 })
 
+const expenses = pgTable("expenses", {
+    id: serial("id").primaryKey().notNull(),
+    bookingId: integer("booking_id").notNull().references(() => booking.id, { onDelete: "cascade" }),
+    category: varchar("category", { length: 100 }).notNull(),
+    label: varchar("label", { length: 255 }).notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    created_at: timestamp("created_at").defaultNow(),
+});
+
 module.exports = {
     user,
     booking,
-    packages,clients
+    packages,
+    clients,
+    expenses
 }
