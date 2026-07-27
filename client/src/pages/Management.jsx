@@ -36,40 +36,20 @@ function daysUntil(dateStr) {
   return Math.round((d - today) / 86400000);
 }
 
-// ── seed data ─────────────────────────────────────────────────────────────────
-const SEED_BOOKINGS = [
-  { id: 1, hall: "Hall A", client: "Rania & Omar", event: "Wedding", date: "2026-05-03", revenue: 275000 },
-  { id: 2, hall: "Hall B", client: "Sana & Bilal", event: "Nikkah", date: "2026-05-03", revenue: 120000 },
-  { id: 3, hall: "Hall A", client: "Fatima & Usman", event: "Wedding", date: "2026-05-14", revenue: 310000 },
-  { id: 4, hall: "Hall B", client: "Ayesha & Hassan", event: "Reception", date: "2026-05-20", revenue: 180000 },
-  { id: 5, hall: "Hall A", client: "Zara & Khalid", event: "Mehndi", date: "2026-06-05", revenue: 145000 },
-  { id: 6, hall: "Hall B", client: "Sara & Ahmed", event: "Wedding", date: "2026-06-12", revenue: 290000 },
-  { id: 7, hall: "Hall A", client: "Hira & Faisal", event: "Wedding", date: "2026-06-19", revenue: 340000 },
-  { id: 8, hall: "Hall B", client: "Mariam & Tariq", event: "Reception", date: "2026-07-08", revenue: 160000 },
-];
-
-const SEED_EXPENSES = [
-  { id: 1, bookingId: 1, category: "Catering", label: "Dinner for 400 guests", amount: 140000 },
-  { id: 2, bookingId: 1, category: "Decoration", label: "Floral stage setup", amount: 55000 },
-  { id: 3, bookingId: 1, category: "Audio / Lights", label: "Sound & LED lighting", amount: 30000 },
-  { id: 4, bookingId: 1, category: "Staff Wages", label: "Serving staff × 20", amount: 24000 },
-  { id: 5, bookingId: 2, category: "Catering", label: "Lunch for 150 guests", amount: 52000 },
-  { id: 6, bookingId: 2, category: "Decoration", label: "Basic floral décor", amount: 18000 },
-  { id: 7, bookingId: 3, category: "Catering", label: "Dinner for 500 guests", amount: 175000 },
-  { id: 8, bookingId: 3, category: "Decoration", label: "Premium décor package", amount: 72000 },
-  { id: 9, bookingId: 3, category: "Staff Wages", label: "Full crew", amount: 30000 },
-  { id: 10, bookingId: 4, category: "Catering", label: "Dinner buffet", amount: 88000 },
-  { id: 11, bookingId: 4, category: "Audio / Lights", label: "AV setup", amount: 22000 },
-  { id: 12, bookingId: 5, category: "Decoration", label: "Mehndi stage & lights", amount: 48000 },
-  { id: 13, bookingId: 5, category: "Catering", label: "Snacks & dinner", amount: 38000 },
-  { id: 14, bookingId: 6, category: "Catering", label: "Full wedding dinner", amount: 155000 },
-  { id: 15, bookingId: 6, category: "Decoration", label: "Luxury floral package", amount: 65000 },
-  { id: 16, bookingId: 7, category: "Catering", label: "Dinner for 550 guests", amount: 192000 },
-  { id: 17, bookingId: 7, category: "Decoration", label: "Grand stage décor", amount: 82000 },
-  { id: 18, bookingId: 7, category: "Staff Wages", label: "Premium crew", amount: 36000 },
-  { id: 19, bookingId: 8, category: "Catering", label: "Buffet dinner", amount: 74000 },
-  { id: 20, bookingId: 8, category: "Decoration", label: "Standard décor", amount: 28000 },
-];
+// Normalizes a raw booking row from the API (Drizzle `booking` schema:
+// id, userId, client, phone, guests, date, event, package_name, venue, status,
+// total_amount, advance_paid, payment_method, payment_note, created_at, updated_at)
+// into the { hall, client, event, date, revenue } shape this component uses.
+function normalizeBooking(b) {
+  return {
+    id: b.id,
+    hall: b.venue,
+    client: b.client,
+    event: b.event,
+    date: b.date,
+    revenue: Number(b.total_amount) || 0,
+  };
+}
 
 // ── shared chart tooltip ────────────────────────────────────────────────────
 function ChartTooltip({ active, payload, label }) {
@@ -173,13 +153,14 @@ function EventRow({ booking }) {
 //  MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Management() {
-  const [expenses, setExpenses] = useState(SEED_EXPENSES);
+  const [expenses, setExpenses] = useState([]); // real expenses wiring to be added later
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [hallFilter, setHallFilter] = useState("all");
 
-  const { data: bookings = [] } = getAllBookings() || {};
+  const { data: rawBookings = [] } = getAllBookings() || {};
+  const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
 
   const [newExp, setNewExp] = useState({ category: EXPENSE_CATEGORIES[0], label: "", amount: "" });
   const [addingTo, setAddingTo] = useState(null);
