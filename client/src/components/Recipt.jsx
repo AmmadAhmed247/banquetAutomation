@@ -27,7 +27,7 @@ const FUNCS = ["Wedding", "Walima", "Mehndi", "Barat", "Engagement", "Birthday",
 function Field({ label, icon: Icon, children }) {
   return (
     <div>
-      <label className="flex items-center gap-1.5 text-xs font-semibold text-green-600 uppercase tracking-widest mb-1.5">
+      <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-1.5">
         {Icon && <Icon size={11} />} {label}
       </label>
       {children}
@@ -35,8 +35,8 @@ function Field({ label, icon: Icon, children }) {
   );
 }
 
-const inp = "w-full border border-green-200 rounded-xl px-3.5 py-2.5 text-sm text-green-900 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 placeholder-green-300";
-const sel = "w-full border border-green-200 rounded-xl px-3.5 py-2.5 text-sm text-green-900 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 appearance-none cursor-pointer";
+const inp = "w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-300 placeholder-zinc-400";
+const sel = "w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-300 appearance-none cursor-pointer";
 
 function ReceiptPreview({ data }) {
 
@@ -66,7 +66,7 @@ function ReceiptPreview({ data }) {
   );
 
   return (
-    <div className="border-2 border-blue-900 p-5 bg-white font-sans text-gray-900 relative overflow-hidden" style={{ fontFamily: "Arial, sans-serif" }}>
+    <div className="border-2 border-blue-900 p-4 sm:p-5 bg-white font-sans text-gray-900 relative overflow-hidden w-full max-w-[420px] mx-auto" style={{ fontFamily: "Arial, sans-serif" }}>
       {/* Watermark */}
       <svg className="absolute opacity-[0.06] pointer-events-none" style={{ top: "30%", left: "50%", transform: "translateX(-50%)" }} width="260" height="260" viewBox="0 0 260 260">
         <g transform="translate(130,130)">
@@ -78,15 +78,15 @@ function ReceiptPreview({ data }) {
 
       <FanLogo />
       <div className="text-center mb-2">
-        <div className="text-2xl font-black text-red-700 tracking-wide leading-tight">DARBAR BANQUET</div>
-        <div className="text-base font-bold text-blue-900 tracking-[4px]">A &amp; B</div>
+        <div className="text-xl sm:text-2xl font-black text-red-700 tracking-wide leading-tight">DARBAR BANQUET</div>
+        <div className="text-sm sm:text-base font-bold text-blue-900 tracking-[4px]">A &amp; B</div>
       </div>
 
-      <div className="flex justify-between items-end mb-3">
+      <div className="flex flex-wrap justify-between items-end gap-x-2 gap-y-1 mb-3">
         <div className="text-[11px] font-bold">
           R.No. <span className="border-b border-blue-900 inline-block min-w-[60px] px-1 text-sm font-black">{data.rNo}</span>
         </div>
-        <div className="text-[10px] font-bold text-red-700">Tel:021-36641326, 021-36641327</div>
+        <div className="text-[9px] sm:text-[10px] font-bold text-red-700">Tel:021-36641326, 021-36641327</div>
       </div>
 
       <Row label="Date :" value={data.date} />
@@ -154,7 +154,7 @@ function ReceiptPreview({ data }) {
         ))}
       </ul>
 
-      <div className="flex justify-between items-end mt-2">
+      <div className="flex flex-wrap justify-between items-end gap-2 mt-2">
         <span className="text-[9px]">I have read &amp; agreed to the above terms &amp; conditions.</span>
         <div className="text-right">
           <div className="text-[10px] font-bold text-red-700">Signature of Party</div>
@@ -180,7 +180,8 @@ const formatWhatsAppNumber = (phone) => {
 }
 
 export default function DarbarReceiptForm() {
-  const [isSubmitting, setIsSubmitting] = useState(false);   // ← ADD THIS LINE
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPreviewMobile, setShowPreviewMobile] = useState(false);
   const { register, handleSubmit, watch, reset, setValue } = useForm({
     defaultValues: defaultForm,
   });
@@ -234,23 +235,39 @@ export default function DarbarReceiptForm() {
   };
 
   return (
-    <div className="min-h-screen bg-green-50 p-6">
+    <div className="min-h-screen bg-zinc-50 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
 
         {/* Header */}
-        <div className="mb-7">
-          <span className="text-xs font-semibold text-green-500 uppercase tracking-widest">Darbar Banquet A &amp; B</span>
-          <h1 className="text-3xl font-bold text-green-900 mt-1" style={{ fontFamily: "Georgia, serif" }}>Receipt Generator</h1>
-          <p className="text-green-500 text-sm mt-1">Fill in the details — receipt updates live on the right</p>
+        <div className="mb-5 sm:mb-7">
+          <span className="text-xs font-semibold text-green-600 uppercase tracking-widest">Darbar Banquet A &amp; B</span>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 mt-1" style={{ fontFamily: "Georgia, serif" }}>Receipt Generator</h1>
+          <p className="text-zinc-500 text-sm mt-1">
+            Fill in the details — receipt updates live{" "}
+            <span className="lg:hidden">below</span>
+            <span className="hidden lg:inline">on the right</span>
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-8">
+        {/* Mobile-only toggle to jump to preview */}
+        <button
+          type="button"
+          onClick={() => setShowPreviewMobile(v => !v)}
+          className="lg:hidden mb-4 w-full flex items-center justify-center gap-2 border border-zinc-200 text-zinc-700 text-sm font-semibold px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-100 transition-colors cursor-pointer"
+        >
+          {showPreviewMobile ? "Show Form" : "Show Receipt Preview"}
+        </button>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className={`space-y-5 ${showPreviewMobile ? "hidden lg:block" : ""}`}
+          >
 
             {/* Receipt No */}
-            <div className="bg-white rounded-2xl border border-green-100 p-5 shadow-sm">
-              <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Receipt Info</p>
+            <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm">
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Receipt Info</p>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="R. No.">
                   <input className={inp} placeholder="730" {...register("rNo")} />
@@ -262,8 +279,8 @@ export default function DarbarReceiptForm() {
             </div>
 
             {/* Client Info */}
-            <div className="bg-white rounded-2xl border border-green-100 p-5 shadow-sm">
-              <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Client Information</p>
+            <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm">
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Client Information</p>
               <div className="space-y-4">
                 <Field label="Client Name" icon={User}>
                   <input className={inp} placeholder="Mr. Ali Ahmed" {...register("clientName")} />
@@ -278,9 +295,9 @@ export default function DarbarReceiptForm() {
             </div>
 
             {/* Event Details */}
-            <div className="bg-white rounded-2xl border border-green-100 p-5 shadow-sm">
-              <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Event Details</p>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm">
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Event Details</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Reserved For" icon={Building2}>
                   <select className={sel} {...register("reservedFor")}>
                     <option value="">Select Hall</option>
@@ -306,9 +323,9 @@ export default function DarbarReceiptForm() {
             </div>
 
             {/* Payment */}
-            <div className="bg-white rounded-2xl border border-green-100 p-5 shadow-sm">
-              <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Payment Details</p>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm">
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Payment Details</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Lump Sum (Rs.)" icon={Wallet}>
                   <input
                     type="number"
@@ -327,16 +344,16 @@ export default function DarbarReceiptForm() {
                     onBlur={autoBalance}
                   />
                 </Field>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-2">
                   <Field label="Balance (Rs.)" icon={PiggyBank}>
                     <div className="relative">
                       <input
                         type="text"
-                        className={inp + " bg-green-100 font-semibold"}
+                        className={inp + " bg-zinc-100 font-semibold"}
                         placeholder="Auto-calculated"
                         {...register("balance")}
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-green-400 font-medium">auto</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-zinc-400 font-medium">auto</span>
                     </div>
                   </Field>
                 </div>
@@ -344,21 +361,21 @@ export default function DarbarReceiptForm() {
 
               {/* Live payment bar */}
               {formData.lumpSum && (
-                <div className="mt-4 bg-green-50 rounded-xl p-3 border border-green-100">
+                <div className="mt-4 bg-zinc-50 rounded-xl p-3 border border-zinc-200">
                   {(() => {
                     const l = parseFloat(formData.lumpSum) || 0;
                     const a = parseFloat(formData.advance) || 0;
                     const pct = l ? Math.min(100, Math.round((a / l) * 100)) : 0;
                     return (
                       <>
-                        <div className="flex justify-between text-[11px] font-semibold text-green-600 mb-1.5">
+                        <div className="flex flex-wrap justify-between gap-1 text-[11px] font-semibold text-zinc-600 mb-1.5">
                           <span>Advance: Rs. {(a).toLocaleString()}</span>
                           <span>{pct}% paid</span>
                         </div>
-                        <div className="w-full bg-green-200 rounded-full h-2">
+                        <div className="w-full bg-zinc-200 rounded-full h-2">
                           <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                         </div>
-                        <p className="text-[11px] text-red-400 font-medium mt-1">
+                        <p className="text-[11px] text-red-500 font-medium mt-1">
                           Balance: Rs. {Math.max(0, l - a).toLocaleString()}
                         </p>
                       </>
@@ -369,18 +386,18 @@ export default function DarbarReceiptForm() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 onClick={() => reset()}
-                className="flex items-center gap-2 border border-green-200 text-green-600 text-sm font-semibold px-5 py-3 rounded-xl hover:bg-green-100 transition-colors cursor-pointer bg-transparent"
+                className="flex items-center justify-center gap-2 border border-zinc-200 text-zinc-600 text-sm font-semibold px-5 py-3 rounded-xl hover:bg-zinc-100 transition-colors cursor-pointer bg-transparent order-2 sm:order-1"
               >
                 <RotateCcw size={14} /> Reset
               </button>
               <button
                 disabled={isSubmitting}
                 type="submit"
-                className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-3 rounded-xl shadow-md shadow-green-200 transition-all duration-200 cursor-pointer border-none disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+                className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-3 rounded-xl shadow-md shadow-zinc-200 transition-all duration-200 cursor-pointer border-none disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none order-1 sm:order-2"
               >
                 <Printer size={15} />
                 {isSubmitting ? "Sending..." : "Send Receipt"}
@@ -389,12 +406,12 @@ export default function DarbarReceiptForm() {
           </form>
 
           {/* ── LIVE PREVIEW ── */}
-          <div className="sticky top-6 self-start">
+          <div className={`lg:sticky lg:top-6 self-start ${showPreviewMobile ? "" : "hidden lg:block"}`}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-bold text-green-600 uppercase tracking-widest">Live Preview</p>
-              <span className="text-[10px] bg-green-100 text-green-600 px-3 py-1 rounded-full font-semibold">Updates as you type</span>
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Live Preview</p>
+              <span className="text-[10px] bg-zinc-100 text-zinc-600 px-3 py-1 rounded-full font-semibold">Updates as you type</span>
             </div>
-            <div ref={printRef} className="shadow-xl shadow-green-100 rounded-xl overflow-hidden">
+            <div ref={printRef} className="shadow-xl shadow-zinc-200 rounded-xl overflow-hidden overflow-x-auto">
               <ReceiptPreview data={formData} />
             </div>
           </div>

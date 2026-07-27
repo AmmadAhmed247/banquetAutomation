@@ -18,11 +18,11 @@ function PaymentBar({ total, advance }) {
   return (
     <div className="w-full">
       <div className="w-full bg-green-100 rounded-full h-1 mb-1">
-        <div className="bg-green-500 h-1 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+        <div className="bg-green-100 h-1 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
       </div>
-      <div className="flex justify-between">
-        <span className="text-[10px] text-green-500 font-medium">{pct}% paid</span>
-        <span className="text-[10px] text-red-400 font-medium">Due {formatPKR(remaining)}</span>
+      <div className="flex justify-between gap-2">
+        <span className="text-[10px] text-green-500 font-medium truncate">{pct}% paid</span>
+        <span className="text-[10px] text-red-400 font-medium shrink-0">Due {formatPKR(remaining)}</span>
       </div>
     </div>
   );
@@ -32,37 +32,37 @@ function PaymentBar({ total, advance }) {
 function BookingCard({ booking, onEdit , onDelete }) {
   const sc = statusConfig[booking.status] || statusConfig.Pending;
   return (
-    <div className="bg-white border border-green-100 rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
       <div className={`h-1 w-full ${sc.bar}`} />
       <div className="p-4 space-y-3">
 
         {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-bold text-green-900 text-sm">{booking.client}</p>
-            <p className="text-[11px] text-green-400 mt-0.5">{booking.phone}</p>
+        <div className="flex items-start justify-between gap-2 flex-wrap">
+          <div className="min-w-0">
+            <p className="font-bold text-zinc-900 text-sm truncate">{booking.client}</p>
+            <p className="text-[11px] text-zinc-400 mt-0.5 truncate">{booking.phone}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border ${sc.bg} ${sc.text} ${sc.border}`}>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap ${sc.bg} ${sc.text} ${sc.border}`}>
               {booking.status}
             </span>
             <button
               onClick={() => onEdit(booking)}
-              className="p-2 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 rounded-xl transition-all"
+              className="p-2 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 rounded-xl transition-all shrink-0"
             >
               <Pencil size={13} />
             </button>
             <button
               onClick={() => onDelete(booking)}
-              className="p-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-xl transition-all"
+              className="p-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-xl transition-all shrink-0"
             >
               <Delete size={13} />
             </button>
-            
+
           </div>
         </div>
 
-        <div className="border-t border-green-50" />
+        <div className="border-t border-zinc-100" />
 
         {/* Grid fields */}
         <div className="grid grid-cols-2 gap-2">
@@ -72,34 +72,33 @@ function BookingCard({ booking, onEdit , onDelete }) {
             { icon: Users,        label: "Guests", value: booking.guests },
             { icon: MapPin,       label: "Venue",  value: booking.venue },
           ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="bg-green-50 rounded-xl p-2.5">
+            <div key={label} className="bg-zinc-100 rounded-xl p-2.5 min-w-0">
               <div className="flex items-center gap-1 mb-0.5">
-                <Icon size={9} className="text-green-400" />
-                <p className="text-[9px] text-green-400 font-semibold uppercase tracking-wider">{label}</p>
+                <Icon size={9} className="text-zinc-400 shrink-0" />
+                <p className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider truncate">{label}</p>
               </div>
-              <p className="text-xs font-bold text-green-800 truncate">{value}</p>
+              <p className="text-xs font-bold text-zinc-800 truncate">{value}</p>
             </div>
           ))}
         </div>
 
         {/* Payment */}
-        <div className="border-t border-green-50 pt-2">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-1">
-              <CreditCard size={10} className="text-green-400" />
-              <span className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Payment</span>
-            </div>
-            <div className="flex flex-row gap-2">
-
-            <span className="text-[10px] bg-green-50 border border-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold">
-              <span className="text-black"  >Payment note: </span>{booking.payment_note}
-            </span>
-            <span className="text-[10px] bg-green-50 border border-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold">
-              <span className="text-black"  >Method:</span> {booking.payment_method}
-            </span>
-            </div>
+        <div className="border-t border-zinc-100 pt-2">
+          <div className="flex items-center gap-1 mb-1.5">
+            <CreditCard size={10} className="text-zinc-400 shrink-0" />
+            <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Payment</span>
           </div>
-          <p className="text-sm font-bold text-green-900 mb-1.5">{formatPKR(booking.totalAmount)}</p>
+
+          <div className="flex flex-wrap gap-1.5 mb-1.5">
+            <span className="max-w-full text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
+              <span className="text-black">Note: </span>{booking.payment_note}
+            </span>
+            <span className="max-w-full text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
+              <span className="text-black">Method:</span> {booking.payment_method}
+            </span>
+          </div>
+
+          <p className="text-sm font-bold text-zinc-900 mb-1.5">{formatPKR(booking.totalAmount)}</p>
           <PaymentBar total={booking.totalAmount} advance={booking.advancePaid} />
         </div>
 
@@ -112,11 +111,12 @@ function BookingCard({ booking, onEdit , onDelete }) {
 function BookingsTable({ filteredBookings, onEdit , onDelete }) {
   return (
     <div className="bg-white border border-green-100 rounded-2xl overflow-hidden shadow-sm">
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-green-50/60 border-b border-green-100">
             {["Client", "Event", "Date", "Guests", "Venue", "Total", "Payment", "Payment Note", "Status",  "", ""].map((h) => (
-              <th key={h} className="text-left text-[10px] font-semibold text-green-500 uppercase tracking-wider px-4 py-3">
+              <th key={h} className="text-left text-[10px] font-semibold text-green-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">
                 {h}
               </th>
             ))}
@@ -190,11 +190,12 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
 
-// MAIN EXPORT 
+// MAIN EXPORT
 export default function BookingsList({ filteredBookings, isLoading, onEdit , onDelete }) {
   if (isLoading && filteredBookings.length === 0) {
     return (

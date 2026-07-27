@@ -88,8 +88,8 @@ export default function Bookings({ showToast }) {
 const handleDelete = (booking) => {
   toast((t) => (
     <div className="flex items-center gap-3">
-      <p className="text-sm text-green-900">
-        Delete booking for <span className="font-semibold">{booking.client}</span>?
+      <p className="text-sm text-gray-700">
+        Delete booking for <span className="font-semibold text-gray-900">{booking.client}</span>?
       </p>
       <div className="flex gap-2">
         <button
@@ -103,13 +103,13 @@ const handleDelete = (booking) => {
               toast.error("Failed to delete booking");
             }
           }}
-          className="text-xs font-semibold bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 px-3 py-1.5 rounded-lg"
+          className="text-xs font-semibold bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-3 py-1.5 rounded-lg"
         >
           Delete
         </button>
         <button
           onClick={() => toast.dismiss(t.id)}
-          className="text-xs font-semibold bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg"
+          className="text-xs font-semibold bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg"
         >
           Cancel
         </button>
@@ -126,17 +126,17 @@ const handleDelete = (booking) => {
     );
 
   return (
-    <div className="min-h-screen bg-green-50 p-8">
+    <div className="min-h-screen bg-[#F8F7F3] p-4 sm:p-8">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <p className="text-green-500 text-xs font-semibold tracking-widest uppercase mb-1">Management</p>
-          <h1 className="text-4xl font-bold text-green-900 font-mono">Bookings</h1>
-          <p className="text-green-500 text-sm mt-1">All banquet reservations in one place</p>
+          <p className="text-green-600 text-[11px] font-semibold tracking-widest uppercase mb-1.5">Management</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">Bookings</h1>
+          <p className="text-gray-400 text-sm mt-1">All banquet reservations in one place</p>
         </div>
         <button
           onClick={openNew}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-md shadow-green-200 transition-all duration-200 hover:-translate-y-0.5 border-none cursor-pointer"
+          className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-sm transition-colors duration-200 border-none cursor-pointer w-full sm:w-auto"
         >
           <PlusCircle size={16} /> New Booking
         </button>
@@ -144,9 +144,11 @@ const handleDelete = (booking) => {
 
       {/* Error Alert */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
-          <AlertCircle size={18} className="text-red-500" />
-          <p className="text-sm text-red-600">{error?.message || "An error occurred"}</p>
+        <div className="mb-6 bg-white border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-9 h-9 shrink-0 rounded-xl bg-red-50 flex items-center justify-center">
+            <AlertCircle size={16} className="text-red-500" />
+          </div>
+          <p className="text-sm text-gray-600">{error?.message || "An error occurred"}</p>
         </div>
       )}
 
