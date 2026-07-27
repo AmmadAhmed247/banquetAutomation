@@ -23,4 +23,25 @@ const loginClient = async ({ email, password }) => {
   const { password: _, ...clientData } = client;
   return { token, client: clientData };
 };
-module.exports = { loginClient };
+
+const login = async (req, res) => {
+  try {
+    const { token, client } = await clientService.loginClient(req.body);
+
+
+    res.cookie("token", token, {
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict", 
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+    });
+
+    return res.status(200).json({
+      message: "Logged in successfully",
+      client,
+    });
+  } catch (err) {
+    return res.status(401).json({ message: err.message });
+  }
+};
+module.exports = { loginClient, login };
