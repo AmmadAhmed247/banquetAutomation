@@ -87,7 +87,7 @@ async function GetAllBookings(phone) {
         const bookings = await db
         .select()
         .from(booking)
-        .where(eq(booking.phone, phone))
+        // .where(eq(booking.phone, phone))
 
 
         if(!bookings || bookings.length === 0){
