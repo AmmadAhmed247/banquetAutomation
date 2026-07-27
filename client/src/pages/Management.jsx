@@ -315,8 +315,8 @@ export default function Management() {
       {/* ── KPI Grid ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <KpiCard label="Total Gross Revenue" value={currency(totalRevenue)} sub={`${filteredBookings.length} bookings`} icon={ArrowUpRight} badgeColor="bg-blue-600" />
-        <KpiCard label="Aggregated Costs" value={currency(totalExpense)} sub="Operational expenses" icon={Receipt} badgeColor="bg-rose-500" />
-        <KpiCard label="Net System Profit" value={currency(totalProfit)} sub={totalProfit >= 0 ? "Margin holding steady" : "Running at a deficit"} icon={DollarSign} badgeColor="bg-emerald-600" trend={margin} />
+        <KpiCard label="Total Costs" value={currency(totalExpense)} sub="Operational expenses" icon={Receipt} badgeColor="bg-rose-500" />
+        <KpiCard label="Total Net Profit" value={currency(totalProfit)} sub={totalProfit >= 0 ? "Margin holding steady" : "Running at a deficit"} icon={DollarSign} badgeColor="bg-emerald-600" trend={margin} />
         <KpiCard label="Average Yield / Event" value={currency(filteredBookings.length ? Math.round(totalProfit / filteredBookings.length) : 0)} sub="Per booking" icon={Package} badgeColor="bg-violet-600" />
       </div>
 
