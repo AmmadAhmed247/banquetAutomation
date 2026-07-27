@@ -29,6 +29,13 @@
       "when": 1785167001442,
       "tag": "0003_mean_tusk",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785185436946,
+      "tag": "0004_lumpy_famine",
+      "breakpoints": true
     }
   ]
 }
