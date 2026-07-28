@@ -1,5 +1,5 @@
-const { boolean } = require("drizzle-orm/gel-core");
-const {pgTable, integer, serial,varchar, text, timestamp , numeric, time} = require("drizzle-orm/pg-core")
+const { pgTable, integer, serial, varchar, text, timestamp, numeric, time, boolean } = require("drizzle-orm/pg-core");
+
 
 const user = pgTable("users", {
     id: serial("id").primaryKey().notNull(),
@@ -8,6 +8,8 @@ const user = pgTable("users", {
     last_inbound_at: timestamp("last_inbound_at"),
     created_at: timestamp("created_at").defaultNow()
 })
+
+
 const booking = pgTable("bookings", {
   id:serial("id").primaryKey().notNull(),
   userId:integer("user_id").references(() => user.id),
@@ -35,6 +37,12 @@ const booking = pgTable("bookings", {
   // Timestamps
   created_at:timestamp("created_at").defaultNow(),
   updated_at:timestamp("updated_at").defaultNow(),
+
+
+    // Reminder tracking
+  booking_reminder_sent: boolean("booking_reminder_sent").default(false),
+  resource_reminder_sent: boolean("resource_reminder_sent").default(false),
+  last_advance_reminder_at: timestamp("last_advance_reminder_at"),
 });
 
 const packages = pgTable("packages", {

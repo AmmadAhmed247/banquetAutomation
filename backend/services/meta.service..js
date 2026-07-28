@@ -96,11 +96,40 @@ async function sendReceiptTemplate(phone, mediaUrl, { clientName, functionName, 
     return { success: false, message: error.response?.data || error.message };
   }
 }
+async function sendTemplateMessage(to, templateName, languageCode, bodyParams = []) {
+    try {
+        const res = await axios.post(
+            `https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+            {
+                messaging_product: "whatsapp",
+                to,
+                type: "template",
+                template: {
+                    name: templateName,
+                    language: { code: languageCode },
+                    components: bodyParams.length
+                        ? [{ type: "body", parameters: bodyParams.map(p => ({ type: "text", text: String(p) })) }]
+                        : []
+                }
+            },
+            { headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` } }
+        )
+        return { success: true, data: res.data }
+    } catch (error) {
+        return { success: false, error: error.response?.data || error.message }
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
 
 
 module.exports = {
     parseIncoming,
+    sendTemplateMessage,
     sendMessage,
     sendMediaMessage,
-    sendReceiptTemplate
+    sendReceiptTemplate,
+    sleep
 };

@@ -126,7 +126,7 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-green-50/60 border-b border-green-100">
-            {["Client", "Event", "Date", "Advance Amount", "Advance Due", "Guests", "Venue", "Total", "Payment", "Payment Note", "Status",  "", ""].map((h) => (
+            {["Client", "Event", "Date", "Guests", "Venue", "Total Amount", "Advance Amount", "Payment", "Advance Due", "Payment Note", "Status",  "", ""].map((h) => (
               <th key={h} className="text-left text-[10px] font-semibold text-green-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">
                 {h}
               </th>
@@ -152,12 +152,6 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
                 <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
                   {booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
-                  {formatPKR(booking.advanceAmount)}
-                </td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
-                  {booking.advanceDueDate ? new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-                </td>
 
                 <td className="px-4 py-3.5 text-green-800">{booking.guests}</td>
 
@@ -167,6 +161,10 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
                   {formatPKR(booking.totalAmount)}
                 </td>
 
+                <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
+                  {formatPKR(booking.advanceAmount)}
+                </td>
+
                 <td className="px-4 py-3.5 min-w-[150px]">
                   <div className="flex flex-col gap-2">
                     <div className="flex flex-wrap gap-1.5">
@@ -174,14 +172,15 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
                         {booking.payment_method}
                       </span>
                       <span className="text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
-                        <span className="font-semibold text-green-800">Advance Amount:</span>&nbsp;{formatPKR(booking.advanceAmount)}
-                      </span>
-                      <span className="text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
-                        <span className="font-semibold text-green-800">Advance Paid:</span>&nbsp;{formatPKR(booking.advancePaid)}
+                        <span className="font-semibold text-green-800">Paid:</span>&nbsp;{formatPKR(booking.advancePaid)}
                       </span>
                     </div>
                     <PaymentBar total={booking.totalAmount} advance={booking.advancePaid} />
                   </div>
+                </td>
+
+                <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
+                  {booking.advanceDueDate ? new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
 
                 <td className="px-4 py-3.5">
@@ -189,6 +188,7 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
                     {booking.payment_note}
                   </span>
                 </td>
+
                 <td className="px-4 py-3.5">
                   <span className={`inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full border ${sc.bg} ${sc.text} ${sc.border}`}>
                     {booking.status}

@@ -40,7 +40,7 @@ function Field({ label, children }) {
 const inputCls = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm text-green-900 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 placeholder-green-300";
 const selectCls = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm text-green-900 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 appearance-none cursor-pointer";
 
-const EVENTS = ["Wedding", "Walima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate"];
+const EVENTS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate"];
 const VENUES = ["Hall A", "Hall B"];
 const PAYMENT_METHODS = ["Cash", "Bank Transfer", "Online", "Cheque"];
 const STATUSES = ["Pending", "Confirmed", "Cancelled"];

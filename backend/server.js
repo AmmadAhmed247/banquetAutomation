@@ -13,7 +13,7 @@ const authRoute=require("./routes/auth.route")
 const expenseRouter = require("./routes/expense.route")
 const cookieParser = require("cookie-parser");
 const path = require("path");
-require("./jobs/reminder.jobs")
+const {startReminderJobs} = require("./jobs/reminder.jobs")
 
 dotenv.config()
 
@@ -27,7 +27,7 @@ app.use(cookieParser());
 app.use(express.json())
 app.use(express.urlencoded({extended: false}))
 app.use("/public", express.static(path.join(__dirname, "public")));
-
+startReminderJobs();
 app.get("/", (req,res)=> {
     console.log("API WORKING!")
 
