@@ -61,13 +61,20 @@ async function generateReceipt(data = {}) {
     ctx.restore();
   };
 
-  const text = (str, x, y, { size = 13, weight = 'normal', color = '#111', align = 'left', font = 'Arial' } = {}) => {
+  // Default text size bumped modestly: 13 -> 14
+  const text = (str, x, y, { size = 14, weight = 'normal', color = '#111', align = 'left', font = 'Arial' } = {}) => {
     ctx.save();
     ctx.font = `${weight} ${size}px ${font}`;
     ctx.fillStyle = color;
     ctx.textAlign = align;
     ctx.fillText(str, x, y);
     ctx.restore();
+  };
+
+  // Draws a value centered within a line segment (x1 to x2)
+  const centeredText = (str, x1, x2, y, opts = {}) => {
+    const midX = (x1 + x2) / 2;
+    text(str, midX, y, { ...opts, align: 'center' });
   };
 
   // Background
@@ -84,68 +91,67 @@ async function generateReceipt(data = {}) {
 
   // Logo / Header
   drawFanLogo(ctx, W / 2, 62, 38);
-  text('DARBAR BANQUET', W / 2, 118, { size: 38, weight: 'bold', color: '#c0392b', align: 'center', font: 'Arial' });
-  text('A & B', W / 2, 150, { size: 24, weight: 'bold', color: '#1a237e', align: 'center', font: 'Arial' });
+  text('DARBAR BANQUET', W / 2, 118, { size: 41, weight: 'bold', color: '#c0392b', align: 'center', font: 'Arial' });
+  text('A & B', W / 2, 150, { size: 26, weight: 'bold', color: '#1a237e', align: 'center', font: 'Arial' });
 
   // R.No + Tel
-  text('R.No.', 42, 186, { size: 13, weight: 'bold' });
+  text('R.No.', 42, 186, { size: 14, weight: 'bold' });
   line(82, 190, 190, 190);
-  text(data.rNo || '', 90, 186, { size: 14, weight: 'bold' });
-  text('Tel:021-36641326, 021-36641327', W / 2 + 20, 186, { size: 12, color: '#c0392b', weight: 'bold' });
+  centeredText(data.rNo || '', 82, 190, 186, { size: 15, weight: 'bold' });
 
   // Date
-  text('Date :', 42, 220, { size: 13, weight: 'bold' });
+  text('Date :', 42, 220, { size: 14, weight: 'bold' });
   line(82, 224, 260, 224);
-  if (data.date) text(data.date, 90, 220, { size: 13 });
+  if (data.date) centeredText(data.date, 82, 260, 220, { size: 14 });
 
   // Received from
-  text('RECEIVED with thanks from Mr.', 42, 258, { size: 13, weight: 'bold' });
+  text('RECEIVED with thanks from Mr.', 42, 258, { size: 14, weight: 'bold' });
   line(292, 262, W - 42, 262);
-  if (data.clientName) text(data.clientName, 298, 258, { size: 13 });
+  if (data.clientName) centeredText(data.clientName, 292, W - 42, 258, { size: 14 });
 
   // Resident of
-  text('Resident of', 42, 294, { size: 13, weight: 'bold' });
+  text('Resident of', 42, 294, { size: 14, weight: 'bold' });
   line(130, 298, W - 42, 298);
-  if (data.resident) text(data.resident, 136, 294, { size: 13 });
+  if (data.resident) centeredText(data.resident, 130, W - 42, 294, { size: 14 });
 
   // Telephone
   line(42, 332, 290, 332);
-  text('Telephone#.', 296, 328, { size: 13, weight: 'bold' });
+  text('Telephone#.', 296, 328, { size: 14, weight: 'bold' });
   line(390, 332, W - 42, 332);
-  if (data.phone) text(cleanPhone(data.phone), 396, 328, { size: 13 });
+  if (data.phone) centeredText(cleanPhone(data.phone), 390, W - 42, 328, { size: 14 });
 
   // Reserved for / Day
-  text('has been reserved for', 42, 372, { size: 13, weight: 'bold' });
+  text('has been reserved for', 42, 372, { size: 14, weight: 'bold' });
   line(200, 376, 480, 376);
-  if (data.reservedFor) text(data.reservedFor, 206, 372, { size: 13 });
-  text('Day', 490, 372, { size: 13, weight: 'bold' });
+  if (data.reservedFor) centeredText(data.reservedFor, 200, 480, 372, { size: 14 });
+  text('Day', 490, 372, { size: 14, weight: 'bold' });
   line(518, 376, W - 42, 376);
-  if (data.day) text(data.day, 524, 372, { size: 13 });
+  if (data.day) centeredText(data.day, 518, W - 42, 372, { size: 14 });
 
   // Function / No. of Guest
-  text('Function', 42, 412, { size: 13, weight: 'bold' });
+  text('Function', 42, 412, { size: 14, weight: 'bold' });
   line(106, 416, 390, 416);
-  if (data.functionName) text(data.functionName, 112, 412, { size: 13 });
-  text('No. Of Guest', 396, 412, { size: 13, weight: 'bold' });
+  if (data.functionName) centeredText(data.functionName, 106, 390, 412, { size: 14 });
+  text('No. Of Guest', 396, 412, { size: 14, weight: 'bold' });
   line(494, 416, W - 42, 416);
-  if (data.noOfGuests) text(data.noOfGuests, 500, 412, { size: 13 });
+  if (data.noOfGuests) centeredText(data.noOfGuests, 494, W - 42, 412, { size: 14 });
 
   // Lump Sum / Manager
-  text('Lump Sum', 42, 460, { size: 13, weight: 'bold' });
+  text('Lump Sum', 42, 460, { size: 14, weight: 'bold' });
   line(120, 464, 480, 464);
-  if (data.lumpSum) text(data.lumpSum, 126, 460, { size: 13 });
-  text('Manager', W - 130, 460, { size: 13, weight: 'bold' });
+  if (data.lumpSum) centeredText(data.lumpSum, 120, 480, 460, { size: 14 });
   line(W - 200, 476, W - 42, 476);
+  text('Manager', W - 130, 494, { size: 15, weight: 'bold' });
 
   // Advance
-  text('Advance', 42, 500, { size: 13, weight: 'bold' });
+  text('Advance', 42, 500, { size: 14, weight: 'bold' });
   line(106, 504, 300, 504);
-  if (data.advance) text(data.advance, 112, 500, { size: 13 });
+  if (data.advance) centeredText(data.advance, 106, 300, 500, { size: 14 });
 
   // Balance
-  text('Balance', 42, 538, { size: 13, weight: 'bold' });
+  text('Balance', 42, 538, { size: 14, weight: 'bold' });
   line(100, 542, 300, 542);
-  if (data.balance) text(data.balance, 106, 538, { size: 13 });
+  if (data.balance) centeredText(data.balance, 100, 300, 538, { size: 14 });
 
   // Terms & Conditions
   const tcY = 572;
@@ -165,11 +171,11 @@ async function generateReceipt(data = {}) {
   ctx.closePath();
   ctx.fill();
   ctx.restore();
-  text('Terms & Conditions', W / 2, tcY + 19, { size: 13, weight: 'bold', color: '#fff', align: 'center' });
+  text('Terms & Conditions', W / 2, tcY + 19, { size: 14, weight: 'bold', color: '#fff', align: 'center' });
 
   const tcItems = [
     'Advance non refundable. Balance must be paid within 48 hours prior your event.',
-    'Cold drinks are strictly not allowed from outside. All drinks are available at company price\n@ Rs.1200 per crate chilled on counter. NESTLE / AQUAFINA water bottle for Rs.150 per table with service.',
+    'Cold drinks are strictly not allowed from outside. All drinks are available at company price\n@ Rs.1500 per crate chilled on counter. NESTLE / AQUAFINA water bottle for Rs.150 per table with service.',
     'Fresh flower stage is not included in your booking amount.',
     'Premises should be vacated before 12 a.m.',
     'No musical function is allowed without concerned authorities permission.',
@@ -188,25 +194,25 @@ async function generateReceipt(data = {}) {
 
     const lines = item.split('\n');
     lines.forEach((l, i) => {
-      text(l, 62, tcLineY + i * 17, { size: 11, color: '#111' });
+      text(l, 62, tcLineY + i * 17, { size: 12, color: '#111' });
     });
     tcLineY += lines.length > 1 ? 38 : 22;
   });
 
   // Signature
-  text('Signature of Party', W - 180, tcLineY - 4, { size: 12, weight: 'bold', color: '#c0392b' });
+  text('Signature of Party', W - 180, tcLineY - 4, { size: 13, weight: 'bold', color: '#c0392b' });
   line(W - 190, tcLineY + 2, W - 42, tcLineY + 2, '#c0392b', 1.5);
-  text('I have read & agreed to the above terms & conditions.', 62, tcLineY + 16, { size: 11, color: '#111' });
+  text('I have read & agreed to the above terms & conditions.', 62, tcLineY + 16, { size: 12, color: '#111' });
   line(28, tcLineY + 28, W - 28, tcLineY + 28, '#c0392b', 1.5);
 
   // Footer
   const footY = tcLineY + 52;
-  text('D-16, Block "N" Near Sakhi Hassan,', W / 2, footY, { size: 13, weight: 'bold', color: '#111', align: 'center' });
-  text('North Nazimabad, Karachi.', W / 2, footY + 20, { size: 13, weight: 'bold', color: '#111', align: 'center' });
+  text('D-16, Block "N" Near Sakhi Hassan,', W / 2, footY, { size: 14, weight: 'bold', color: '#111', align: 'center' });
+  text('North Nazimabad, Karachi.', W / 2, footY + 20, { size: 14, weight: 'bold', color: '#111', align: 'center' });
 
   // Save to public folder
   const fileName = `receipt-${Date.now()}.png`;
-  
+
   const buffer = canvas.toBuffer("image/png");
   const uploaded = await uploadBuffer(buffer, fileName, "/receipts");
 

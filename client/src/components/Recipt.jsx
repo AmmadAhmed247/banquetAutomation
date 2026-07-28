@@ -58,9 +58,9 @@ function ReceiptPreview({ data }) {
 
   const Row = ({ label, value, line = true }) => (
     <div className="flex items-end gap-2 mb-2">
-      <span className="text-[11px] font-bold whitespace-nowrap">{label}</span>
-      <div className="flex-1 border-b border-blue-900" style={{ minHeight: 16 }}>
-        {value && <span className="text-[11px] pl-1">{value}</span>}
+      <span className="text-[12px] font-bold whitespace-nowrap">{label}</span>
+      <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
+        {value && <span className="text-[12px] pl-1">{value}</span>}
       </div>
     </div>
   );
@@ -83,10 +83,9 @@ function ReceiptPreview({ data }) {
       </div>
 
       <div className="flex flex-wrap justify-between items-end gap-x-2 gap-y-1 mb-3">
-        <div className="text-[11px] font-bold">
-          R.No. <span className="border-b border-blue-900 inline-block min-w-[60px] px-1 text-sm font-black">{data.rNo}</span>
+        <div className="text-[12px] font-bold">
+          R.No. <span className="border-b border-blue-900 inline-block min-w-[60px] px-1 text-sm font-black text-center">{data.rNo}</span>
         </div>
-        <div className="text-[9px] sm:text-[10px] font-bold text-red-700">Tel:021-36641326, 021-36641327</div>
       </div>
 
       <Row label="Date :" value={data.date} />
@@ -94,44 +93,47 @@ function ReceiptPreview({ data }) {
       <Row label="Resident of" value={data.resident} />
 
       <div className="flex items-end gap-2 mb-2">
-        <div className="flex-1 border-b border-blue-900" style={{ minHeight: 16 }}></div>
-        <span className="text-[11px] font-bold whitespace-nowrap">Telephone#.</span>
-        <div className="flex-1 border-b border-blue-900" style={{ minHeight: 16 }}>
-          {data.phone && <span className="text-[11px] pl-1">{data.phone}</span>}
+        <div className="flex-1 border-b border-blue-900" style={{ minHeight: 17 }}></div>
+        <span className="text-[12px] font-bold whitespace-nowrap">Telephone#.</span>
+        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
+          {data.phone && <span className="text-[12px] pl-1">{data.phone}</span>}
         </div>
       </div>
 
       <div className="flex items-end gap-2 mb-2">
-        <span className="text-[11px] font-bold whitespace-nowrap">has been reserved for</span>
-        <div className="flex-[2] border-b border-blue-900" style={{ minHeight: 16 }}>
-          {data.reservedFor && <span className="text-[11px] pl-1">{data.reservedFor}</span>}
+        <span className="text-[12px] font-bold whitespace-nowrap">has been reserved for</span>
+        <div className="flex-[2] border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
+          {data.reservedFor && <span className="text-[12px] pl-1">{data.reservedFor}</span>}
         </div>
-        <span className="text-[11px] font-bold whitespace-nowrap">Day</span>
-        <div className="flex-1 border-b border-blue-900" style={{ minHeight: 16 }}>
-          {data.day && <span className="text-[11px] pl-1">{data.day}</span>}
+        <span className="text-[12px] font-bold whitespace-nowrap">Day</span>
+        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
+          {data.day && <span className="text-[12px] pl-1">{data.day}</span>}
         </div>
       </div>
 
       <div className="flex items-end gap-2 mb-2">
-        <span className="text-[11px] font-bold whitespace-nowrap">Function</span>
-        <div className="flex-[2] border-b border-blue-900" style={{ minHeight: 16 }}>
-          {data.functionName && <span className="text-[11px] pl-1">{data.functionName}</span>}
+        <span className="text-[12px] font-bold whitespace-nowrap">Function</span>
+        <div className="flex-[2] border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
+          {data.functionName && <span className="text-[12px] pl-1">{data.functionName}</span>}
         </div>
-        <span className="text-[11px] font-bold whitespace-nowrap">No. Of Guest</span>
-        <div className="flex-1 border-b border-blue-900" style={{ minHeight: 16 }}>
-          {data.noOfGuest && <span className="text-[11px] pl-1">{data.noOfGuest}</span>}
+        <span className="text-[12px] font-bold whitespace-nowrap">No. Of Guest</span>
+        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
+          {data.noOfGuest && <span className="text-[12px] pl-1">{data.noOfGuest}</span>}
         </div>
       </div>
 
+      {/* Lump Sum */}
       <div className="flex items-end gap-2 mb-1">
-        <span className="text-[11px] font-bold whitespace-nowrap">Lump Sum</span>
-        <div className="flex-1 border-b border-blue-900" style={{ minHeight: 16 }}>
-          {data.lumpSum && <span className="text-[11px] pl-1">Rs. {data.lumpSum}</span>}
+        <span className="text-[12px] font-bold whitespace-nowrap">Lump Sum</span>
+        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
+          {data.lumpSum && <span className="text-[12px] pl-1">Rs. {data.lumpSum}</span>}
         </div>
-        <span className="text-[11px] font-bold whitespace-nowrap">Manager</span>
       </div>
-      <div className="flex justify-end mb-2">
-        <div className="border-b border-blue-900" style={{ width: 120, minHeight: 16 }}></div>
+
+      {/* Manager signature — line first, label below it */}
+      <div className="flex flex-col items-end mb-2">
+        <div className="border-b border-blue-900" style={{ width: 120, minHeight: 17 }}></div>
+        <span className="text-[12px] font-bold whitespace-nowrap mt-1">Manager</span>
       </div>
 
       <Row label="Advance" value={data.advance ? `Rs. ${data.advance}` : ""} />
@@ -139,30 +141,30 @@ function ReceiptPreview({ data }) {
 
       {/* Terms */}
       <div className="text-center my-2">
-        <span className="bg-red-700 text-white text-[11px] font-bold px-5 py-1 rounded-full">Terms &amp; Conditions</span>
+        <span className="bg-red-700 text-white text-[12px] font-bold px-5 py-1 rounded-full">Terms &amp; Conditions</span>
       </div>
-      <ul className="text-[9.5px] space-y-1 leading-snug">
+      <ul className="text-[10px] space-y-1 leading-snug">
         {["Advance non refundable. Balance must be paid within 48 hours prior your event.",
-          "Cold drinks are strictly not allowed from outside. All drinks are available at company price @ Rs.1200 per crate chilled on counter.",
+          "Cold drinks are strictly not allowed from outside. All drinks are available at company price @ Rs.1500 per crate chilled on counter.",
           "Fresh flower stage is not included in your booking amount.",
           "Premises should be vacated before 12 a.m.",
           "No musical function is allowed without concerned authorities permission.",
           "Car parking at your own risk.",
           "Management will not be responsible for loss of any kind of property."
         ].map((t, i) => (
-          <li key={i} className="flex gap-1.5"><span className="text-red-700 text-[11px] leading-none mt-0.5">●</span><span>{t}</span></li>
+          <li key={i} className="flex gap-1.5"><span className="text-red-700 text-[12px] leading-none mt-0.5">●</span><span>{t}</span></li>
         ))}
       </ul>
 
       <div className="flex flex-wrap justify-between items-end gap-2 mt-2">
-        <span className="text-[9px]">I have read &amp; agreed to the above terms &amp; conditions.</span>
+        <span className="text-[10px]">I have read &amp; agreed to the above terms &amp; conditions.</span>
         <div className="text-right">
-          <div className="text-[10px] font-bold text-red-700">Signature of Party</div>
+          <div className="text-[11px] font-bold text-red-700">Signature of Party</div>
           <div className="border-b border-red-700 mt-0.5" style={{ width: 100 }}></div>
         </div>
       </div>
       <div className="border-t-2 border-red-700 mt-2 mb-1.5"></div>
-      <div className="text-center text-[10px] font-bold leading-snug">
+      <div className="text-center text-[11px] font-bold leading-snug">
         D-16, Block "N" Near Sakhi Hassan,<br />North Nazimabad, Karachi.
       </div>
     </div>
