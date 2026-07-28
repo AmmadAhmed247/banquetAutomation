@@ -15,6 +15,7 @@ async function CreateBooking(bookingData) {
             guests = 0,
             venue,
             totalAmount = 0,
+            totalAdvanceAmount = 0,
             advancePaid = 0,
             advanceDueDate = null,   
             paymentMethod = "Cash",
@@ -45,6 +46,7 @@ async function CreateBooking(bookingData) {
             guests: guests,
             venue: venue,
             total_amount: totalAmount.toString(),
+            advance_amount: totalAdvanceAmount.toString(),
             advance_paid: advancePaid.toString(),
             advance_due_date: advanceDueDate ? new Date(advanceDueDate) : null,   // ← added
             payment_method: paymentMethod,
@@ -98,9 +100,38 @@ async function GetAllBookings(phone) {
             }
         }
 
+        // Map snake_case DB fields to camelCase expected by frontend
+        const mapped = bookings.map(b => ({
+            ...b,
+            id: b.id,
+            userId: b.user_id || b.userId,
+            client: b.client,
+            phone: b.phone,
+            guests: b.guests,
+            date: b.date,
+            event: b.event,
+            package: b.package_name,
+            package_name: b.package_name,
+            totalAmount: b.total_amount !== undefined ? Number(b.total_amount) : undefined,
+            total_amount: b.total_amount,
+            advanceAmount: b.advance_amount !== undefined ? Number(b.advance_amount) : undefined,
+            advance_amount: b.advance_amount,
+            advancePaid: b.advance_paid !== undefined ? Number(b.advance_paid) : undefined,
+            advance_paid: b.advance_paid,
+            advanceDueDate: b.advance_due_date,
+            advance_due_date: b.advance_due_date,
+            paymentMethod: b.payment_method,
+            payment_method: b.payment_method,
+            paymentNote: b.payment_note,
+            payment_note: b.payment_note,
+            status: b.status,
+            created_at: b.created_at,
+            updated_at: b.updated_at
+        }))
+
         return {
             success: true,
-            bookings: bookings
+            bookings: mapped
         }
     } catch (error) {
         console.log("Error On Getting Bookings (Service): ", error)
@@ -126,9 +157,37 @@ async function GetAllBookingsUnfiltered() {
             }
         }
 
+        const mapped = bookings.map(b => ({
+            ...b,
+            id: b.id,
+            userId: b.user_id || b.userId,
+            client: b.client,
+            phone: b.phone,
+            guests: b.guests,
+            date: b.date,
+            event: b.event,
+            package: b.package_name,
+            package_name: b.package_name,
+            totalAmount: b.total_amount !== undefined ? Number(b.total_amount) : undefined,
+            total_amount: b.total_amount,
+            advanceAmount: b.advance_amount !== undefined ? Number(b.advance_amount) : undefined,
+            advance_amount: b.advance_amount,
+            advancePaid: b.advance_paid !== undefined ? Number(b.advance_paid) : undefined,
+            advance_paid: b.advance_paid,
+            advanceDueDate: b.advance_due_date,
+            advance_due_date: b.advance_due_date,
+            paymentMethod: b.payment_method,
+            payment_method: b.payment_method,
+            paymentNote: b.payment_note,
+            payment_note: b.payment_note,
+            status: b.status,
+            created_at: b.created_at,
+            updated_at: b.updated_at
+        }))
+
         return {
             success: true,
-            bookings: bookings
+            bookings: mapped
         }
     } catch (error) {
         console.log("Error On Getting All Bookings (Service): ", error)
@@ -151,6 +210,7 @@ async function UpdateBooking(bookingId, bookingData) {
             guests = 0,
             venue,
             totalAmount = 0,
+            advanceAmount = 0,
             advancePaid = 0,
             advanceDueDate = null,   
             paymentMethod = "Cash",
@@ -169,6 +229,7 @@ async function UpdateBooking(bookingId, bookingData) {
             guests: guests,
             venue: venue,
             total_amount: totalAmount.toString(),
+            advance_amount: advanceAmount.toString(),
             advance_paid: advancePaid.toString(),
             advance_due_date: advanceDueDate ? new Date(advanceDueDate) : null,   
             payment_method: paymentMethod,

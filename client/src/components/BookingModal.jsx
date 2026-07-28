@@ -139,6 +139,9 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
     <Field label="Total Amount (PKR)">
       <input type="number" placeholder="e.g. 850000" value={form.totalAmount} onChange={e => f("totalAmount", e.target.value)} className={inputCls} disabled={isLoading} />
     </Field>
+    <Field label="Advance Amount (PKR)">
+      <input type="number" placeholder="e.g. 300000" value={form.advanceAmount} onChange={e => f("advanceAmount", e.target.value)} className={inputCls} disabled={isLoading} />
+    </Field>
     <Field label="Advance Paid (PKR)">
       <input type="number" placeholder="e.g. 300000" value={form.advancePaid} onChange={e => f("advancePaid", e.target.value)} className={inputCls} disabled={isLoading} />
     </Field>

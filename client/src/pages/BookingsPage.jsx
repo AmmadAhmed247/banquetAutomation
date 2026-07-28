@@ -29,6 +29,7 @@ const emptyForm = {
   guests: "",
   venue: "Hall A",
   totalAmount: "",
+  advanceAmount: "",
   advancePaid: "",
   advanceDueDate: "",   
   paymentMethod: "Cash",
@@ -56,6 +57,7 @@ export default function Bookings({ showToast }) {
     return {
       ...b,
       totalAmount: b.total_amount || b.totalAmount,
+      advanceAmount: b.advance_amount || b.advanceAmount,
       advancePaid: b.advance_paid || b.advancePaid,
       advanceDueDate: formattedDueDate || b.advanceDueDate || "",
       paymentNote: b.payment_note || b.paymentNote,

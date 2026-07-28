@@ -2,7 +2,7 @@ const { CreateBooking, GetAllBookings, GetAllBookingsUnfiltered, UpdateBooking ,
 
 async function CreateUserBooking(req,res) {
     try {
-        const {event, date, packageName, phone, client, guests, venue, totalAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status} = req.body
+        const {event, date, packageName, phone, client, guests, venue, totalAmount,advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status} = req.body
 
         console.log("Create Booking Request body:", req.body)
         console.log("Create Booking advanceDueDate:", advanceDueDate)
@@ -22,6 +22,7 @@ async function CreateUserBooking(req,res) {
             guests: guests || 0,
             venue,
             totalAmount: totalAmount || 0,
+            totalAdvanceAmount: advanceAmount || 0,
             advancePaid: advancePaid || 0,
             advanceDueDate: advanceDueDate || null,   
             paymentMethod: paymentMethod || "Cash",
@@ -84,9 +85,9 @@ async function GetAllBookingsAdmin(req, res) {
 
 async function UpdateUserBooking(req, res) {
     try {
-        const { id, event, date, packageName, phone, client, guests, venue, totalAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status } = req.body
+        const { id, event, date, packageName, phone, client, guests, venue, totalAmount, advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status } = req.body
 
-        console.log("Update Booking Request:", { id, event, date, packageName, phone, client, guests, venue, totalAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status })
+        console.log("Update Booking Request:", { id, event, date, packageName, phone, client, guests, venue, totalAmount, advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status })
 
         if(!id){
             return res.status(400).json({
@@ -109,6 +110,7 @@ async function UpdateUserBooking(req, res) {
             guests: guests || 0,
             venue,
             totalAmount: totalAmount || 0,
+            advanceAmount: advanceAmount || 0,
             advancePaid: advancePaid || 0,
             advanceDueDate: advanceDueDate || null,   
             paymentMethod: paymentMethod || "Cash",

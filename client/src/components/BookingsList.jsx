@@ -99,7 +99,17 @@ function BookingCard({ booking, onEdit , onDelete }) {
             </span>
           </div>
 
-          <p className="text-sm font-bold text-zinc-900 mb-1.5">{formatPKR(booking.totalAmount)}</p>
+          <p className="text-sm font-bold text-zinc-900 mb-2">{formatPKR(booking.totalAmount)}</p>
+
+          <div className="flex flex-wrap gap-2 mb-2">
+            <span className="text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
+              <span className="text-black">Advance Amount:</span> {formatPKR(booking.advanceAmount)}
+            </span>
+            <span className="text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
+              <span className="text-black">Advance Paid:</span> {formatPKR(booking.advancePaid)}
+            </span>
+          </div>
+
           <PaymentBar total={booking.totalAmount} advance={booking.advancePaid} />
         </div>
 
@@ -116,7 +126,7 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-green-50/60 border-b border-green-100">
-            {["Client", "Event", "Date", "Advance Due", "Guests", "Venue", "Total", "Payment", "Payment Note", "Status",  "", ""].map((h) => (
+            {["Client", "Event", "Date", "Advance Amount", "Advance Due", "Guests", "Venue", "Total", "Payment", "Payment Note", "Status",  "", ""].map((h) => (
               <th key={h} className="text-left text-[10px] font-semibold text-green-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">
                 {h}
               </th>
@@ -143,6 +153,9 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
                   {booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
+                  {formatPKR(booking.advanceAmount)}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
                   {booking.advanceDueDate ? new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
 
@@ -155,10 +168,20 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
                 </td>
 
                 <td className="px-4 py-3.5 min-w-[150px]">
-                  <span className="text-[10px] bg-green-50 border border-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold mb-1.5 inline-block">
-                    {booking.payment_method}
-                  </span>
-                  <PaymentBar total={booking.totalAmount} advance={booking.advancePaid} />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="text-[10px] bg-green-50 border border-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold inline-block">
+                        {booking.payment_method}
+                      </span>
+                      <span className="text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
+                        <span className="font-semibold text-green-800">Advance Amount:</span>&nbsp;{formatPKR(booking.advanceAmount)}
+                      </span>
+                      <span className="text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
+                        <span className="font-semibold text-green-800">Advance Paid:</span>&nbsp;{formatPKR(booking.advancePaid)}
+                      </span>
+                    </div>
+                    <PaymentBar total={booking.totalAmount} advance={booking.advancePaid} />
+                  </div>
                 </td>
 
                 <td className="px-4 py-3.5">
