@@ -8,6 +8,7 @@ async function SendReceiptMessage(req, res) {
       date,
       clientName,
       resident,
+      whatsapp,
       phone,
       reservedFor,
       day,
@@ -23,6 +24,7 @@ async function SendReceiptMessage(req, res) {
       date,
       clientName,
       resident,
+      whatsapp,
       phone,
       reservedFor,
       day,
@@ -40,17 +42,17 @@ async function SendReceiptMessage(req, res) {
       });
     }
 
-    const formattedPhone = phone.startsWith("whatsapp:")
-      ? phone
-      : `whatsapp:+${phone.replace(/\D/g, "").replace(/^0/, "92")}`;
+    const formattedWhatsapp = whatsapp.startsWith("whatsapp:")
+      ? whatsapp
+      : `whatsapp:+${whatsapp.replace(/\D/g, "").replace(/^0/, "92")}`;
 
-
-    const receipt = await getReceiptMessage(formattedPhone, {
+    const receipt = await getReceiptMessage(formattedWhatsapp, {
       rNo,
       date,
       clientName,
       resident,
-      phone: formattedPhone,
+      whatsapp: formattedWhatsapp,
+      phone,
       reservedFor,
       day,
       functionName,
@@ -60,12 +62,12 @@ async function SendReceiptMessage(req, res) {
       balance,
     });
     if (!receipt.success) {
-  return res.status(502).json({
-    success: false,
-    message: "Failed to send WhatsApp message",
-    error: receipt.message,
-  });
-}
+      return res.status(502).json({
+        success: false,
+        message: "Failed to send WhatsApp message",
+        error: receipt.message,
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -78,14 +80,10 @@ async function SendReceiptMessage(req, res) {
     return res.status(500).json({
       success: false,
       message: "Server Error",
-    
     });
-    
   }
-  
 }
 
 module.exports = {
   SendReceiptMessage,
 };
-

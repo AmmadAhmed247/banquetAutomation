@@ -1,4 +1,4 @@
-const { createCanvas } = require("canvas");
+const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs");
 const path = require("path");
 const { uploadBuffer } = require("../utils/uploadToImagekit");
@@ -92,7 +92,6 @@ async function generateReceipt(data = {}) {
   // Logo / Header
   drawFanLogo(ctx, W / 2, 62, 38);
   text('DARBAR BANQUET', W / 2, 118, { size: 41, weight: 'bold', color: '#c0392b', align: 'center', font: 'Arial' });
-  text('A & B', W / 2, 150, { size: 26, weight: 'bold', color: '#1a237e', align: 'center', font: 'Arial' });
 
   // R.No + Tel
   text('R.No.', 42, 186, { size: 14, weight: 'bold' });
@@ -114,11 +113,13 @@ async function generateReceipt(data = {}) {
   line(130, 298, W - 42, 298);
   if (data.resident) centeredText(data.resident, 130, W - 42, 294, { size: 14 });
 
-  // Telephone
-  line(42, 332, 290, 332);
-  text('Telephone#.', 296, 328, { size: 14, weight: 'bold' });
-  line(390, 332, W - 42, 332);
-  if (data.phone) centeredText(cleanPhone(data.phone), 390, W - 42, 328, { size: 14 });
+  // WhatsApp & Phone
+  text('WhatsApp.', 42, 328, { size: 14, weight: 'bold' });
+  line(128, 332, 370, 332);
+  if (data.whatsapp) centeredText(cleanPhone(data.whatsapp), 128, 370, 328, { size: 14 });
+  text('Phone.', 390, 328, { size: 14, weight: 'bold' });
+  line(448, 332, W - 42, 332);
+  if (data.phone) centeredText(cleanPhone(data.phone), 448, W - 42, 328, { size: 14 });
 
   // Reserved for / Day
   text('has been reserved for', 42, 372, { size: 14, weight: 'bold' });
@@ -142,6 +143,22 @@ async function generateReceipt(data = {}) {
   if (data.lumpSum) centeredText(data.lumpSum, 120, 480, 460, { size: 14 });
   line(W - 200, 476, W - 42, 476);
   text('Manager', W - 130, 494, { size: 15, weight: 'bold' });
+
+  // Manager signature image, placed above the "Manager" label/line
+  try {
+    const signaturePath = path.join(__dirname, "../assets/manager-signature.png");
+    const signatureImg = await loadImage(signaturePath);
+    const sigW = 140;
+    const sigH = sigW * (signatureImg.height / signatureImg.width);
+    const sigX = W - 200 + ((W - 42 - (W - 200)) - sigW) / 2;
+    
+    // Changed from 476 - sigH - 4 to 476 - sigH (and added a tiny positive offset if needed)
+    const sigY = 484 - sigH + 2; 
+    
+    ctx.drawImage(signatureImg, sigX, sigY, sigW, sigH);
+  } catch (err) {
+    console.error("Could not load manager signature:", err.message);
+  }
 
   // Advance
   text('Advance', 42, 500, { size: 14, weight: 'bold' });
@@ -199,9 +216,7 @@ async function generateReceipt(data = {}) {
     tcLineY += lines.length > 1 ? 38 : 22;
   });
 
-  // Signature
-  text('Signature of Party', W - 180, tcLineY - 4, { size: 13, weight: 'bold', color: '#c0392b' });
-  line(W - 190, tcLineY + 2, W - 42, tcLineY + 2, '#c0392b', 1.5);
+  // Agreement note (Signature of Party block removed)
   text('I have read & agreed to the above terms & conditions.', 62, tcLineY + 16, { size: 12, color: '#111' });
   line(28, tcLineY + 28, W - 28, tcLineY + 28, '#c0392b', 1.5);
 

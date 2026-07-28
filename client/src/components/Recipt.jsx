@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
-import { set, useForm } from "react-hook-form";
-import { Printer, RotateCcw, User, Phone, MapPin, CalendarDays, Users, Building2, Wallet, CreditCard, PiggyBank } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { Printer, RotateCcw, User, Phone, MessageCircle, MapPin, CalendarDays, Users, Building2, Wallet, CreditCard, PiggyBank } from "lucide-react";
 import receiptService from "../services/receipt.service";
 import toast from "react-hot-toast";
 
@@ -10,6 +10,7 @@ const defaultForm = {
   date: "",
   clientName: "",
   resident: "",
+  whatsapp: "",
   phone: "",
   reservedFor: "",
   day: "",
@@ -22,7 +23,7 @@ const defaultForm = {
 
 const HALLS = ["Hall A", "Hall B", "Hall A & B"];
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const FUNCS = ["Wedding", "Walima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate"];
+const FUNCS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate"];
 
 function Field({ label, icon: Icon, children }) {
   return (
@@ -79,7 +80,6 @@ function ReceiptPreview({ data }) {
       <FanLogo />
       <div className="text-center mb-2">
         <div className="text-xl sm:text-2xl font-black text-red-700 tracking-wide leading-tight">DARBAR BANQUET</div>
-        <div className="text-sm sm:text-base font-bold text-blue-900 tracking-[4px]">A &amp; B</div>
       </div>
 
       <div className="flex flex-wrap justify-between items-end gap-x-2 gap-y-1 mb-3">
@@ -93,8 +93,11 @@ function ReceiptPreview({ data }) {
       <Row label="Resident of" value={data.resident} />
 
       <div className="flex items-end gap-2 mb-2">
-        <div className="flex-1 border-b border-blue-900" style={{ minHeight: 17 }}></div>
-        <span className="text-[12px] font-bold whitespace-nowrap">Telephone#.</span>
+        <span className="text-[12px] font-bold whitespace-nowrap">WhatsApp.</span>
+        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
+          {data.whatsapp && <span className="text-[12px] pl-1">{data.whatsapp}</span>}
+        </div>
+        <span className="text-[12px] font-bold whitespace-nowrap">Phone.</span>
         <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
           {data.phone && <span className="text-[12px] pl-1">{data.phone}</span>}
         </div>
@@ -132,9 +135,12 @@ function ReceiptPreview({ data }) {
 
       {/* Manager signature — line first, label below it */}
       <div className="flex flex-col items-end mb-2">
-        <div className="border-b border-blue-900" style={{ width: 120, minHeight: 17 }}></div>
-        <span className="text-[12px] font-bold whitespace-nowrap mt-1">Manager</span>
-      </div>
+  {/* Added relative positioning and a negative bottom margin to push the image down onto the line */}
+  <img className="w-28 relative -mb-4 z-10" src="/manager-signature.png" alt="Manager Signature" />
+  
+  <div className="border-b border-blue-900" style={{ width: 120, minHeight: 17 }}></div>
+  <span className="text-[12px] font-bold whitespace-nowrap mt-1">Manager</span>
+</div>
 
       <Row label="Advance" value={data.advance ? `Rs. ${data.advance}` : ""} />
       <Row label="Balance" value={balance ? `Rs. ${balance}` : ""} />
@@ -156,12 +162,8 @@ function ReceiptPreview({ data }) {
         ))}
       </ul>
 
-      <div className="flex flex-wrap justify-between items-end gap-2 mt-2">
+      <div className="flex flex-wrap items-end gap-2 mt-2">
         <span className="text-[10px]">I have read &amp; agreed to the above terms &amp; conditions.</span>
-        <div className="text-right">
-          <div className="text-[11px] font-bold text-red-700">Signature of Party</div>
-          <div className="border-b border-red-700 mt-0.5" style={{ width: 100 }}></div>
-        </div>
       </div>
       <div className="border-t-2 border-red-700 mt-2 mb-1.5"></div>
       <div className="text-center text-[11px] font-bold leading-snug">
@@ -208,6 +210,7 @@ export default function DarbarReceiptForm() {
         date: data.date,
         clientName: data.clientName,
         resident: data.resident,
+        whatsapp: data.whatsapp,
         phone: data.phone,
         reservedFor: data.reservedFor,
         day: data.day,
@@ -220,7 +223,7 @@ export default function DarbarReceiptForm() {
 
       const formattedData = {
         ...fixedData,
-        phone: formatWhatsAppNumber(fixedData.phone)
+        whatsapp: formatWhatsAppNumber(fixedData.whatsapp)
       }
 
       const result = await receiptService.sendReceipt(formattedData)
@@ -242,7 +245,7 @@ export default function DarbarReceiptForm() {
 
         {/* Header */}
         <div className="mb-5 sm:mb-7">
-          <span className="text-xs font-semibold text-green-600 uppercase tracking-widest">Darbar Banquet A &amp; B</span>
+          <span className="text-xs font-semibold text-green-600 uppercase tracking-widest">Darbar Banquet</span>
           <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 mt-1" style={{ fontFamily: "Georgia, serif" }}>Receipt Generator</h1>
           <p className="text-zinc-500 text-sm mt-1">
             Fill in the details — receipt updates live{" "}
@@ -290,8 +293,11 @@ export default function DarbarReceiptForm() {
                 <Field label="Resident of" icon={MapPin}>
                   <input className={inp} placeholder="North Nazimabad, Karachi" {...register("resident")} />
                 </Field>
-                <Field label="Telephone" icon={Phone}>
-                  <input className={inp} placeholder="0300-1234567" {...register("phone")} />
+                <Field label="WhatsApp Number" icon={MessageCircle}>
+                  <input className={inp} placeholder="0300-1234567" {...register("whatsapp")} />
+                </Field>
+                <Field label="Phone Number" icon={Phone}>
+                  <input className={inp} placeholder="021-1234567" {...register("phone")} />
                 </Field>
               </div>
             </div>
