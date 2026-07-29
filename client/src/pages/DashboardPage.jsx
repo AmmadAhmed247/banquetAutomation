@@ -7,7 +7,8 @@ import {
   CalendarCheck,
   ReceiptIcon,
   DollarSign,
-  LogOut
+  LogOut,
+  BanknoteArrowDown
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
@@ -16,11 +17,11 @@ export default function DashboardPage() {
   const navigate = useNavigate();
 
   const tools = [
-    { name: "Add-ons", path: "expense", icon: Users, desc: "Manage your studio" },
     { name: "Calendar", path: "calendar", icon: Calendar, desc: "Manage your studio" },
     { name: "Bookings", path: "bookings", icon: CalendarCheck, desc: "Manage your studio" },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon, desc: "Manage your studio" },
     { name: "Management System", path: "management", icon: DollarSign, desc: "Manage your studio" },
+    { name: "Add-ons", path: "addons", icon: BanknoteArrowDown, desc: "Manage your studio" },
   ];
 
   const handleLogout = async () => {

@@ -42,8 +42,8 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
-        path: "expense",
-        element: <BookingsAddonsPage pageName="Expense Page" />,
+        path: "addons",
+        element: <BookingsAddonsPage pageName="Add-ons Page" />,
       },
       {
         path: "recipt",

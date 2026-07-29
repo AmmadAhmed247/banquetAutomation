@@ -21,10 +21,10 @@ const STANDARD_EXPENSE_CATEGORIES = ["Diesel", "Staff Wages", "KE Bill", "Sui Ga
 const ADDON_CATEGORIES = [
   "Pepsi Co.",
   "Coca Cola Co.",
-  "Dawes Flower",
+  "Fresh Flower",
   "Cola Next",
   "Dance Floor",
-  "Water Board",
+  "Water Bottles",
   "Ayaz Tissue",
   "Stage",
 ];

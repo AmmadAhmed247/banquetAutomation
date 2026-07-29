@@ -28,7 +28,7 @@ export default function RootLayout() {
     { name: "Bookings", path: "bookings", icon: CalendarCheck },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon },
     { name: "Management System", path: "management", icon: DollarSign },
-    { name: "Expense", path: "expense", icon: BanknoteArrowDown },
+    { name: "Add-ons", path: "addons", icon: BanknoteArrowDown },
   ];
 
   // UPDATED: Check if they are on the main dashboard page
