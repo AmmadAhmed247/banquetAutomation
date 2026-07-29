@@ -4,7 +4,6 @@ import { Printer, RotateCcw, User, Phone, MessageCircle, MapPin, CalendarDays, U
 import receiptService from "../services/receipt.service";
 import toast from "react-hot-toast";
 
-
 const defaultForm = {
   rNo: "",
   date: "",
@@ -40,7 +39,6 @@ const inp = "w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm text
 const sel = "w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-300 appearance-none cursor-pointer";
 
 function ReceiptPreview({ data }) {
-
   const balance = (() => {
     const l = parseFloat(String(data.lumpSum).replace(/,/g, "")) || 0;
     const a = parseFloat(String(data.advance).replace(/,/g, "")) || 0;
@@ -48,7 +46,7 @@ function ReceiptPreview({ data }) {
   })();
 
   const FanLogo = () => (
-    <svg width="64" height="48" viewBox="0 0 72 52" className="mx-auto mb-1">
+    <svg width="48" height="38" viewBox="0 0 72 52" className="mx-auto mb-1">
       <g transform="translate(36,46)">
         {[[-72, "#c0392b"], [-48, "#c0392b"], [-24, "#c0392b"], [0, "#9e9e9e"], [24, "#1a237e"], [48, "#1a237e"], [72, "#1a237e"]].map(([r, c]) => (
           <ellipse key={r} transform={`rotate(${r})`} rx="5" ry="22" fill={c} />
@@ -57,19 +55,10 @@ function ReceiptPreview({ data }) {
     </svg>
   );
 
-  const Row = ({ label, value, line = true }) => (
-    <div className="flex items-end gap-2 mb-2">
-      <span className="text-[12px] font-bold whitespace-nowrap">{label}</span>
-      <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
-        {value && <span className="text-[12px] pl-1">{value}</span>}
-      </div>
-    </div>
-  );
-
   return (
-    <div className="border-2 border-blue-900 p-4 sm:p-5 bg-white font-sans text-gray-900 relative overflow-hidden w-full max-w-[420px] mx-auto" style={{ fontFamily: "Arial, sans-serif" }}>
-      {/* Watermark */}
-      <svg className="absolute opacity-[0.06] pointer-events-none" style={{ top: "30%", left: "50%", transform: "translateX(-50%)" }} width="260" height="260" viewBox="0 0 260 260">
+    <div className="border-[2.5px] border-[#1a237e] p-5 bg-white font-sans text-zinc-900 relative overflow-hidden w-full max-w-[420px] mx-auto text-[13px]" style={{ fontFamily: "Arial, sans-serif" }}>
+      {/* Watermark Fan */}
+      <svg className="absolute opacity-[0.06] pointer-events-none" style={{ top: "38%", left: "50%", transform: "translate(-50%, -50%)" }} width="260" height="260" viewBox="0 0 260 260">
         <g transform="translate(130,130)">
           {[-90, -60, -30, 0, 30, 60, 90].map((r, i) => (
             <ellipse key={r} transform={`rotate(${r})`} rx="17" ry="68" fill={["#c0392b", "#1a237e", "#e8c9b8", "#1a237e", "#c0392b", "#e8c9b8", "#1a237e"][i]} />
@@ -78,118 +67,178 @@ function ReceiptPreview({ data }) {
       </svg>
 
       <FanLogo />
-      <div className="text-center mb-2">
-        <div className="text-xl sm:text-2xl font-black text-red-700 tracking-wide leading-tight">DARBAR BANQUET</div>
+      
+      <div className="text-center mb-3">
+        <div className="text-[22px] font-black text-[#c0392b] tracking-wide leading-none">DARBAR BANQUET</div>
       </div>
 
-      <div className="flex flex-wrap justify-between items-end gap-x-2 gap-y-1 mb-3">
-        <div className="text-[12px] font-bold">
-          R.No. <span className="border-b border-blue-900 inline-block min-w-[60px] px-1 text-sm font-black text-center">{data.rNo}</span>
-        </div>
-      </div>
-
-      <Row label="Date :" value={data.date} />
-      <Row label="RECEIVED with thanks from Mr." value={data.clientName} />
-      <Row label="Resident of" value={data.resident} />
-
-      <div className="flex items-end gap-2 mb-2">
-        <span className="text-[12px] font-bold whitespace-nowrap">WhatsApp.</span>
-        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
-          {data.whatsapp && <span className="text-[12px] pl-1">{data.whatsapp}</span>}
-        </div>
-        <span className="text-[12px] font-bold whitespace-nowrap">Phone.</span>
-        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
-          {data.phone && <span className="text-[12px] pl-1">{data.phone}</span>}
+      {/* R.No */}
+      <div className="flex items-end gap-1.5 mb-2.5">
+        <span className="text-[13px] font-bold">R.No.</span>
+        <div className="border-b border-[#1a237e] text-center px-2 min-w-[70px]" style={{ minHeight: 18 }}>
+          {data.rNo && <span className="text-[13px] font-bold">{data.rNo}</span>}
         </div>
       </div>
 
-      <div className="flex items-end gap-2 mb-2">
-        <span className="text-[12px] font-bold whitespace-nowrap">has been reserved for</span>
-        <div className="flex-[2] border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
-          {data.reservedFor && <span className="text-[12px] pl-1">{data.reservedFor}</span>}
-        </div>
-        <span className="text-[12px] font-bold whitespace-nowrap">Day</span>
-        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
-          {data.day && <span className="text-[12px] pl-1">{data.day}</span>}
+      {/* Date */}
+      <div className="flex items-end gap-1.5 mb-2.5">
+        <span className="text-[13px] font-bold whitespace-nowrap">Date :</span>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.date && <span className="text-[13px]">{data.date}</span>}
         </div>
       </div>
 
-      <div className="flex items-end gap-2 mb-2">
-        <span className="text-[12px] font-bold whitespace-nowrap">Function</span>
-        <div className="flex-[2] border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
-          {data.functionName && <span className="text-[12px] pl-1">{data.functionName}</span>}
+      {/* Received From */}
+      <div className="flex items-end gap-1.5 mb-2.5">
+        <span className="text-[13px] font-bold whitespace-nowrap">RECEIVED with thanks from Mr.</span>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.clientName && <span className="text-[13px]">{data.clientName}</span>}
         </div>
-        <span className="text-[12px] font-bold whitespace-nowrap">No. Of Guest</span>
-        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
-          {data.noOfGuest && <span className="text-[12px] pl-1">{data.noOfGuest}</span>}
+      </div>
+
+      {/* Resident of */}
+      <div className="flex items-end gap-1.5 mb-2.5">
+        <span className="text-[13px] font-bold whitespace-nowrap">Resident of</span>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.resident && <span className="text-[13px]">{data.resident}</span>}
+        </div>
+      </div>
+
+      {/* WhatsApp & Phone */}
+      <div className="flex items-end gap-2 mb-2.5">
+        <span className="text-[13px] font-bold whitespace-nowrap">WhatsApp.</span>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.whatsapp && <span className="text-[13px]">{data.whatsapp}</span>}
+        </div>
+        <span className="text-[13px] font-bold whitespace-nowrap">Phone.</span>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.phone && <span className="text-[13px]">{data.phone}</span>}
+        </div>
+      </div>
+
+      {/* Reserved For & Day */}
+      <div className="flex items-end gap-2 mb-2.5">
+        <span className="text-[13px] font-bold whitespace-nowrap">has been reserved for</span>
+        <div className="flex-[2] border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.reservedFor && <span className="text-[13px]">{data.reservedFor}</span>}
+        </div>
+        <span className="text-[13px] font-bold whitespace-nowrap">Day</span>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.day && <span className="text-[13px]">{data.day}</span>}
+        </div>
+      </div>
+
+      {/* Function & No. Of Guest */}
+      <div className="flex items-end gap-2 mb-2.5">
+        <span className="text-[13px] font-bold whitespace-nowrap">Function</span>
+        <div className="flex-[2] border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.functionName && <span className="text-[13px]">{data.functionName}</span>}
+        </div>
+        <span className="text-[13px] font-bold whitespace-nowrap">No. Of Guest</span>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.noOfGuests && <span className="text-[13px]">{data.noOfGuests}</span>}
         </div>
       </div>
 
       {/* Lump Sum */}
-      <div className="flex items-end gap-2 mb-1">
-        <span className="text-[12px] font-bold whitespace-nowrap">Lump Sum</span>
-        <div className="flex-1 border-b border-blue-900 text-center" style={{ minHeight: 17 }}>
-          {data.lumpSum && <span className="text-[12px] pl-1">Rs. {data.lumpSum}</span>}
+      <div className="flex items-end gap-2 mb-2.5">
+        <span className="text-[13px] font-bold whitespace-nowrap">Lump Sum</span>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.lumpSum && <span className="text-[13px]">{data.lumpSum}</span>}
         </div>
       </div>
 
-      {/* Manager signature — line first, label below it */}
-      <div className="flex flex-col items-end mb-2">
-  {/* Added relative positioning and a negative bottom margin to push the image down onto the line */}
-  <img className="w-28 relative -mb-4 z-10" src="/manager-signature.png" alt="Manager Signature" />
-  
-  <div className="border-b border-blue-900" style={{ width: 120, minHeight: 17 }}></div>
-  <span className="text-[12px] font-bold whitespace-nowrap mt-1">Manager</span>
-</div>
+      {/* Advance & Signature Layout */}
+      <div className="flex items-end justify-between gap-4 mb-1">
+        <div className="flex-1">
+          <div className="flex items-end gap-2 mb-2.5">
+            <span className="text-[13px] font-bold whitespace-nowrap">Advance</span>
+            <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+              {data.advance && <span className="text-[13px]">{data.advance}</span>}
+            </div>
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-[13px] font-bold whitespace-nowrap">Balance</span>
+            <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+              {balance && <span className="text-[13px]">{balance}</span>}
+            </div>
+          </div>
+        </div>
 
-      <Row label="Advance" value={data.advance ? `Rs. ${data.advance}` : ""} />
-      <Row label="Balance" value={balance ? `Rs. ${balance}` : ""} />
-
-      {/* Terms */}
-      <div className="text-center my-2">
-        <span className="bg-red-700 text-white text-[12px] font-bold px-5 py-1 rounded-full">Terms &amp; Conditions</span>
+        <div className="flex flex-col items-center min-w-[120px]">
+          <div className="relative h-10 w-28 flex items-end justify-center">
+            <img className="absolute bottom-1 w-28 object-contain z-10 pointer-events-none" src="/manager-signature.png" alt="Manager Signature" />
+          </div>
+          <div className="w-full border-b border-[#1a237e]" style={{ minHeight: 1 }}></div>
+          <span className="text-[13px] font-bold mt-0.5">Manager</span>
+        </div>
       </div>
-      <ul className="text-[10px] space-y-1 leading-snug">
-        {["Advance non refundable. Balance must be paid within 48 hours prior your event.",
-          "Cold drinks are strictly not allowed from outside. All drinks are available at company price @ Rs.1500 per crate chilled on counter.",
+
+      {/* Terms & Conditions Pill */}
+      <div className="text-center my-3">
+        <span className="bg-[#c0392b] text-white text-[12px] font-bold px-6 py-1 rounded-full inline-block">Terms &amp; Conditions</span>
+      </div>
+
+      <ul className="text-[10.5px] space-y-1 leading-tight mb-2">
+        {[
+          "Advance non refundable. Balance must be paid within 48 hours prior your event.",
+          "Cold drinks are strictly not allowed from outside. All drinks are available at company price @ Rs.1500 per crate chilled on counter. NESTLE / AQUAFINA water bottle for Rs.150 per table with service.",
           "Fresh flower stage is not included in your booking amount.",
           "Premises should be vacated before 12 a.m.",
           "No musical function is allowed without concerned authorities permission.",
           "Car parking at your own risk.",
           "Management will not be responsible for loss of any kind of property."
         ].map((t, i) => (
-          <li key={i} className="flex gap-1.5"><span className="text-red-700 text-[12px] leading-none mt-0.5">●</span><span>{t}</span></li>
+          <li key={i} className="flex gap-1.5 items-start">
+            <span className="text-[#c0392b] text-[10px] leading-none mt-1">●</span>
+            <span>{t}</span>
+          </li>
         ))}
       </ul>
 
-      <div className="flex flex-wrap items-end gap-2 mt-2">
-        <span className="text-[10px]">I have read &amp; agreed to the above terms &amp; conditions.</span>
-      </div>
-      <div className="border-t-2 border-red-700 mt-2 mb-1.5"></div>
-      <div className="text-center text-[11px] font-bold leading-snug">
-        D-16, Block "N" Near Sakhi Hassan,<br />North Nazimabad, Karachi.
+      <div className="text-[11px] mb-2">I have read &amp; agreed to the above terms &amp; conditions.</div>
+      <div className="border-t-[1.5px] border-[#c0392b] mb-2"></div>
+
+      {/* Footer Split Layout */}
+      <div className="grid grid-cols-2 relative pt-1 pb-1">
+        <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1.5px] bg-[#c0392b]"></div>
+        
+        <div className="pr-3 text-[11px] font-bold leading-tight">
+          D-16, Block "N" Near Sakhi Hassan,<br />North Nazimabad, Karachi.
+        </div>
+        
+        <div className="pl-4 text-[10.5px] leading-tight">
+          <div className="font-bold text-[#c0392b] mb-0.5">Contact Numbers:</div>
+          <div className="font-bold">WhatsApp: 03002319171</div>
+          <div className="font-bold">Phone: 03008928058</div>
+        </div>
       </div>
     </div>
   );
 }
 
 const formatWhatsAppNumber = (phone) => {
-  let cleaned = phone.replace(/\D/g, "")
+  if (!phone) return "";
+  let cleaned = phone.replace(/\D/g, "");
 
-  if (cleaned.startsWith("0")) {
-    cleaned = "92" + cleaned.slice(1)
+  if (cleaned.startsWith("92")) {
+    cleaned = "+" + cleaned;
+  } else if (cleaned.startsWith("0")) {
+    cleaned = "+92" + cleaned.slice(1);
+  } else {
+    cleaned = "+" + cleaned;
   }
 
-  return `whatsapp:+${cleaned}`
-}
+  return `whatsapp:${cleaned}`;
+};
 
 export default function DarbarReceiptForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
+  
   const { register, handleSubmit, watch, reset, setValue } = useForm({
     defaultValues: defaultForm,
   });
-
 
   const printRef = useRef();
   const formData = watch();
@@ -200,11 +249,19 @@ export default function DarbarReceiptForm() {
     if (l && a) setValue("balance", (l - a).toLocaleString());
   };
 
+  const onError = (errors) => {
+    const firstKey = Object.keys(errors)[0];
+    if (firstKey) {
+      toast.error(`Please fill out the required field: ${firstKey}`);
+    } else {
+      toast.error("Please fill out all required fields.");
+    }
+  };
+
   const onSubmit = async (data) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      console.log("Receipt data:", data);
       const fixedData = {
         rNo: data.rNo,
         date: data.date,
@@ -215,25 +272,25 @@ export default function DarbarReceiptForm() {
         reservedFor: data.reservedFor,
         day: data.day,
         functionName: data.functionName,
-        noOfGuests: data.noOfGuest,
+        noOfGuests: data.noOfGuests,
         lumpSum: data.lumpSum,
         advance: data.advance,
         balance: data.balance
-      }
+      };
 
       const formattedData = {
         ...fixedData,
         whatsapp: formatWhatsAppNumber(fixedData.whatsapp)
-      }
+      };
 
-      const result = await receiptService.sendReceipt(formattedData)
+      const result = await receiptService.sendReceipt(formattedData);
 
       if (result?.success === true) {
-        toast.success("Receipt Sent!")
+        toast.success("Receipt Sent!");
       }
-
     } catch (error) {
-      console.log("An Error Occured: ", error)
+      console.log("An Error Occured: ", error);
+      toast.error("Failed to send receipt. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -242,8 +299,6 @@ export default function DarbarReceiptForm() {
   return (
     <div className="min-h-screen bg-zinc-50 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
-
-        {/* Header */}
         <div className="mb-5 sm:mb-7">
           <span className="text-xs font-semibold text-green-600 uppercase tracking-widest">Darbar Banquet</span>
           <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 mt-1" style={{ fontFamily: "Georgia, serif" }}>Receipt Generator</h1>
@@ -254,7 +309,6 @@ export default function DarbarReceiptForm() {
           </p>
         </div>
 
-        {/* Mobile-only toggle to jump to preview */}
         <button
           type="button"
           onClick={() => setShowPreviewMobile(v => !v)}
@@ -264,73 +318,67 @@ export default function DarbarReceiptForm() {
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-
           <form
-            onSubmit={handleSubmit(onSubmit)}
+            onSubmit={handleSubmit(onSubmit, onError)}
             className={`space-y-5 ${showPreviewMobile ? "hidden lg:block" : ""}`}
           >
-
-            {/* Receipt No */}
             <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm">
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Receipt Info</p>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="R. No.">
-                  <input className={inp} placeholder="730" {...register("rNo")} />
+                  <input className={inp} placeholder="730" {...register("rNo", { required: true })} />
                 </Field>
                 <Field label="Date" icon={CalendarDays}>
-                  <input type="date" className={inp} {...register("date")} />
+                  <input type="date" className={inp} {...register("date", { required: true })} />
                 </Field>
               </div>
             </div>
 
-            {/* Client Info */}
             <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm">
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Client Information</p>
               <div className="space-y-4">
                 <Field label="Client Name" icon={User}>
-                  <input className={inp} placeholder="Mr. Ali Ahmed" {...register("clientName")} />
+                  <input className={inp} placeholder="Mr. Ali Ahmed" {...register("clientName", { required: true })} />
                 </Field>
                 <Field label="Resident of" icon={MapPin}>
-                  <input className={inp} placeholder="North Nazimabad, Karachi" {...register("resident")} />
+                  <input className={inp} placeholder="North Nazimabad, Karachi" {...register("resident", { required: true })} />
                 </Field>
                 <Field label="WhatsApp Number" icon={MessageCircle}>
-                  <input className={inp} placeholder="0300-1234567" {...register("whatsapp")} />
+                  <input className={inp} placeholder="0300-1234567" {...register("whatsapp", { required: true })} />
                 </Field>
                 <Field label="Phone Number" icon={Phone}>
-                  <input className={inp} placeholder="021-1234567" {...register("phone")} />
+                  <input className={inp} placeholder="021-1234567" {...register("phone", { required: true })} />
                 </Field>
               </div>
             </div>
 
-            {/* Event Details */}
             <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm">
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Event Details</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Reserved For" icon={Building2}>
-                  <select className={sel} {...register("reservedFor")}>
+                  <select className={sel} {...register("reservedFor", { required: true })}>
                     <option value="">Select Hall</option>
                     {HALLS.map(h => <option key={h}>{h}</option>)}
                   </select>
                 </Field>
                 <Field label="Day">
-                  <select className={sel} {...register("day")}>
+                  <select className={sel} {...register("day", { required: true })}>
                     <option value="">Select Day</option>
                     {DAYS.map(d => <option key={d}>{d}</option>)}
                   </select>
                 </Field>
                 <Field label="Function" icon={CalendarDays}>
-                  <select className={sel} {...register("functionName")}>
+                  <select className={sel} {...register("functionName", { required: true })}>
                     <option value="">Select Function</option>
                     {FUNCS.map(fn => <option key={fn}>{fn}</option>)}
                   </select>
                 </Field>
                 <Field label="No. of Guests" icon={Users}>
-                  <input type="number" className={inp} placeholder="350" {...register("noOfGuest")} />
+                  <input type="number" className={inp} placeholder="350" {...register("noOfGuests", { required: true })} />
                 </Field>
               </div>
             </div>
 
-            {/* Payment */}
             <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm">
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Payment Details</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -339,7 +387,7 @@ export default function DarbarReceiptForm() {
                     type="number"
                     className={inp}
                     placeholder="850000"
-                    {...register("lumpSum")}
+                    {...register("lumpSum", { required: true })}
                     onBlur={autoBalance}
                   />
                 </Field>
@@ -348,7 +396,7 @@ export default function DarbarReceiptForm() {
                     type="number"
                     className={inp}
                     placeholder="300000"
-                    {...register("advance")}
+                    {...register("advance", { required: true })}
                     onBlur={autoBalance}
                   />
                 </Field>
@@ -359,7 +407,7 @@ export default function DarbarReceiptForm() {
                         type="text"
                         className={inp + " bg-zinc-100 font-semibold"}
                         placeholder="Auto-calculated"
-                        {...register("balance")}
+                        {...register("balance", { required: true })}
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-zinc-400 font-medium">auto</span>
                     </div>
@@ -367,7 +415,6 @@ export default function DarbarReceiptForm() {
                 </div>
               </div>
 
-              {/* Live payment bar */}
               {formData.lumpSum && (
                 <div className="mt-4 bg-zinc-50 rounded-xl p-3 border border-zinc-200">
                   {(() => {
@@ -393,7 +440,6 @@ export default function DarbarReceiptForm() {
               )}
             </div>
 
-            {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
@@ -413,7 +459,6 @@ export default function DarbarReceiptForm() {
             </div>
           </form>
 
-          {/* ── LIVE PREVIEW ── */}
           <div className={`lg:sticky lg:top-6 self-start ${showPreviewMobile ? "" : "hidden lg:block"}`}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Live Preview</p>

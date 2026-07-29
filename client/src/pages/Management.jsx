@@ -16,7 +16,7 @@ import { getAllAddons, useCreateAddon, useDeleteAddon } from "../lib/hooks/addon
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const STANDARD_EXPENSE_CATEGORIES = ["Diesel", "Staff Wages", "KE Bill", "Sui Gas"];
+const STANDARD_EXPENSE_CATEGORIES = [ "Staff Wages" ,"Miscellaneous"];
 
 const ADDON_CATEGORIES = [
   "Pepsi Co.",
@@ -27,6 +27,10 @@ const ADDON_CATEGORIES = [
   "Water Bottles",
   "Ayaz Tissue",
   "Stage",
+  "Fire Crackers",
+  "Ladies Staff",
+  "Miscellaneous",
+
 ];
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = [CURRENT_YEAR, CURRENT_YEAR + 1];
@@ -112,7 +116,6 @@ function KpiCard({ label, value, sub, icon: Icon, trend }) {
   );
 }
 
-// Standard expense line item — no add-on fields, this table never carries them
 function ExpenseRow({ expense, onDelete }) {
   return (
     <div className="flex items-center gap-4 py-3 border-b border-stone-100 last:border-0 group">
@@ -131,8 +134,8 @@ function ExpenseRow({ expense, onDelete }) {
   );
 }
 
-// Add-on line item — client price, vendor cost, and the commission you keep
 function AddonRow({ addon, onDelete }) {
+  const commission = Number(addon.client_price || 0) - Number(addon.vendor_cost || 0);
   return (
     <div className="flex items-center gap-4 py-3 border-b border-stone-100 last:border-0 group">
       <div className="flex flex-col flex-1 min-w-0">
@@ -143,7 +146,7 @@ function AddonRow({ addon, onDelete }) {
         <div className="text-[11px] text-stone-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
           <span>Client: {currency(addon.client_price)}</span>
           <span>Vendor: {currency(addon.vendor_cost)}</span>
-          <span className="text-violet-700 font-semibold">Commission: +{currency(addon.commission)}</span>
+          <span className="text-violet-700 font-semibold">Commission: +{currency(commission)}</span>
         </div>
       </div>
       <div className="flex items-center gap-3 flex-shrink-0">
@@ -205,8 +208,7 @@ export default function Management() {
   const { data: rawBookings = [] } = getAllBookings() || {};
   const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
 
-  // Two independent draft states — a standard expense never shares a shape with an add-on
-  const [mode, setMode] = useState("expense"); // "expense" | "addon"
+  const [mode, setMode] = useState("expense"); 
   const [newExp, setNewExp] = useState({ category: STANDARD_EXPENSE_CATEGORIES[0], label: "", amount: "" });
   const [newAddon, setNewAddon] = useState({ service: ADDON_CATEGORIES[0], client_price: "", vendor_cost: "" });
   const [addingTo, setAddingTo] = useState(null);
@@ -222,7 +224,6 @@ export default function Management() {
     });
   }, [bookings, selectedYear, selectedMonth, hallFilter]);
 
-  // Standard expenses grouped by booking — this table never contains add-ons
   const expensesByBooking = useMemo(() => {
     const map = {};
     expenses.forEach((e) => {
@@ -232,7 +233,6 @@ export default function Management() {
     return map;
   }, [expenses]);
 
-  // Add-ons grouped by booking — entirely separate table/source
   const addonsByBooking = useMemo(() => {
     const map = {};
     addons.forEach((a) => {
@@ -242,24 +242,36 @@ export default function Management() {
     return map;
   }, [addons]);
 
-  // Core booking economics — untouched by add-ons
-  const totalRevenue = filteredBookings.reduce((s, b) => s + b.revenue, 0);
-  const totalExpense = filteredBookings.reduce((s, b) => {
-    return s + (expensesByBooking[b.id] || []).reduce((acc, e) => acc + Number(e.amount || 0), 0);
-  }, 0);
+  // Combined economics — including add-ons in main totals
+  const totalRevenue = useMemo(() => {
+    const bookingRev = filteredBookings.reduce((s, b) => s + b.revenue, 0);
+    const addonRev = filteredBookings.reduce((s, b) => {
+        return s + (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.client_price || 0), 0);
+    }, 0);
+    return bookingRev + addonRev;
+  }, [filteredBookings, addonsByBooking]);
+
+  const totalExpense = useMemo(() => {
+    const stdExp = filteredBookings.reduce((s, b) => {
+        return s + (expensesByBooking[b.id] || []).reduce((acc, e) => acc + Number(e.amount || 0), 0);
+    }, 0);
+    const vendorExp = filteredBookings.reduce((s, b) => {
+        return s + (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.vendor_cost || 0), 0);
+    }, 0);
+    return stdExp + vendorExp;
+  }, [filteredBookings, expensesByBooking, addonsByBooking]);
+
   const totalProfit = totalRevenue - totalExpense;
   const margin = pct(totalProfit, totalRevenue);
 
-  // Add-on economics — its own separate ledger, never folded into totalProfit
-  const totalAddonClientRevenue = filteredBookings.reduce((s, b) => {
-    return s + (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.client_price || 0), 0);
-  }, 0);
-  const totalAddonVendorCost = filteredBookings.reduce((s, b) => {
-    return s + (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.vendor_cost || 0), 0);
-  }, 0);
-  const totalAddonCommission = totalAddonClientRevenue - totalAddonVendorCost;
+  const totalAddonCommission = useMemo(() => {
+    return filteredBookings.reduce((s, b) => {
+        return s + (addonsByBooking[b.id] || []).reduce((acc, a) => {
+            return acc + (Number(a.client_price || 0) - Number(a.vendor_cost || 0));
+        }, 0);
+    }, 0);
+  }, [filteredBookings, addonsByBooking]);
 
-  // Revenue vs Expenses trend (standard expenses only)
   const monthlyData = useMemo(() => {
     return MONTHS.map((m, idx) => {
       const bks = bookings.filter((b) => {
@@ -267,15 +279,22 @@ export default function Management() {
         return d.getFullYear() === selectedYear && d.getMonth() === idx &&
           (hallFilter === "all" || b.hall === hallFilter);
       });
-      const rev = bks.reduce((s, b) => s + b.revenue, 0);
-      const exp = bks.reduce((s, b) => {
-        return s + (expensesByBooking[b.id] || []).reduce((a, e) => a + Number(e.amount || 0), 0);
+      
+      const rev = bks.reduce((s, b) => {
+        const bAddonRev = (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.client_price || 0), 0);
+        return s + b.revenue + bAddonRev;
       }, 0);
+
+      const exp = bks.reduce((s, b) => {
+        const bStdExp = (expensesByBooking[b.id] || []).reduce((a, e) => a + Number(e.amount || 0), 0);
+        const bVendorExp = (addonsByBooking[b.id] || []).reduce((a, ad) => a + Number(ad.vendor_cost || 0), 0);
+        return s + bStdExp + bVendorExp;
+      }, 0);
+
       return { month: m, Revenue: rev, Expenses: exp, profit: rev - exp, bookings: bks.length };
     });
-  }, [bookings, selectedYear, hallFilter, expensesByBooking]);
+  }, [bookings, selectedYear, hallFilter, expensesByBooking, addonsByBooking]);
 
-  // Hall A vs Hall B monthly comparison — booking revenue only, no add-on client price mixed in
   const hallMonthlyData = useMemo(() => {
     return MONTHS.map((m, idx) => {
       const forHall = (hall) =>
@@ -284,22 +303,30 @@ export default function Management() {
             const d = new Date(b.date);
             return d.getFullYear() === selectedYear && d.getMonth() === idx && b.hall === hall;
           })
-          .reduce((s, b) => s + b.revenue, 0);
+          .reduce((s, b) => {
+             const bAddonRev = (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.client_price || 0), 0);
+             return s + b.revenue + bAddonRev;
+          }, 0);
       return { month: m, "Hall A": forHall("Hall A"), "Hall B": forHall("Hall B") };
     });
-  }, [bookings, selectedYear]);
+  }, [bookings, selectedYear, addonsByBooking]);
 
-  // Standard-expense category breakdown only
   const categoryBreakdown = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
+      // Std expenses
       (expensesByBooking[b.id] || []).forEach((e) => {
         const val = Number(e.amount || 0);
         map[e.category] = (map[e.category] || 0) + val;
       });
+      // Vendor costs as a category
+      (addonsByBooking[b.id] || []).forEach((a) => {
+        const val = Number(a.vendor_cost || 0);
+        map["Vendor Payouts"] = (map["Vendor Payouts"] || 0) + val;
+      });
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [filteredBookings, expensesByBooking]);
+  }, [filteredBookings, expensesByBooking, addonsByBooking]);
 
   const upcomingEvents = useMemo(() => {
     return [...bookings]
@@ -355,13 +382,16 @@ export default function Management() {
   const selectedBookingExpenses = selectedBookingId ? (expensesByBooking[selectedBookingId] || []) : [];
   const selectedBookingAddons = selectedBookingId ? (addonsByBooking[selectedBookingId] || []) : [];
 
-  // Core numbers — standard expenses only
-  const selectedBookingRevenue = selectedBooking?.revenue || 0;
-  const selectedBookingExpense = selectedBookingExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const selectedBookingProfit = selectedBookingRevenue - selectedBookingExpense;
+  // Logic for selected booking totals
+  const selectedBookingBaseRev = selectedBooking?.revenue || 0;
+  const selectedBookingAddonRev = selectedBookingAddons.reduce((s, a) => s + Number(a.client_price || 0), 0);
+  const selectedBookingGrossRev = selectedBookingBaseRev + selectedBookingAddonRev;
 
-  // Add-on numbers — kept entirely separate
-  const selectedBookingAddonRevenue = selectedBookingAddons.reduce((s, a) => s + Number(a.client_price || 0), 0);
+  const selectedBookingStdExp = selectedBookingExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const selectedBookingVendorExp = selectedBookingAddons.reduce((s, a) => s + Number(a.vendor_cost || 0), 0);
+  const selectedBookingGrossExp = selectedBookingStdExp + selectedBookingVendorExp;
+
+  const selectedBookingNetProfit = selectedBookingGrossRev - selectedBookingGrossExp;
   const selectedBookingAddonCommission = selectedBookingAddons.reduce(
     (s, a) => s + (Number(a.client_price || 0) - Number(a.vendor_cost || 0)), 0
   );
@@ -422,10 +452,10 @@ export default function Management() {
 
       {/* ── KPI Grid ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <KpiCard label="Booking Revenue" value={currency(totalRevenue)} sub={`${filteredBookings.length} bookings`} icon={ArrowUpRight} />
-        <KpiCard label="Operating Costs" value={currency(totalExpense)} sub="Standard expenses only" icon={Receipt} />
-        <KpiCard label="Core Profit" value={currency(totalProfit)} sub={totalProfit >= 0 ? "Before add-ons" : "Running at a loss"} icon={DollarSign} trend={margin} />
-        <KpiCard label="Add-on Commission" value={currency(totalAddonCommission)} sub={`+${currency(totalAddonClientRevenue)} client revenue`} icon={PlusCircle} />
+        <KpiCard label="Gross Revenue" value={currency(totalRevenue)} sub={`Incl. ${currency(totalRevenue - (filteredBookings.reduce((s,b)=>s+b.revenue, 0)))} add-ons`} icon={ArrowUpRight} />
+        <KpiCard label="Total Costs" value={currency(totalExpense)} sub="Std expenses + Vendor payouts" icon={Receipt} />
+        <KpiCard label="Net Profit" value={currency(totalProfit)} sub={totalProfit >= 0 ? "Total take-home" : "Running at a loss"} icon={DollarSign} trend={margin} />
+        <KpiCard label="Add-on Commission" value={currency(totalAddonCommission)} sub="Pure profit from services" icon={PlusCircle} />
       </div>
 
       {/* ── Trend + Activity ─────────────────────────────────────────────────── */}
@@ -436,7 +466,7 @@ export default function Management() {
             <div>
               <h2 className="text-[15px] font-semibold text-stone-900">Revenue vs Expenses</h2>
               <p className="text-[11px] text-stone-400 mt-0.5">
-                {currency(totalRevenue)} booked against {currency(totalExpense)} in operating costs · {selectedYear}
+                {currency(totalRevenue)} total gross against {currency(totalExpense)} in total costs · {selectedYear}
               </p>
             </div>
             <BarChart3 size={16} className="text-emerald-600" />
@@ -494,7 +524,7 @@ export default function Management() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-[15px] font-semibold text-stone-900">Hall Performance</h2>
-              <p className="text-[11px] text-stone-400 mt-0.5">Monthly revenue, Hall A vs Hall B · {selectedYear}</p>
+              <p className="text-[11px] text-stone-400 mt-0.5">Gross monthly revenue, Hall A vs Hall B · {selectedYear}</p>
             </div>
           </div>
 
@@ -570,7 +600,7 @@ export default function Management() {
           <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center">
             <div>
               <h2 className="text-[15px] font-semibold text-stone-900">Booking Ledger</h2>
-              <p className="text-[11px] text-stone-400 mt-0.5">Select a row to inspect or add line costs</p>
+              <p className="text-[11px] text-stone-400 mt-0.5">Select a row to inspect gross costs and add-ons</p>
             </div>
             <SlidersHorizontal size={14} className="text-stone-400" />
           </div>
@@ -595,11 +625,19 @@ export default function Management() {
                   </tr>
                 )}
                 {filteredBookings.map((b) => {
-                  const bTotalExp = (expensesByBooking[b.id] || []).reduce((s, e) => s + Number(e.amount || 0), 0);
-                  const bTotalRev = b.revenue;
+                  const bAddons = addonsByBooking[b.id] || [];
+                  const bExpenses = expensesByBooking[b.id] || [];
+
+                  const bAddonRev = bAddons.reduce((s, a) => s + Number(a.client_price || 0), 0);
+                  const bVendorExp = bAddons.reduce((s, a) => s + Number(a.vendor_cost || 0), 0);
+                  const bStdExp = bExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+
+                  const bTotalRev = b.revenue + bAddonRev;
+                  const bTotalExp = bStdExp + bVendorExp;
                   const bPro = bTotalRev - bTotalExp;
+                  
                   const isSel = selectedBookingId === b.id;
-                  const addonCount = (addonsByBooking[b.id] || []).length;
+                  const addonCount = bAddons.length;
 
                   return (
                     <tr key={b.id}
@@ -670,10 +708,10 @@ export default function Management() {
 
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   {[
-                    { label: "Revenue", value: currency(selectedBookingRevenue), cls: "text-stone-800" },
-                    { label: "Costs", value: currency(selectedBookingExpense), cls: "text-rose-600" },
-                    { label: "Profit", value: currency(selectedBookingProfit), cls: selectedBookingProfit >= 0 ? "text-emerald-700" : "text-rose-600" },
-                    { label: "Add-on Commission", value: currency(selectedBookingAddonCommission), cls: "text-violet-700" },
+                    { label: "Gross Revenue", value: currency(selectedBookingGrossRev), cls: "text-stone-800" },
+                    { label: "Total Costs", value: currency(selectedBookingGrossExp), cls: "text-rose-600" },
+                    { label: "Net Profit", value: currency(selectedBookingNetProfit), cls: selectedBookingNetProfit >= 0 ? "text-emerald-700" : "text-rose-600" },
+                    { label: "Commission", value: currency(selectedBookingAddonCommission), cls: "text-violet-700" },
                   ].map((k) => (
                     <div key={k.label} className="bg-white rounded-lg p-2.5 border border-stone-100">
                       <p className="text-[9px] text-stone-400 uppercase tracking-tight mb-1">{k.label}</p>
