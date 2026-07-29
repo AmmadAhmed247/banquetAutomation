@@ -1,10 +1,9 @@
 import { createBrowserRouter } from "react-router-dom";
 import RootLayout from "./layouts/RootLayout";
 import DashboardPage from "./pages/DashboardPage";
-import ContactsPage from "./pages/ContactsPage";
+import BookingsAddonsPage from "./pages/BookingsAddonsPage.jsx";
 import CalendarPage from "./pages/CalendarPage";
 import BookingsPage from "./pages/BookingsPage";
-import SettingsPage from "./pages/SettingsPage";
 import Recipt from "./components/Recipt";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/loginPage";
@@ -43,8 +42,8 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
-        path: "contacts",
-        element: <ComingSoon pageName="Contacts Page" />,
+        path: "expense",
+        element: <BookingsAddonsPage pageName="Expense Page" />,
       },
       {
         path: "recipt",

@@ -10,13 +10,21 @@ async function GetExpenses(req, res) {
     }
 }
 
+
 async function AddExpense(req, res) {
     try {
-        const { bookingId, category, label, amount } = req.body;
+        const { bookingId, category, label, amount} = req.body;
         if (!bookingId || !category || !label || !amount) {
-            return res.status(400).json({ success: false, message: "All fields are required" });
+            return res.status(400).json({ success: false, message: "Required fields are missing" });
         }
-        const newExpense = await addExpense({ bookingId, category, label, amount });
+        const expenseData = {
+            bookingId,
+            category,
+            label,
+            amount,
+        };
+
+        const newExpense = await addExpense(expenseData);
         return res.status(201).json({ success: true, data: newExpense });
     } catch (error) {
         console.error(error);
@@ -33,5 +41,6 @@ async function DeleteExpense(req, res) {
         return res.status(500).json({ success: false, message: "Server Error" });
     }
 }
+
 
 module.exports = { GetExpenses, AddExpense, DeleteExpense };

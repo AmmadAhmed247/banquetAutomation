@@ -75,10 +75,21 @@ const expenses = pgTable("expenses", {
     created_at: timestamp("created_at").defaultNow(),
 });
 
+const addons = pgTable("addons", {
+    id: serial("id").primaryKey().notNull(),
+    bookingId: integer("booking_id").notNull().references(() => booking.id, { onDelete: "cascade" }),
+    service: varchar("service", { length: 100 }).notNull(), // Dance Floor, Decoration, Pepsi Co., etc.
+    client_price: numeric("client_price", { precision: 12, scale: 2 }).notNull().default("0"),
+    vendor_cost: numeric("vendor_cost", { precision: 12, scale: 2 }).notNull().default("0"),
+    commission: numeric("commission", { precision: 12, scale: 2 }).notNull().default("0"), // = client_price - vendor_cost
+    created_at: timestamp("created_at").defaultNow(),
+});
+
 module.exports = {
     user,
     booking,
     packages,
     clients,
-    expenses
+    expenses,
+    addons
 }

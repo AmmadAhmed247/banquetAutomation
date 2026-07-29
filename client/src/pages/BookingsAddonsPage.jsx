@@ -1,0 +1,297 @@
+import { useState, useMemo } from "react";
+import {
+  Sparkles, ChevronDown, ChevronRight, X, Calendar, Building, Wallet, TrendingUp, Inbox, PlusCircle 
+} from "lucide-react";
+import { getAllBookings } from "../lib/hooks/booking.hook";
+import { getAllAddons } from "../lib/hooks/addon.hook";
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = [CURRENT_YEAR, CURRENT_YEAR + 1];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function currency(n) {
+  return "₨ " + Number(n || 0).toLocaleString("en-PK");
+}
+function pct(a, b) {
+  if (!b) return 0;
+  return Math.round((a / b) * 100);
+}
+
+function normalizeBooking(b) {
+  return {
+    id: b.id,
+    hall: b.venue,
+    client: b.client,
+    event: b.event,
+    date: b.date,
+    revenue: Number(b.total_amount) || 0,
+  };
+}
+
+function KpiCard({ label, value, sub, icon: Icon }) {
+  return (
+    <div className="bg-white border border-stone-200 rounded-xl p-6 transition-shadow duration-200 hover:shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-stone-400">{label}</span>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-green-500">
+          <Icon size={16} className="text-white" />
+        </div>
+      </div>
+      <p className="text-2xl font-semibold tracking-tight text-stone-900">{value}</p>
+      <p className="text-[12px] text-stone-400 mt-1.5">{sub}</p>
+    </div>
+  );
+}
+
+export default function BookingsAddonsPage() {
+  const { data: addons = [] } = getAllAddons();
+  const { data: rawBookings = [] } = getAllBookings() || {};
+  const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
+
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [selectedMonth, setSelectedMonth] = useState("all");
+  const [hallFilter, setHallFilter] = useState("all");
+  const [selectedBooking, setSelectedBooking] = useState(null);
+
+  // Add-ons grouped by booking
+  const addonsByBooking = useMemo(() => {
+    const map = {};
+    addons.forEach((a) => {
+      if (!map[a.bookingId]) map[a.bookingId] = [];
+      map[a.bookingId].push(a);
+    });
+    return map;
+  }, [addons]);
+
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      const d = new Date(b.date);
+      const yearMatch = d.getFullYear() === selectedYear;
+      const monthMatch = selectedMonth === "all" || d.getMonth() === MONTHS.indexOf(selectedMonth);
+      const hallMatch = hallFilter === "all" || b.hall === hallFilter;
+      const hasAddons = (addonsByBooking[b.id] || []).length > 0;
+      return yearMatch && monthMatch && hallMatch && hasAddons;
+    });
+  }, [bookings, selectedYear, selectedMonth, hallFilter, addonsByBooking]);
+
+  // Totals across the filtered set
+  const totalClientRevenue = filteredBookings.reduce(
+    (s, b) => s + (addonsByBooking[b.id] || []).reduce((a, x) => a + Number(x.client_price || 0), 0), 0
+  );
+  const totalVendorCost = filteredBookings.reduce(
+    (s, b) => s + (addonsByBooking[b.id] || []).reduce((a, x) => a + Number(x.vendor_cost || 0), 0), 0
+  );
+  const totalCommission = totalClientRevenue - totalVendorCost;
+  const margin = pct(totalCommission, totalClientRevenue);
+
+  return (
+    <div className="min-h-screen bg-stone-50 text-stone-900 p-6 md:p-8 antialiased selection:bg-emerald-100">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+      `}</style>
+
+      {/* ── Page Header ──────────────────────────────────────────────────────── */}
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 mb-8 pb-6 border-b border-stone-200">
+        <div>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-green-600">Management Suite</span>
+          <h1 className="text-2xl font-semibold tracking-tight text-stone-900 mt-1">
+            Add-on Services & Commission
+          </h1>
+        </div>
+
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Hall Filter */}
+          <div className="bg-stone-100 p-1 rounded-lg flex gap-0.5 border border-stone-200">
+            {["all", "Hall A", "Hall B"].map((h) => (
+              <button key={h} onClick={() => setHallFilter(h)}
+                className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all
+                  ${hallFilter === h
+                    ? "bg-white text-stone-900 shadow-sm font-semibold"
+                    : "text-stone-500 hover:text-stone-800"}`}>
+                {h === "all" ? "Both Halls" : h}
+              </button>
+            ))}
+          </div>
+
+          {/* Year Filter */}
+          <div className="relative">
+            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-stone-200 rounded-lg text-[12px] font-medium text-stone-700 outline-none focus:border-green-400 cursor-pointer">
+              {YEARS.map((y) => <option key={y}>{y}</option>)}
+            </select>
+            <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+          </div>
+
+          {/* Month Filter Pills */}
+          <div className="bg-stone-100 p-1 rounded-lg flex gap-0.5 border border-stone-200 overflow-x-auto max-w-full">
+            <button
+              onClick={() => setSelectedMonth("all")}
+              className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap
+                ${selectedMonth === "all"
+                  ? "bg-stone-900 text-white shadow-sm font-semibold"
+                  : "text-stone-500 hover:text-stone-800"}`}
+            >
+              All Months
+            </button>
+            {MONTHS.map((m) => (
+              <button
+                key={m}
+                onClick={() => setSelectedMonth(m)}
+                className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap
+                  ${selectedMonth === m
+                    ? "bg-stone-900 text-white shadow-sm font-semibold"
+                    : "text-stone-500 hover:text-stone-800"}`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── KPI Grid ──────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <KpiCard label="Client Revenue" value={currency(totalClientRevenue)} sub="Total charged for add-ons" icon={Wallet} />
+        <KpiCard label="Vendor Cost" value={currency(totalVendorCost)} sub="Paid out to vendors" icon={Building} />
+        <KpiCard label="Your Commission" value={currency(totalCommission)} sub={`${margin}% margin on add-ons`} icon={TrendingUp} />
+        <KpiCard label="Active Bookings" value={filteredBookings.length} sub="With add-ons attached" icon={Sparkles} />
+      </div>
+
+      {/* ── Table & Detail Drawer ─────────────────────────────────────────────── */}
+      <div className={`grid gap-6 items-start ${selectedBooking ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
+
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-[15px] font-semibold text-stone-900">Bookings with Add-ons</h2>
+              <p className="text-[11px] text-stone-400 mt-0.5">Click a row to see every add-on item and its commission</p>
+            </div>
+            <span className="text-[11px] font-semibold text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-100">
+              {filteredBookings.length} bookings
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-stone-50 border-b border-stone-100">
+                  {["Client", "Hall", "Event", "Date", "Items", "Client Revenue", "Commission", ""].map((h) => (
+                    <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {filteredBookings.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">
+                      No bookings with add-ons for these filters.
+                    </td>
+                  </tr>
+                )}
+                {filteredBookings.map((b) => {
+                  const items = addonsByBooking[b.id] || [];
+                  const rev = items.reduce((s, x) => s + Number(x.client_price || 0), 0);
+                  const cost = items.reduce((s, x) => s + Number(x.vendor_cost || 0), 0);
+                  const comm = rev - cost;
+                  const isSel = selectedBooking?.id === b.id;
+
+                  return (
+                    <tr key={b.id}
+                      onClick={() => setSelectedBooking(isSel ? null : b)}
+                      className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-green-50/50" : "hover:bg-stone-50"}`}>
+                      <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}</td>
+                      <td className="px-5 py-3.5">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border
+                          ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>
+                          {b.hall}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td>
+                      <td className="px-5 py-3.5 text-[12px] text-stone-400">
+                        {new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1 w-max">
+                          <PlusCircle size={9} /> {items.length}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(rev)}</td>
+                      <td className="px-5 py-3.5 text-[13px] font-semibold text-violet-700">+{currency(comm)}</td>
+                      <td className="px-5 py-3.5 text-right">
+                        <ChevronRight size={16} className={`text-stone-400 inline transition-transform ${isSel ? "rotate-90 text-violet-600" : ""}`} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Detail Drawer */}
+        {selectedBooking && (
+          <div className="bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden sticky top-6">
+            <div className="p-5 border-b border-stone-100 bg-stone-50/60 flex items-start justify-between">
+              <div>
+                <span className="text-[9px] font-semibold uppercase tracking-wider bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100">
+                  Add-on Breakdown
+                </span>
+                <p className="text-[14px] font-semibold text-stone-900 mt-1.5">{selectedBooking.client}</p>
+                <p className="text-[11px] text-stone-400 mt-0.5">
+                  {selectedBooking.event} · {selectedBooking.hall} ·{" "}
+                  {new Date(selectedBooking.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+              </div>
+              <button onClick={() => setSelectedBooking(null)} className="text-stone-400 hover:text-stone-900 p-1">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4 max-h-[calc(100vh-260px)]">
+              {(addonsByBooking[selectedBooking.id] || []).length === 0 ? (
+                <div className="text-center py-12">
+                  <Inbox size={24} className="text-stone-200 mx-auto mb-2" />
+                  <p className="text-stone-400 text-[12px]">No add-ons recorded for this booking.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {(addonsByBooking[selectedBooking.id] || []).map((item) => (
+                    <div key={item.id} className="bg-stone-50 p-3.5 rounded-xl border border-stone-200 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-stone-900 text-[13px] flex items-center gap-1.5">
+                          <PlusCircle size={12} className="text-green-600" /> {item.service}
+                        </span>
+                        <span className="text-[9px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                          Add-on
+                        </span>
+                      </div>
+
+                      <div className="bg-white p-2.5 rounded-lg border border-stone-100 flex flex-col gap-1 text-[12px]">
+                        <div className="flex justify-between text-stone-600">
+                          <span>Client Price</span>
+                          <span className="font-semibold text-stone-900">{currency(item.client_price)}</span>
+                        </div>
+                        <div className="flex justify-between text-stone-600">
+                          <span>Vendor Cost</span>
+                          <span className="font-semibold text-rose-600">{currency(item.vendor_cost)}</span>
+                        </div>
+                        <div className="flex justify-between text-stone-900 pt-1 border-t border-stone-100 font-bold">
+                          <span>Commission</span>
+                          <span className="text-violet-700">+{currency(item.commission)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

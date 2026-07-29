@@ -7,38 +7,25 @@ import {
   CalendarCheck,
   ReceiptIcon,
   DollarSign,
-  LogOut // Imported LogOut icon
+  LogOut
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // Imported axios for the backend call
-import api from "../api/api"
+import api from "../api/api";
+
 export default function DashboardPage() {
   const navigate = useNavigate();
-  
-  // FIXED paths: Since this page is loaded inside the /dashboard layout, 
-  // navigating to sub-routes should just be relative paths like "contacts" instead of "dashboard/contacts"
+
   const tools = [
-    { name: "Contacts", path: "contacts", icon: Users, desc: "Manage your studio" },
+    { name: "Add-ons", path: "expense", icon: Users, desc: "Manage your studio" },
     { name: "Calendar", path: "calendar", icon: Calendar, desc: "Manage your studio" },
     { name: "Bookings", path: "bookings", icon: CalendarCheck, desc: "Manage your studio" },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon, desc: "Manage your studio" },
     { name: "Management System", path: "management", icon: DollarSign, desc: "Manage your studio" },
   ];
 
-  const stats = [
-    { label: "Total Clients", val: "48", trend: "+3 this week", icon: Users },
-    { label: "Weddings", val: "6", trend: "2 upcoming", icon: Calendar },
-    { label: "Messages", val: "312", trend: "Today", icon: MessageCircle },
-    { label: "Auto Replies", val: "89", trend: "This week", icon: Zap },
-  ];
-
-
   const handleLogout = async () => {
     try {
-     
-      await api.post(`/api/auth/logout`, {}, {
-        withCredentials: true, 
-      });
+      await api.post(`/api/auth/logout`, {}, { withCredentials: true });
     } catch (error) {
       console.error("Logout API failed, forcing redirect anyway...", error);
     } finally {
@@ -47,59 +34,70 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-12 max-w-7xl mx-auto animate-in fade-in duration-700">
+    // Clean, high-end off-white background
+    <div className="relative min-h-screen w-full bg-[#f8fafc] text-slate-900">
       
-      {/* Header section with Logout Button */}
-      <div className="flex justify-between items-center mb-12">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-4xl font-mono font-bold text-slate-900 leading-none">Darbar</h1>
-            <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">CRM</span>
-          </div>
-        </div>
+      {/* --- CONTENT LAYER --- */}
+      <div className="relative z-10 p-6 md:p-12 max-w-7xl mx-auto animate-in fade-in duration-700">
         
-        <div className="flex items-center gap-6">
-          <div className="text-right hidden sm:block">
-            <p className="text-slate-400 text-sm font-medium">{new Date().toLocaleString()}</p>
+        {/* Modern Glass Header */}
+        <div className="flex justify-between items-center mb-16 bg-white p-8 rounded-[32px] border border-slate-200/60 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+                <h1 className="relative text-4xl font-mono font-bold text-slate-900 tracking-tighter">Darbar</h1>
+                <span className="absolute -bottom-2 left-0 text-[10px] text-emerald-600 font-black uppercase tracking-[0.3em]">CRM</span>
+            </div>
           </div>
           
-          {/* Modern Logout Button */}
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white hover:bg-red-50 hover:text-red-600 border border-slate-100 hover:border-red-100 rounded-xl transition-all shadow-sm active:scale-95"
-          >
-            <LogOut size={16} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
-        {stats.map((s, i) => (
-          <div key={i} className="bg-white p-8 rounded-[32px] border border-emerald-50 shadow-sm hover:shadow-md transition-shadow">
-            <s.icon className="w-6 h-6 text-emerald-600 mb-4" />
-            <h3 className="text-4xl font-bold text-slate-900 mb-1">{s.val}</h3>
-            <p className="text-slate-400 text-xs font-medium mb-2">{s.label}</p>
-            <span className="text-emerald-500 text-[10px] font-bold uppercase tracking-tight">{s.trend}</span>
+          <div className="flex items-center gap-8">
+            <div className="hidden lg:block text-right">
+              <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">System Status: Online</p>
+              <p className="text-slate-900 text-sm font-medium">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+            </div>
+            
+            <button 
+              onClick={handleLogout}
+              className="group flex items-center gap-2 px-6 py-3 text-sm font-bold text-slate-700 bg-white hover:bg-red-50 hover:text-red-600 border border-slate-200 rounded-2xl transition-all shadow-sm active:scale-95"
+            >
+              <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+              <span>Sign Out</span>
+            </button>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Tools Grid */}
-      <h2 className="text-lg font-bold text-slate-800 mb-8">Studio Tools</h2>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {tools.map((tool) => (
-          <button
-            key={tool.path}
-            onClick={() => navigate(`${tool.path}`)} // FIXED: Cleaned up interpolation
-            className="group bg-white p-8 rounded-[32px] border border-emerald-50 shadow-sm hover:border-emerald-200 hover:shadow-lg transition-all text-left"
-          >
-            <tool.icon className="w-7 h-7 text-emerald-600 mb-6 group-hover:scale-110 transition-transform" />
-            <h4 className="text-lg font-bold text-slate-900 mb-1">{tool.name}</h4>
-            <p className="text-slate-400 text-[11px] font-medium uppercase tracking-tighter">{tool.desc}</p>
-          </button>
-        ))}
+        {/* Section Title */}
+        <div className="flex items-center gap-4 mb-10">
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Studio Tools</h2>
+            <div className="h-[1px] flex-1 bg-slate-200"></div>
+        </div>
+
+        {/* Tools Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {tools.map((tool) => (
+            <button
+              key={tool.path}
+              onClick={() => navigate(tool.path)}
+              className="group relative h-64 bg-white p-8 rounded-[40px] border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.02),0_10px_25px_-5px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 text-left overflow-hidden"
+            >
+              {/* Subtle hover gradient corner */}
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="w-14 h-14 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-50 group-hover:border-emerald-100 transition-all duration-500">
+                  <tool.icon className="w-7 h-7 text-emerald-600" />
+                </div>
+                
+                <div>
+                  <h4 className="text-xl font-bold text-slate-900 mb-2">{tool.name}</h4>
+                  <p className="text-slate-500 text-xs font-medium leading-relaxed max-w-[150px]">{tool.desc}</p>
+                </div>
+              </div>
+
+              {/* Elegant Accent Line */}
+              <div className="absolute bottom-0 left-0 h-1 w-0 bg-emerald-500 group-hover:w-full transition-all duration-700" />
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

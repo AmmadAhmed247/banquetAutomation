@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import {
   TrendingUp, Plus, Trash2, Receipt,
-  ChevronDown, BarChart3, DollarSign, Package,
-  SlidersHorizontal, X, ArrowUpRight, Inbox, Calendar
+  ChevronDown, BarChart3, DollarSign,
+  SlidersHorizontal, X, ArrowUpRight, Inbox, Calendar,
+  PlusCircle
 } from "lucide-react";
 import {
   ComposedChart, Area, Line, BarChart, Bar, XAxis, YAxis,
@@ -10,13 +11,25 @@ import {
 } from "recharts";
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllExpenses, useCreateExpense, useDeleteExpense } from "../lib/hooks/expense.hook";
+import { getAllAddons, useCreateAddon, useDeleteAddon } from "../lib/hooks/addon.hook";
 
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const EXPENSE_CATEGORIES = ["Catering", "Decoration", "Audio / Lights", "Staff Wages", "Cleaning", "Maintenance", "Utilities", "Marketing", "Miscellaneous"];
+const STANDARD_EXPENSE_CATEGORIES = ["Diesel", "Staff Wages", "KE Bill", "Sui Gas"];
+
+const ADDON_CATEGORIES = [
+  "Pepsi Co.",
+  "Coca Cola Co.",
+  "Dawes Flower",
+  "Cola Next",
+  "Dance Floor",
+  "Water Board",
+  "Ayaz Tissue",
+  "Stage",
+];
 const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
+const YEARS = [CURRENT_YEAR, CURRENT_YEAR + 1];
 
 function currency(n) {
   return "₨ " + Number(n || 0).toLocaleString("en-PK");
@@ -37,7 +50,6 @@ function daysUntil(dateStr) {
   d.setHours(0, 0, 0, 0);
   return Math.round((d - today) / 86400000);
 }
-
 
 function normalizeBooking(b) {
   return {
@@ -77,7 +89,7 @@ function KpiCard({ label, value, sub, icon: Icon, trend }) {
     <div className="bg-white border border-stone-200 rounded-xl p-6 transition-shadow duration-200 hover:shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <span className="text-[11px] font-medium uppercase tracking-wider text-stone-400">{label}</span>
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-green-400`}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-green-400">
           <Icon size={16} className="text-white" />
         </div>
       </div>
@@ -100,6 +112,7 @@ function KpiCard({ label, value, sub, icon: Icon, trend }) {
   );
 }
 
+// Standard expense line item — no add-on fields, this table never carries them
 function ExpenseRow({ expense, onDelete }) {
   return (
     <div className="flex items-center gap-4 py-3 border-b border-stone-100 last:border-0 group">
@@ -110,6 +123,32 @@ function ExpenseRow({ expense, onDelete }) {
       <div className="flex items-center gap-3 flex-shrink-0">
         <span className="text-[13px] text-stone-900 font-semibold">{currency(expense.amount)}</span>
         <button onClick={() => onDelete(expense.id)}
+          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-stone-300 hover:text-rose-600 rounded">
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Add-on line item — client price, vendor cost, and the commission you keep
+function AddonRow({ addon, onDelete }) {
+  return (
+    <div className="flex items-center gap-4 py-3 border-b border-stone-100 last:border-0 group">
+      <div className="flex flex-col flex-1 min-w-0">
+        <span className="text-[13px] font-medium text-stone-800 truncate flex items-center gap-1.5">
+          <PlusCircle  size={12} className="text-violet-600 flex-shrink-0" />
+          {addon.service}
+        </span>
+        <div className="text-[11px] text-stone-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+          <span>Client: {currency(addon.client_price)}</span>
+          <span>Vendor: {currency(addon.vendor_cost)}</span>
+          <span className="text-violet-700 font-semibold">Commission: +{currency(addon.commission)}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <span className="text-[13px] text-stone-900 font-semibold">{currency(addon.client_price)}</span>
+        <button onClick={() => onDelete(addon.id)}
           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-stone-300 hover:text-rose-600 rounded">
           <Trash2 size={14} />
         </button>
@@ -152,8 +191,12 @@ function EventRow({ booking }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Management() {
   const { data: expenses = [] } = getAllExpenses();
+  const { data: addons = [] } = getAllAddons();
   const createExpenseMutation = useCreateExpense();
   const deleteExpenseMutation = useDeleteExpense();
+  const createAddonMutation = useCreateAddon();
+  const deleteAddonMutation = useDeleteAddon();
+
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
@@ -162,7 +205,10 @@ export default function Management() {
   const { data: rawBookings = [] } = getAllBookings() || {};
   const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
 
-  const [newExp, setNewExp] = useState({ category: EXPENSE_CATEGORIES[0], label: "", amount: "" });
+  // Two independent draft states — a standard expense never shares a shape with an add-on
+  const [mode, setMode] = useState("expense"); // "expense" | "addon"
+  const [newExp, setNewExp] = useState({ category: STANDARD_EXPENSE_CATEGORIES[0], label: "", amount: "" });
+  const [newAddon, setNewAddon] = useState({ service: ADDON_CATEGORIES[0], client_price: "", vendor_cost: "" });
   const [addingTo, setAddingTo] = useState(null);
 
   // ── derived ─────────────────────────────────────────────────────────────────
@@ -176,6 +222,7 @@ export default function Management() {
     });
   }, [bookings, selectedYear, selectedMonth, hallFilter]);
 
+  // Standard expenses grouped by booking — this table never contains add-ons
   const expensesByBooking = useMemo(() => {
     const map = {};
     expenses.forEach((e) => {
@@ -185,14 +232,34 @@ export default function Management() {
     return map;
   }, [expenses]);
 
+  // Add-ons grouped by booking — entirely separate table/source
+  const addonsByBooking = useMemo(() => {
+    const map = {};
+    addons.forEach((a) => {
+      if (!map[a.bookingId]) map[a.bookingId] = [];
+      map[a.bookingId].push(a);
+    });
+    return map;
+  }, [addons]);
+
+  // Core booking economics — untouched by add-ons
   const totalRevenue = filteredBookings.reduce((s, b) => s + b.revenue, 0);
   const totalExpense = filteredBookings.reduce((s, b) => {
-    return s + (expensesByBooking[b.id] || []).reduce((a, e) => a + Number(e.amount), 0);
+    return s + (expensesByBooking[b.id] || []).reduce((acc, e) => acc + Number(e.amount || 0), 0);
   }, 0);
   const totalProfit = totalRevenue - totalExpense;
   const margin = pct(totalProfit, totalRevenue);
 
-  // Revenue vs Expenses trend (line + area)
+  // Add-on economics — its own separate ledger, never folded into totalProfit
+  const totalAddonClientRevenue = filteredBookings.reduce((s, b) => {
+    return s + (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.client_price || 0), 0);
+  }, 0);
+  const totalAddonVendorCost = filteredBookings.reduce((s, b) => {
+    return s + (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.vendor_cost || 0), 0);
+  }, 0);
+  const totalAddonCommission = totalAddonClientRevenue - totalAddonVendorCost;
+
+  // Revenue vs Expenses trend (standard expenses only)
   const monthlyData = useMemo(() => {
     return MONTHS.map((m, idx) => {
       const bks = bookings.filter((b) => {
@@ -201,12 +268,14 @@ export default function Management() {
           (hallFilter === "all" || b.hall === hallFilter);
       });
       const rev = bks.reduce((s, b) => s + b.revenue, 0);
-      const exp = bks.reduce((s, b) => s + (expensesByBooking[b.id] || []).reduce((a, e) => a + Number(e.amount), 0), 0);
+      const exp = bks.reduce((s, b) => {
+        return s + (expensesByBooking[b.id] || []).reduce((a, e) => a + Number(e.amount || 0), 0);
+      }, 0);
       return { month: m, Revenue: rev, Expenses: exp, profit: rev - exp, bookings: bks.length };
     });
-  }, [bookings, expenses, selectedYear, hallFilter, expensesByBooking]);
+  }, [bookings, selectedYear, hallFilter, expensesByBooking]);
 
-  // Hall A vs Hall B monthly comparison (grouped bars)
+  // Hall A vs Hall B monthly comparison — booking revenue only, no add-on client price mixed in
   const hallMonthlyData = useMemo(() => {
     return MONTHS.map((m, idx) => {
       const forHall = (hall) =>
@@ -220,11 +289,13 @@ export default function Management() {
     });
   }, [bookings, selectedYear]);
 
+  // Standard-expense category breakdown only
   const categoryBreakdown = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
       (expensesByBooking[b.id] || []).forEach((e) => {
-        map[e.category] = (map[e.category] || 0) + Number(e.amount);
+        const val = Number(e.amount || 0);
+        map[e.category] = (map[e.category] || 0) + val;
       });
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
@@ -240,29 +311,60 @@ export default function Management() {
   // ── actions ──────────────────────────────────────────────────────────────────
   function addExpense(bookingId) {
     try {
-          if (!newExp.label || !newExp.amount) return;
-    createExpenseMutation.mutate({
-      bookingId,
-      category: newExp.category,
-      label: newExp.label,
-      amount: Number(newExp.amount),
-    });
-    setNewExp({ category: EXPENSE_CATEGORIES[0], label: "", amount: "" });
-    setAddingTo(null);
+      if (!newExp.label || !newExp.amount) return;
+      const payload = {
+        bookingId,
+        category: newExp.category,
+        label: newExp.label,
+        amount: Number(newExp.amount || 0),
+      };
+      createExpenseMutation.mutate(payload);
+      setNewExp({ category: STANDARD_EXPENSE_CATEGORIES[0], label: "", amount: "" });
+      setAddingTo(null);
     } catch (error) {
-      console.log(error)
+      console.log(error);
+    }
+  }
+
+  function addAddon(bookingId) {
+    try {
+      if (!newAddon.service || !newAddon.client_price) return;
+      const payload = {
+        bookingId,
+        service: newAddon.service,
+        client_price: Number(newAddon.client_price || 0),
+        vendor_cost: Number(newAddon.vendor_cost || 0),
+      };
+      createAddonMutation.mutate(payload);
+      setNewAddon({ service: ADDON_CATEGORIES[0], client_price: "", vendor_cost: "" });
+      setAddingTo(null);
+    } catch (error) {
+      console.log(error);
     }
   }
 
   function deleteExpense(id) {
     deleteExpenseMutation.mutate(id);
   }
-  
+
+  function deleteAddon(id) {
+    deleteAddonMutation.mutate(id);
+  }
+
   const selectedBooking = bookings.find((b) => b.id === selectedBookingId);
   const selectedBookingExpenses = selectedBookingId ? (expensesByBooking[selectedBookingId] || []) : [];
+  const selectedBookingAddons = selectedBookingId ? (addonsByBooking[selectedBookingId] || []) : [];
+
+  // Core numbers — standard expenses only
   const selectedBookingRevenue = selectedBooking?.revenue || 0;
-  const selectedBookingExpense = selectedBookingExpenses.reduce((s, e) => s + Number(e.amount), 0);
+  const selectedBookingExpense = selectedBookingExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
   const selectedBookingProfit = selectedBookingRevenue - selectedBookingExpense;
+
+  // Add-on numbers — kept entirely separate
+  const selectedBookingAddonRevenue = selectedBookingAddons.reduce((s, a) => s + Number(a.client_price || 0), 0);
+  const selectedBookingAddonCommission = selectedBookingAddons.reduce(
+    (s, a) => s + (Number(a.client_price || 0) - Number(a.vendor_cost || 0)), 0
+  );
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 p-6 md:p-8 antialiased selection:bg-emerald-100">
@@ -320,10 +422,10 @@ export default function Management() {
 
       {/* ── KPI Grid ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <KpiCard label="Total Gross Revenue" value={currency(totalRevenue)} sub={`${filteredBookings.length} bookings`} icon={ArrowUpRight} badgeColor="bg-blue-600" />
-        <KpiCard label="Total Costs" value={currency(totalExpense)} sub="Operational expenses" icon={Receipt} badgeColor="bg-rose-500" />
-        <KpiCard label="Total Net Profit" value={currency(totalProfit)} sub={totalProfit >= 0 ? "Margin holding steady" : "Running at a deficit"} icon={DollarSign} badgeColor="bg-emerald-600" trend={margin} />
-        <KpiCard label="Average Yield / Event" value={currency(filteredBookings.length ? Math.round(totalProfit / filteredBookings.length) : 0)} sub="Per booking" icon={Package} badgeColor="bg-violet-600" />
+        <KpiCard label="Booking Revenue" value={currency(totalRevenue)} sub={`${filteredBookings.length} bookings`} icon={ArrowUpRight} />
+        <KpiCard label="Operating Costs" value={currency(totalExpense)} sub="Standard expenses only" icon={Receipt} />
+        <KpiCard label="Core Profit" value={currency(totalProfit)} sub={totalProfit >= 0 ? "Before add-ons" : "Running at a loss"} icon={DollarSign} trend={margin} />
+        <KpiCard label="Add-on Commission" value={currency(totalAddonCommission)} sub={`+${currency(totalAddonClientRevenue)} client revenue`} icon={PlusCircle} />
       </div>
 
       {/* ── Trend + Activity ─────────────────────────────────────────────────── */}
@@ -334,7 +436,7 @@ export default function Management() {
             <div>
               <h2 className="text-[15px] font-semibold text-stone-900">Revenue vs Expenses</h2>
               <p className="text-[11px] text-stone-400 mt-0.5">
-                {currency(totalRevenue)} booked against {currency(totalExpense)} in costs · {selectedYear}
+                {currency(totalRevenue)} booked against {currency(totalExpense)} in operating costs · {selectedYear}
               </p>
             </div>
             <BarChart3 size={16} className="text-emerald-600" />
@@ -493,14 +595,24 @@ export default function Management() {
                   </tr>
                 )}
                 {filteredBookings.map((b) => {
-                  const bExp = (expensesByBooking[b.id] || []).reduce((s, e) => s + Number(e.amount), 0);
-                  const bPro = b.revenue - bExp;
+                  const bTotalExp = (expensesByBooking[b.id] || []).reduce((s, e) => s + Number(e.amount || 0), 0);
+                  const bTotalRev = b.revenue;
+                  const bPro = bTotalRev - bTotalExp;
                   const isSel = selectedBookingId === b.id;
+                  const addonCount = (addonsByBooking[b.id] || []).length;
+
                   return (
                     <tr key={b.id}
                       onClick={() => setSelectedBookingId(isSel ? null : b.id)}
                       className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-emerald-50/50" : "hover:bg-stone-50"}`}>
-                      <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}</td>
+                      <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">
+                        {b.client}
+                        {addonCount > 0 && (
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded">
+                            <PlusCircle size={9} /> {addonCount}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-5 py-3.5">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border
                           ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>
@@ -511,8 +623,8 @@ export default function Management() {
                       <td className="px-5 py-3.5 text-[12px] text-stone-400">
                         {new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
                       </td>
-                      <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(b.revenue)}</td>
-                      <td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(bExp)}</td>
+                      <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(bTotalRev)}</td>
+                      <td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(bTotalExp)}</td>
                       <td className={`px-5 py-3.5 text-[13px] font-semibold ${bPro >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
                         {bPro >= 0 ? "+" : ""}{currency(bPro)}
                       </td>
@@ -520,7 +632,7 @@ export default function Management() {
                         <button
                           onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }}
                           className="text-[11px] font-medium px-2.5 py-1 bg-stone-50 text-stone-700 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors">
-                          + Add Expense
+                          + Add
                         </button>
                       </td>
                     </tr>
@@ -556,11 +668,12 @@ export default function Management() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 mt-4">
+                <div className="grid grid-cols-2 gap-2 mt-4">
                   {[
                     { label: "Revenue", value: currency(selectedBookingRevenue), cls: "text-stone-800" },
                     { label: "Costs", value: currency(selectedBookingExpense), cls: "text-rose-600" },
                     { label: "Profit", value: currency(selectedBookingProfit), cls: selectedBookingProfit >= 0 ? "text-emerald-700" : "text-rose-600" },
+                    { label: "Add-on Commission", value: currency(selectedBookingAddonCommission), cls: "text-violet-700" },
                   ].map((k) => (
                     <div key={k.label} className="bg-white rounded-lg p-2.5 border border-stone-100">
                       <p className="text-[9px] text-stone-400 uppercase tracking-tight mb-1">{k.label}</p>
@@ -570,12 +683,22 @@ export default function Management() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-5 py-2 max-h-64">
+              <div className="flex-1 overflow-y-auto px-5 py-2 max-h-72">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 pt-3 pb-1">Standard Expenses</p>
                 {selectedBookingExpenses.length === 0 ? (
-                  <p className="text-[12px] text-stone-400 text-center py-8">No costs logged for this booking.</p>
+                  <p className="text-[12px] text-stone-400 text-center py-4">No costs logged for this booking.</p>
                 ) : (
                   selectedBookingExpenses.map((e) => (
                     <ExpenseRow key={e.id} expense={e} onDelete={deleteExpense} />
+                  ))
+                )}
+
+                <p className="text-[10px] font-bold uppercase tracking-wider text-violet-500 pt-4 pb-1">Add-on Services</p>
+                {selectedBookingAddons.length === 0 ? (
+                  <p className="text-[12px] text-stone-400 text-center py-4">No add-ons logged for this booking.</p>
+                ) : (
+                  selectedBookingAddons.map((a) => (
+                    <AddonRow key={a.id} addon={a} onDelete={deleteAddon} />
                   ))
                 )}
               </div>
@@ -583,31 +706,75 @@ export default function Management() {
               <div className="border-t border-stone-100 p-4 bg-stone-50/40">
                 {addingTo === selectedBookingId ? (
                   <div className="flex flex-col gap-2">
-                    <select value={newExp.category} onChange={(e) => setNewExp({ ...newExp, category: e.target.value })}
-                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 bg-white text-stone-700">
-                      {EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                    </select>
-                    <input value={newExp.label} onChange={(e) => setNewExp({ ...newExp, label: e.target.value })}
-                      placeholder="Line item description"
-                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 placeholder:text-stone-300" />
-                    <input type="number" value={newExp.amount} onChange={(e) => setNewExp({ ...newExp, amount: e.target.value })}
-                      placeholder="Amount (₨)"
-                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 placeholder:text-stone-300" />
-                    <div className="flex gap-2 mt-1">
-                      <button onClick={() => addExpense(selectedBookingId)}
-                        className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg transition-colors">
-                        Add Expense
+                    <div className="flex items-center justify-between bg-stone-100 p-1 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setMode("expense")}
+                        className={`flex-1 py-1 text-[11px] font-semibold rounded-md transition-all ${mode === "expense" ? "bg-white text-stone-900 shadow-sm" : "text-stone-500"}`}>
+                        Standard Expense
                       </button>
-                      <button onClick={() => setAddingTo(null)}
-                        className="px-3 py-1.5 bg-white text-stone-600 border border-stone-200 text-[12px] font-medium rounded-lg hover:bg-stone-50 transition-colors">
-                        Cancel
+                      <button
+                        type="button"
+                        onClick={() => setMode("addon")}
+                        className={`flex-1 py-1 text-[11px] font-semibold rounded-md transition-all ${mode === "addon" ? "bg-violet-600 text-white shadow-sm" : "text-stone-500"}`}>
+                        Add-on Service
                       </button>
                     </div>
+
+                    {mode === "expense" ? (
+                      <>
+                        <select value={newExp.category} onChange={(e) => setNewExp({ ...newExp, category: e.target.value })}
+                          className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 bg-white text-stone-700">
+                          {STANDARD_EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                        </select>
+                        <input value={newExp.label} onChange={(e) => setNewExp({ ...newExp, label: e.target.value })}
+                          placeholder="Line item description"
+                          className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 placeholder:text-stone-300" />
+                        <input type="number" value={newExp.amount} onChange={(e) => setNewExp({ ...newExp, amount: e.target.value })}
+                          placeholder="Amount (₨)"
+                          className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 placeholder:text-stone-300" />
+                        <div className="flex gap-2 mt-1">
+                          <button onClick={() => addExpense(selectedBookingId)}
+                            className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg transition-colors">
+                            Add Expense
+                          </button>
+                          <button onClick={() => setAddingTo(null)}
+                            className="px-3 py-1.5 bg-white text-stone-600 border border-stone-200 text-[12px] font-medium rounded-lg hover:bg-stone-50 transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <select value={newAddon.service} onChange={(e) => setNewAddon({ ...newAddon, service: e.target.value })}
+                          className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-violet-500 bg-white text-stone-700">
+                          {ADDON_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                        </select>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input type="number" value={newAddon.client_price} onChange={(e) => setNewAddon({ ...newAddon, client_price: e.target.value })}
+                            placeholder="Client Price (₨)"
+                            className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-violet-500 placeholder:text-stone-300" />
+                          <input type="number" value={newAddon.vendor_cost} onChange={(e) => setNewAddon({ ...newAddon, vendor_cost: e.target.value })}
+                            placeholder="Vendor Cost (₨)"
+                            className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-violet-500 placeholder:text-stone-300" />
+                        </div>
+                        <div className="flex gap-2 mt-1">
+                          <button onClick={() => addAddon(selectedBookingId)}
+                            className="flex-1 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-[12px] font-medium rounded-lg transition-colors">
+                            Add Add-on
+                          </button>
+                          <button onClick={() => setAddingTo(null)}
+                            className="px-3 py-1.5 bg-white text-stone-600 border border-stone-200 text-[12px] font-medium rounded-lg hover:bg-stone-50 transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <button onClick={() => setAddingTo(selectedBookingId)}
                     className="w-full py-2 border border-dashed border-stone-300 rounded-lg text-[12px] font-medium text-stone-600 hover:border-emerald-400 hover:text-emerald-700 hover:bg-white transition-all flex items-center justify-center gap-1.5">
-                    <Plus size={13} /> Add Line Cost
+                    <Plus size={13} /> Add Line Cost / Add-on
                   </button>
                 )}
               </div>

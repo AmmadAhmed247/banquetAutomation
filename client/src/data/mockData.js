@@ -60,7 +60,7 @@ export const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "⬡" },
   { id: "inbox", label: "Inbox", icon: "✉", badge: 3 },
   { id: "autobot", label: "Auto Reply Bot", icon: "⚡" },
-  { id: "contacts", label: "Contacts", icon: "◎" },
+  { id: "expense", label: "Expense", icon: "◎" },
   { id: "calendar", label: "Calendar", icon: "▦" },
   { id: "bookings", label: "Bookings", icon: "✦" },
   { id: "gallery", label: "Gallery Links", icon: "◉" },

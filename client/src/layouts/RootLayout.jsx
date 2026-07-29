@@ -6,7 +6,9 @@ import {
   CalendarCheck,
   ReceiptIcon,
   DollarSign,
-  LogOut
+  LogOut,
+  BanknoteArrowDown ,
+
 } from "lucide-react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -22,11 +24,11 @@ export default function RootLayout() {
   };
 
   const tools = [
-    { name: "Contacts", path: "contacts", icon: Users },
     { name: "Calendar", path: "calendar", icon: Calendar },
     { name: "Bookings", path: "bookings", icon: CalendarCheck },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon },
     { name: "Management System", path: "management", icon: DollarSign },
+    { name: "Expense", path: "expense", icon: BanknoteArrowDown },
   ];
 
   // UPDATED: Check if they are on the main dashboard page
