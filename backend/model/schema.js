@@ -85,11 +85,23 @@ const addons = pgTable("addons", {
     created_at: timestamp("created_at").defaultNow(),
 });
 
+
+const monthlyExpenses = pgTable("monthly_expenses", {
+    id: serial("id").primaryKey().notNull(),
+    category: varchar("category", { length: 100 }).notNull(), 
+    label: varchar("label", { length: 255 }).notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    month: integer("month").notNull(),   
+    year: integer("year").notNull(),
+    created_at: timestamp("created_at").defaultNow(),
+});
+
 module.exports = {
     user,
     booking,
     packages,
     clients,
     expenses,
-    addons
+    addons,
+    monthlyExpenses
 }

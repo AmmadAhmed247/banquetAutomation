@@ -1,6 +1,6 @@
 import axios from "axios"
 
 export default axios.create({
-    baseURL: "https://banquetautomation.onrender.com",
+    baseURL: "http://localhost:3000",
     withCredentials: true,
 })      
