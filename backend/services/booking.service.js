@@ -20,7 +20,9 @@ async function CreateBooking(bookingData) {
             advanceDueDate = null,   
             paymentMethod = "Cash",
             paymentNote = "",
-            status = "Pending"
+            status = "Pending",
+            timeSlot = "Night",
+            bankName = null
         } = bookingData
 
         const userResult = await getOrCreateUser(phone, client)
@@ -51,7 +53,9 @@ async function CreateBooking(bookingData) {
             advance_due_date: advanceDueDate ? new Date(advanceDueDate) : null,   // ← added
             payment_method: paymentMethod,
             payment_note: paymentNote,
-            status: status
+            status: status,
+            time_slot: timeSlot,
+            bank_name: paymentMethod === "Bank Transfer" ? (bankName || null) : null
         })
         .returning()
 
@@ -125,6 +129,8 @@ async function GetAllBookings(phone) {
             paymentNote: b.payment_note,
             payment_note: b.payment_note,
             status: b.status,
+            timeSlot: b.time_slot,
+            bankName: b.bank_name,  
             created_at: b.created_at,
             updated_at: b.updated_at
         }))
@@ -181,6 +187,8 @@ async function GetAllBookingsUnfiltered() {
             paymentNote: b.payment_note,
             payment_note: b.payment_note,
             status: b.status,
+            timeSlot: b.time_slot,
+            bankName: b.bank_name,
             created_at: b.created_at,
             updated_at: b.updated_at
         }))
@@ -215,6 +223,8 @@ async function UpdateBooking(bookingId, bookingData) {
             advanceDueDate = null,   
             paymentMethod = "Cash",
             paymentNote = "",
+            timeSlot = "",
+            bankName = "",
             status = "Pending"
         } = bookingData
 
@@ -234,6 +244,9 @@ async function UpdateBooking(bookingId, bookingData) {
             advance_due_date: advanceDueDate ? new Date(advanceDueDate) : null,   
             payment_method: paymentMethod,
             payment_note: paymentNote,
+            time_slot: timeSlot,
+            bank_name: paymentMethod === "Bank Transfer" ? (bankName || null) : null,
+
             status: status,
             updated_at: new Date()
         })

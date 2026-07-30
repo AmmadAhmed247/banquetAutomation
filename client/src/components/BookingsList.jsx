@@ -1,4 +1,4 @@
-import { Loader, Pencil, CalendarDays, Phone, Users, MapPin, Tag, CreditCard, Delete } from "lucide-react";
+import { Loader, Pencil, CalendarDays, Phone, Users, MapPin, Tag, CreditCard, Delete, Clock, Landmark } from "lucide-react";
 
 const statusConfig = {
   Confirmed: { bg: "bg-green-100", text: "text-green-700", border: "border-green-200", bar: "bg-green-500" },
@@ -9,6 +9,15 @@ const statusConfig = {
 function formatPKR(val) {
   if (!val && val !== 0) return "—";
   return "PKR " + Number(val).toLocaleString("en-PK");
+}
+
+// Some bookings come back camelCase (timeSlot/bankName), some snake_case (time_slot/bank_name)
+// depending on where the data was fetched from — this just reads whichever is present.
+function getTimeSlot(booking) {
+  return booking.timeSlot ?? booking.time_slot ?? "—";
+}
+function getBankName(booking) {
+  return booking.bankName ?? booking.bank_name ?? "";
 }
 
 function PaymentBar({ total, advance }) {
@@ -31,6 +40,7 @@ function PaymentBar({ total, advance }) {
 // ── CARD (below xl) ──────────────────────────────────────────────────────────
 function BookingCard({ booking, onEdit , onDelete }) {
   const sc = statusConfig[booking.status] || statusConfig.Pending;
+  const bankName = getBankName(booking);
   return (
     <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
       <div className={`h-1 w-full ${sc.bar}`} />
@@ -69,6 +79,7 @@ function BookingCard({ booking, onEdit , onDelete }) {
           {[
             { icon: Tag,          label: "Event",    value: booking.event },
             { icon: CalendarDays, label: "Date",     value: booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
+            { icon: Clock,        label: "Time Slot", value: getTimeSlot(booking) },
             { icon: CalendarDays, label: "Advance Due", value: booking.advanceDueDate ? new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
             { icon: Users,        label: "Guests",   value: booking.guests },
             { icon: MapPin,       label: "Venue",    value: booking.venue },
@@ -97,6 +108,11 @@ function BookingCard({ booking, onEdit , onDelete }) {
             <span className="max-w-full text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
               <span className="text-black">Method:</span> {booking.payment_method}
             </span>
+            {booking.payment_method === "Bank Transfer" && bankName && (
+              <span className="max-w-full text-[10px] bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.5 rounded-full font-semibold truncate flex items-center gap-1">
+                <Landmark size={9} /> {bankName}
+              </span>
+            )}
           </div>
 
           <p className="text-sm font-bold text-zinc-900 mb-2">{formatPKR(booking.totalAmount)}</p>
@@ -126,7 +142,7 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-green-50/60 border-b border-green-100">
-            {["Client", "Event", "Date", "Guests", "Venue", "Total Amount", "Advance Amount", "Payment", "Advance Due", "Payment Note", "Status",  "", ""].map((h) => (
+            {["Client", "Event", "Date", "Time Slot", "Guests", "Venue", "Total Amount", "Advance Amount", "Payment", "Advance Due", "Payment Note", "Status",  "", ""].map((h) => (
               <th key={h} className="text-left text-[10px] font-semibold text-green-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">
                 {h}
               </th>
@@ -136,6 +152,7 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
         <tbody className="divide-y divide-green-50">
           {filteredBookings.map((booking) => {
             const sc = statusConfig[booking.status] || statusConfig.Pending;
+            const bankName = getBankName(booking);
             return (
               <tr key={booking.id} className="hover:bg-green-50/40 transition-colors">
 
@@ -151,6 +168,12 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
 
                 <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
                   {booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                </td>
+
+                <td className="px-4 py-3.5 whitespace-nowrap">
+                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full border bg-blue-50 border-blue-100 text-blue-600">
+                    {getTimeSlot(booking)}
+                  </span>
                 </td>
 
                 <td className="px-4 py-3.5 text-green-800">{booking.guests}</td>
@@ -171,6 +194,11 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
                       <span className="text-[10px] bg-green-50 border border-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold inline-block">
                         {booking.payment_method}
                       </span>
+                      {booking.payment_method === "Bank Transfer" && bankName && (
+                        <span className="text-[10px] bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1">
+                          <Landmark size={9} /> {bankName}
+                        </span>
+                      )}
                       <span className="text-[10px] bg-zinc-100 border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full font-semibold truncate">
                         <span className="font-semibold text-green-800">Paid:</span>&nbsp;{formatPKR(booking.advancePaid)}
                       </span>

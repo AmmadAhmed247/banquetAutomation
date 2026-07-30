@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   CalendarDays, Phone, Users,
-  PlusCircle, X, CreditCard, ChevronDown, Loader, Save, Pencil
+  PlusCircle, X, CreditCard, ChevronDown, Loader, Save, Pencil, Landmark
 } from "lucide-react";
 
 function formatPKR(val) {
@@ -25,6 +25,8 @@ function normalizeBooking(booking) {
     ...booking,
     date: booking.date ? formatDateInput(booking.date) : "",
     advanceDueDate: booking.advanceDueDate ?? ((booking.advance_due_date ? formatDateInput(booking.advance_due_date) : "") || ""),
+    timeSlot: booking.timeSlot ?? booking.time_slot ?? "Night",
+    bankName: booking.bankName ?? booking.bank_name ?? "",
   };
 }
 
@@ -44,9 +46,49 @@ const EVENTS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday"
 const VENUES = ["Hall A", "Hall B"];
 const PAYMENT_METHODS = ["Cash", "Bank Transfer", "Online", "Cheque"];
 const STATUSES = ["Pending", "Confirmed", "Cancelled"];
+const TIME_SLOTS = ["Afternoon", "Night"];
+const BANKS = ["Easypaisa", "JazzCash", "Habib Metro", "Other"];
+
+// ── Bank selection popup ─────────────────────────────────────────────────────
+function BankPopup({ selected, onSelect, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-green-950/50 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="bg-green-100 p-2 rounded-xl">
+              <Landmark size={16} className="text-green-600" />
+            </div>
+            <h3 className="text-[15px] font-bold text-green-900">Select Bank</h3>
+          </div>
+          <button onClick={onClose} className="text-green-300 hover:text-green-600 cursor-pointer border-none bg-transparent p-1 rounded-lg hover:bg-green-50 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        <p className="text-xs text-green-500 mb-4">Which bank or wallet is the transfer coming from?</p>
+        <div className="flex flex-col gap-2">
+          {BANKS.map((bank) => (
+            <button
+              key={bank}
+              onClick={() => onSelect(bank)}
+              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors cursor-pointer
+                ${selected === bank
+                  ? "bg-green-600 text-white border-green-600"
+                  : "bg-green-50 text-green-800 border-green-200 hover:bg-green-100"}`}
+            >
+              {bank}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function BookingModal({ booking, onClose, onSave, isNew, isLoading }) {
   const [form, setForm] = useState(() => normalizeBooking(booking));
+  const [showBankPopup, setShowBankPopup] = useState(false);
+
   useEffect(() => {
     setForm(normalizeBooking(booking));
   }, [booking]);
@@ -54,8 +96,21 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
   const f = (key, val) => setForm(p => ({ ...p, [key]: val }));
   const remaining = Number(form.totalAmount || 0) - Number(form.advancePaid || 0);
   const pct = form.totalAmount ? Math.min(100, Math.round((Number(form.advancePaid || 0) / Number(form.totalAmount)) * 100)) : 0;
-  console.log(booking);
-  
+
+  function handlePaymentMethodChange(value) {
+    f("paymentMethod", value);
+    if (value === "Bank Transfer") {
+      setShowBankPopup(true);
+    } else {
+      // Clear a stale bank selection if they switch away from Bank Transfer
+      f("bankName", "");
+    }
+  }
+
+  function handleBankSelect(bank) {
+    f("bankName", bank);
+    setShowBankPopup(false);
+  }
 
   return (
     <div className="fixed inset-0 bg-green-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-6">
@@ -111,6 +166,7 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
                 { label: "Event Type", key: "event", options: EVENTS },
                 { label: "Package", key: "package", options: ["Basic", "Standard", "Premium"] },
                 { label: "Venue", key: "venue", options: VENUES },
+                { label: "Time Slot", key: "timeSlot", options: TIME_SLOTS },
                 { label: "Status", key: "status", options: STATUSES },
               ].map(fi => (
                 <Field key={fi.key} label={fi.label}>
@@ -133,33 +189,52 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
           {/* Payment Details */}
           <section>
             <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-    <CreditCard size={12} /> Payment Details
-  </p>
-  <div className="grid grid-cols-2 gap-4">
-    <Field label="Total Amount (PKR)">
-      <input type="number" placeholder="e.g. 850000" value={form.totalAmount} onChange={e => f("totalAmount", e.target.value)} className={inputCls} disabled={isLoading} />
-    </Field>
-    <Field label="Advance Amount (PKR)">
-      <input type="number" placeholder="e.g. 300000" value={form.advanceAmount} onChange={e => f("advanceAmount", e.target.value)} className={inputCls} disabled={isLoading} />
-    </Field>
-    <Field label="Advance Paid (PKR)">
-      <input type="number" placeholder="e.g. 300000" value={form.advancePaid} onChange={e => f("advancePaid", e.target.value)} className={inputCls} disabled={isLoading} />
-    </Field>
-    <Field label="Advance Due Date">
-      <input type="date" value={form.advanceDueDate || ""} onChange={e => f("advanceDueDate", e.target.value)} className={inputCls} disabled={isLoading} />
-    </Field>
-    <Field label="Payment Method">
-      <div className="relative">
-        <select value={form.paymentMethod} onChange={e => f("paymentMethod", e.target.value)} className={selectCls} disabled={isLoading}>
-          {PAYMENT_METHODS.map(o => <option key={o}>{o}</option>)}
-        </select>
-        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none" />
-      </div>
-    </Field>
-    <Field label="Payment Note">
-      <input type="text" placeholder="e.g. Token received" value={form.paymentNote || ""} onChange={e => f("paymentNote", e.target.value)} className={inputCls} disabled={isLoading} />
-    </Field>
-  </div>
+              <CreditCard size={12} /> Payment Details
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Total Amount (PKR)">
+                <input type="number" placeholder="e.g. 850000" value={form.totalAmount} onChange={e => f("totalAmount", e.target.value)} className={inputCls} disabled={isLoading} />
+              </Field>
+              <Field label="Advance Amount (PKR)">
+                <input type="number" placeholder="e.g. 300000" value={form.advanceAmount} onChange={e => f("advanceAmount", e.target.value)} className={inputCls} disabled={isLoading} />
+              </Field>
+              <Field label="Advance Paid (PKR)">
+                <input type="number" placeholder="e.g. 300000" value={form.advancePaid} onChange={e => f("advancePaid", e.target.value)} className={inputCls} disabled={isLoading} />
+              </Field>
+              <Field label="Advance Due Date">
+                <input type="date" value={form.advanceDueDate || ""} onChange={e => f("advanceDueDate", e.target.value)} className={inputCls} disabled={isLoading} />
+              </Field>
+              <Field label="Payment Method">
+                <div className="relative">
+                  <select value={form.paymentMethod} onChange={e => handlePaymentMethodChange(e.target.value)} className={selectCls} disabled={isLoading}>
+                    {PAYMENT_METHODS.map(o => <option key={o}>{o}</option>)}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none" />
+                </div>
+              </Field>
+              <Field label="Payment Note">
+                <input type="text" placeholder="e.g. Token received" value={form.paymentNote || ""} onChange={e => f("paymentNote", e.target.value)} className={inputCls} disabled={isLoading} />
+              </Field>
+
+              {/* Bank badge — only shown once Bank Transfer is selected, with a way to reopen the popup */}
+              {form.paymentMethod === "Bank Transfer" && (
+                <div className="col-span-2">
+                  <Field label="Bank">
+                    <button
+                      type="button"
+                      onClick={() => setShowBankPopup(true)}
+                      disabled={isLoading}
+                      className="w-full flex items-center justify-between border border-green-200 rounded-xl px-4 py-2.5 text-sm bg-green-50 hover:bg-green-100 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <span className={form.bankName ? "text-green-900 font-medium" : "text-green-400"}>
+                        {form.bankName || "Select bank..."}
+                      </span>
+                      <Landmark size={14} className="text-green-400" />
+                    </button>
+                  </Field>
+                </div>
+              )}
+            </div>
 
             {/* Live Payment Preview */}
             {form.totalAmount ? (
@@ -195,6 +270,14 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
           </button>
         </div>
       </div>
+
+      {showBankPopup && (
+        <BankPopup
+          selected={form.bankName}
+          onSelect={handleBankSelect}
+          onClose={() => setShowBankPopup(false)}
+        />
+      )}
     </div>
   );
 }

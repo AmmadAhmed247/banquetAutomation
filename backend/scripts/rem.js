@@ -11,17 +11,16 @@ async function run() {
   console.log("Connected to database successfully.");
 
   await client.query(`
-    CREATE TABLE IF NOT EXISTS monthly_expenses (
-      id serial PRIMARY KEY NOT NULL,
-      category varchar(100) NOT NULL,
-      label varchar(255) NOT NULL,
-      amount numeric(12, 2) DEFAULT '0' NOT NULL,
-      month integer NOT NULL,
-      year integer NOT NULL,
-      created_at timestamp DEFAULT now()
-    );
+    ALTER TABLE bookings
+    ADD COLUMN IF NOT EXISTS time_slot varchar(20) DEFAULT 'Night';
   `);
-  console.log("Table 'monthly_expenses' created successfully (or already existed).");
+  console.log("Column 'time_slot' added successfully.");
+
+  await client.query(`
+    ALTER TABLE bookings
+    ADD COLUMN IF NOT EXISTS bank_name varchar(50);
+  `);
+  console.log("Column 'bank_name' added successfully.");
 
   await client.end();
   console.log("Migration completed and connection closed.");

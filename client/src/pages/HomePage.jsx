@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Lenis from "lenis";
 import {
   MessageCircle,
   CalendarClock,
@@ -62,7 +63,6 @@ function Reveal({ children, delay = 0, className = "" }) {
 
 // ─────────────────────────────────────────────────────────────────────────
 // The Raabta Line — a scroll-progress "connection thread" with lit nodes.
-// Literal visual metaphor for the brand name ("raabta" = connection).
 // Desktop only; respects prefers-reduced-motion via CSS.
 // ─────────────────────────────────────────────────────────────────────────
 function RaabtaLine({ progress }) {
@@ -150,17 +150,50 @@ function ProcessStep({ num, title, desc, isLast }) {
 export default function HomePage() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const lenisRef = useRef(null);
 
   useEffect(() => {
-    const onScroll = () => {
-      const doc = document.documentElement;
-      const scrollable = doc.scrollHeight - doc.clientHeight;
-      setScrollProgress(scrollable > 0 ? window.scrollY / scrollable : 0);
+    // Initialize Lenis smooth scrolling
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: "vertical",
+      gestureOrientation: "vertical",
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+    });
+
+    lenisRef.current = lenis;
+
+    // Update scroll progress through Lenis event listener
+    lenis.on("scroll", (e) => {
+      setScrollProgress(e.progress);
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
+    return () => {
+      lenis.destroy();
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Helper for smooth anchor link scrolling using Lenis
+  const scrollToAnchor = (e, targetId) => {
+    e.preventDefault();
+    if (lenisRef.current) {
+      if (targetId === "#top") {
+        lenisRef.current.scrollTo(0, { duration: 1.2 });
+      } else {
+        lenisRef.current.scrollTo(targetId, { duration: 1.2, offset: -20 });
+      }
+    }
+  };
 
   const pillars = [
     {
@@ -198,6 +231,23 @@ export default function HomePage() {
     <div className="min-h-screen bg-white font-sans">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+        /* Lenis Recommended Essential CSS */
+        html.lenis, html.lenis body {
+          height: auto;
+        }
+        .lenis.lenis-smooth {
+          scroll-behavior: auto !important;
+        }
+        .lenis.lenis-smooth [data-lenis-prevent] {
+          overscroll-behavior: contain;
+        }
+        .lenis.lenis-stopped {
+          overflow: hidden;
+        }
+        .lenis.lenis-scrolling iframe {
+          pointer-events: none;
+        }
 
         .font-serif { font-family: 'Fraunces', serif; font-optical-sizing: auto; }
         .font-sans { font-family: 'Manrope', sans-serif; }
@@ -311,20 +361,20 @@ export default function HomePage() {
       {/* ── Navbar ── */}
       <nav className="sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-[#E9F5EE]">
         <div className="max-w-6xl mx-auto px-6 h-[68px] flex items-center justify-between">
-          <a href="#top" className="flex items-center gap-2">
+          <a href="#top" onClick={(e) => scrollToAnchor(e, "#top")} className="flex items-center gap-2">
             <span className="font-serif text-[20px] font-semibold text-[#0B1F17] tracking-tight">
               Raabta
             </span>
           </a>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="#services" className="text-[13.5px] font-medium text-[#3F4B45] hover:text-[#16A34A] transition-colors">
+            <a href="#services" onClick={(e) => scrollToAnchor(e, "#services")} className="text-[13.5px] font-medium text-[#3F4B45] hover:text-[#16A34A] transition-colors">
               Services
             </a>
-            <a href="#whatsapp" className="text-[13.5px] font-medium text-[#3F4B45] hover:text-[#16A34A] transition-colors">
+            <a href="#whatsapp" onClick={(e) => scrollToAnchor(e, "#whatsapp")} className="text-[13.5px] font-medium text-[#3F4B45] hover:text-[#16A34A] transition-colors">
               WhatsApp Automation
             </a>
-            <a href="#process" className="text-[13.5px] font-medium text-[#3F4B45] hover:text-[#16A34A] transition-colors">
+            <a href="#process" onClick={(e) => scrollToAnchor(e, "#process")} className="text-[13.5px] font-medium text-[#3F4B45] hover:text-[#16A34A] transition-colors">
               Process
             </a>
           </div>
@@ -335,6 +385,7 @@ export default function HomePage() {
             </a>
             <a
               href="#contact"
+              onClick={(e) => scrollToAnchor(e, "#contact")}
               className="cta-btn bg-[#0B1F17] hover:bg-[#16A34A] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl"
             >
               Book a call
@@ -352,11 +403,11 @@ export default function HomePage() {
 
         {menuOpen && (
           <div className="md:hidden border-t border-[#E9F5EE] bg-white px-6 py-4 flex flex-col gap-4">
-            <a href="#services" onClick={() => setMenuOpen(false)} className="text-[14px] font-medium text-[#3F4B45]">Services</a>
-            <a href="#whatsapp" onClick={() => setMenuOpen(false)} className="text-[14px] font-medium text-[#3F4B45]">WhatsApp Automation</a>
-            <a href="#process" onClick={() => setMenuOpen(false)} className="text-[14px] font-medium text-[#3F4B45]">Process</a>
+            <a href="#services" onClick={(e) => { setMenuOpen(false); scrollToAnchor(e, "#services"); }} className="text-[14px] font-medium text-[#3F4B45]">Services</a>
+            <a href="#whatsapp" onClick={(e) => { setMenuOpen(false); scrollToAnchor(e, "#whatsapp"); }} className="text-[14px] font-medium text-[#3F4B45]">WhatsApp Automation</a>
+            <a href="#process" onClick={(e) => { setMenuOpen(false); scrollToAnchor(e, "#process"); }} className="text-[14px] font-medium text-[#3F4B45]">Process</a>
             <a href="/login" className="text-[14px] font-medium text-[#5B6B63]">Login</a>
-            <a href="#contact" className="cta-btn bg-[#0B1F17] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl text-center">
+            <a href="#contact" onClick={(e) => { setMenuOpen(false); scrollToAnchor(e, "#contact"); }} className="cta-btn bg-[#0B1F17] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl text-center">
               Book a call
             </a>
           </div>
@@ -369,8 +420,6 @@ export default function HomePage() {
           className="drift-blob absolute -top-20 right-0 w-[420px] h-[420px] rounded-full opacity-40 pointer-events-none"
           style={{ background: "radial-gradient(circle, #DCF5E4 0%, transparent 70%)" }}
         />
-
-        
 
         <Reveal delay={100}>
           <h1 className="font-serif text-[42px] sm:text-[54px] lg:text-[68px] font-semibold text-[#0B1F17] leading-[1.05] tracking-tight max-w-3xl mb-6">
@@ -392,12 +441,14 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center gap-4">
             <a
               href="#contact"
+              onClick={(e) => scrollToAnchor(e, "#contact")}
               className="cta-btn bg-[#16A34A] hover:bg-[#0B7A38] text-white text-[14px] font-semibold px-6 py-3.5 rounded-xl flex items-center gap-2"
             >
               Book a free call <ArrowRight size={16} />
             </a>
             <a
               href="#services"
+              onClick={(e) => scrollToAnchor(e, "#services")}
               className="cta-btn text-[#0B1F17] text-[14px] font-semibold px-6 py-3.5 rounded-xl border border-[#DCEFE3] hover:border-[#16A34A] flex items-center gap-2"
             >
               See what we build
@@ -499,7 +550,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Footer ── */}
-       <footer className="bg-[#FBFDFC] border-t border-[#E9F5EE]">
+      <footer className="bg-[#FBFDFC] border-t border-[#E9F5EE]">
         <div className="max-w-6xl mx-auto px-6 lg:pl-24 pt-16 pb-10">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8 pb-12">
             {/* Brand */}
@@ -519,13 +570,13 @@ export default function HomePage() {
                 EXPLORE
               </p>
               <div className="flex flex-col gap-3">
-                <a href="#services" className="text-[13.5px] text-[#3F4B45] hover:text-[#16A34A] transition-colors w-fit">
+                <a href="#services" onClick={(e) => scrollToAnchor(e, "#services")} className="text-[13.5px] text-[#3F4B45] hover:text-[#16A34A] transition-colors w-fit">
                   Services
                 </a>
-                <a href="#whatsapp" className="text-[13.5px] text-[#3F4B45] hover:text-[#16A34A] transition-colors w-fit">
+                <a href="#whatsapp" onClick={(e) => scrollToAnchor(e, "#whatsapp")} className="text-[13.5px] text-[#3F4B45] hover:text-[#16A34A] transition-colors w-fit">
                   WhatsApp Automation
                 </a>
-                <a href="#process" className="text-[13.5px] text-[#3F4B45] hover:text-[#16A34A] transition-colors w-fit">
+                <a href="#process" onClick={(e) => scrollToAnchor(e, "#process")} className="text-[13.5px] text-[#3F4B45] hover:text-[#16A34A] transition-colors w-fit">
                   Process
                 </a>
               </div>
@@ -562,6 +613,7 @@ export default function HomePage() {
             </p>
             <a
               href="#top"
+              onClick={(e) => scrollToAnchor(e, "#top")}
               className="flex items-center gap-1.5 text-[12px] font-mono text-[#5B6B63] hover:text-[#16A34A] transition-colors"
             >
               Back to top <ArrowUp size={13} />

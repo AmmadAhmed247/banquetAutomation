@@ -29,6 +29,8 @@ const bookingService = {
         advanceDueDate: form.advanceDueDate,   
         paymentMethod:  form.paymentMethod,
         paymentNote:    form.paymentNote,
+        timeSlot:       form.timeSlot,
+        bankName:       form.bankName,
         status:         form.status,
       });
       return res.data;
@@ -56,6 +58,8 @@ const bookingService = {
         paymentMethod:  form.paymentMethod,
         paymentNote:    form.paymentNote,
         status:         form.status,
+        timeSlot:       form.timeSlot,
+        bankName:       form.bankName,
       });
       return res.data;
     } catch (error) {

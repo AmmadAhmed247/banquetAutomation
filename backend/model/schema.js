@@ -37,6 +37,8 @@ const booking = pgTable("bookings", {
   // Timestamps
   created_at:timestamp("created_at").defaultNow(),
   updated_at:timestamp("updated_at").defaultNow(),
+  time_slot: varchar("time_slot", { length: 20 }).default("Night"),   
+  bank_name: varchar("bank_name", { length: 50 }),
 
 
     // Reminder tracking

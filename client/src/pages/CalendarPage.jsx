@@ -49,6 +49,18 @@ function BookingChip({ booking }) {
             <span className="font-medium text-gray-800">{new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
           </div>
         )}
+        {booking.timeSlot && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Time Slot:</span>
+            <span className="font-medium text-gray-800">{booking.timeSlot}</span>
+          </div>
+        )}
+        {booking.bankName && (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Bank:</span>
+            <span className="font-medium text-gray-800">{booking.bankName}</span>
+          </div>
+        )}
         {booking.paymentMethod && (
           <div className="flex justify-between">
             <span className="text-slate-600">Method:</span>
@@ -98,6 +110,8 @@ export default function CalendarView() {
       advanceDueDate:  b.advance_due_date || b.advanceDueDate,
       paymentMethod:   b.payment_method || b.paymentMethod,
       paymentNote:     b.payment_note || b.paymentNote,
+      timeSlot:        b.time_slot || b.timeSlot,
+      bankName:        b.bank_name || b.bankName,
     };
   });
 

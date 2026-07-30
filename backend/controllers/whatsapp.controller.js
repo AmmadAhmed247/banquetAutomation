@@ -76,7 +76,9 @@ async function handleWhatsappWebhook(req, res) {
 
         if (keyword === "GALLERY" || keyword === "2") {
             const msg = await getGalleryMessage();
-            return sendMessage(phone, msg);
+            
+            sendMessage(phone, msg);
+            return sendMessage(phone, `Type *HELP* to show the menu or *SWITCH* to change halls.`);
         }
 
         if (keyword === "CALENDAR" || keyword === "1") {
@@ -148,7 +150,7 @@ async function handleWhatsappWebhook(req, res) {
             await getCalendarMessage(phone, hallToQuery, year, monthNum);
 
             setSession(phone, { ...session, step: "ready" }); 
-            return;
+            return sendMessage(phone, `Type *HELP* to show the menu or *SWITCH* to change halls.`);
         }
 
         // 6. Ready State / Fallback for unrecognized keywords

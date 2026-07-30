@@ -1,13 +1,17 @@
 const { CreateBooking, GetAllBookings, GetAllBookingsUnfiltered, UpdateBooking ,DeleteBooking } = require("../services/booking.service")
 
-async function CreateUserBooking(req,res) {
+async function CreateUserBooking(req, res) {
     try {
-        const {event, date, packageName, phone, client, guests, venue, totalAmount,advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status} = req.body
+        const {
+            event, date, packageName, phone, client, guests, venue,
+            totalAmount, advanceAmount, advancePaid, advanceDueDate,
+            paymentMethod, paymentNote, status, timeSlot, bankName
+        } = req.body
 
         console.log("Create Booking Request body:", req.body)
         console.log("Create Booking advanceDueDate:", advanceDueDate)
 
-        if(!event || !packageName || !date || !phone || !client || !venue){
+        if (!event || !packageName || !date || !phone || !client || !venue) {
             return res.status(400).json({
                 message: "Missing required fields: event, date, packageName, phone, client, venue!"
             })
@@ -24,13 +28,15 @@ async function CreateUserBooking(req,res) {
             totalAmount: totalAmount || 0,
             totalAdvanceAmount: advanceAmount || 0,
             advancePaid: advancePaid || 0,
-            advanceDueDate: advanceDueDate || null,   
+            advanceDueDate: advanceDueDate || null,
             paymentMethod: paymentMethod || "Cash",
             paymentNote: paymentNote || "",
-            status: status || "Pending"
+            status: status || "Pending",
+            timeSlot: timeSlot || "Night",
+            bankName: paymentMethod === "Bank Transfer" ? (bankName || null) : null,
         })
 
-        if(!result?.success){
+        if (!result?.success) {
             return res.status(401).json(result || { message: "Failed to create booking" })
         }
 
@@ -40,7 +46,6 @@ async function CreateUserBooking(req,res) {
         return res.status(500).json({ message: "Internal server error" })
     }
 }
-
 async function GetAllUserBookings(req,res) {
     try {
         const {phone} = req.body
@@ -85,7 +90,7 @@ async function GetAllBookingsAdmin(req, res) {
 
 async function UpdateUserBooking(req, res) {
     try {
-        const { id, event, date, packageName, phone, client, guests, venue, totalAmount, advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status } = req.body
+        const { id, event, date, packageName, phone, client, guests, venue, totalAmount, advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status , timeSlot, bankName } = req.body
 
         console.log("Update Booking Request:", { id, event, date, packageName, phone, client, guests, venue, totalAmount, advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status })
 
@@ -115,7 +120,9 @@ async function UpdateUserBooking(req, res) {
             advanceDueDate: advanceDueDate || null,   
             paymentMethod: paymentMethod || "Cash",
             paymentNote: paymentNote || "",
-            status: status || "Pending"
+            status: status || "Pending",
+            timeSlot: timeSlot || "Night",
+            bankName: paymentMethod === "Bank Transfer" ? (bankName || null) : null
         })
 
         console.log("Update Result:", result)
