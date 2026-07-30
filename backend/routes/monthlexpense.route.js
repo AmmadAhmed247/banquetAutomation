@@ -6,8 +6,8 @@ const {
     DeleteMonthlyExpense,
 } = require("../controllers/MonthlyExpense.controller.js");
 
-router.get("/getMonthlyExpenses", GetMonthlyExpenses);
-router.post("/addMonthlyExpense", AddMonthlyExpense);
-router.delete("/deleteMonthlyExpense/:id", DeleteMonthlyExpense);
+router.get("/getmonthlyexpenses", GetMonthlyExpenses);
+router.post("/addmonthlyexpense", AddMonthlyExpense);
+router.delete("/deletemonthlyexpense/:id", DeleteMonthlyExpense);
 
 module.exports = router;

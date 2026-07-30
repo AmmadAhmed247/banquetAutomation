@@ -419,7 +419,7 @@ export default function BookingsAddonsPage() {
                           </div>
                           <div className="flex justify-between text-stone-900 pt-1 border-t border-stone-100 font-bold">
                             <span>Commission</span>
-                            <span className="text-violet-700">+{currency(md.commission)} · {mMargin}%</span>
+                            <span className="text-violet-700">+{currency(md.commission)} </span>
                           </div>
                         </div>
                       </div>

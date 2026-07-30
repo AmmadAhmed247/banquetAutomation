@@ -10,7 +10,8 @@ async function SendReceiptMessage(req, res) {
       resident,
       whatsapp,
       phone,
-      reservedFor,
+      reservationDate, 
+      reservedFor,    
       day,
       functionName,
       noOfGuests,
@@ -19,6 +20,9 @@ async function SendReceiptMessage(req, res) {
       balance,
     } = req.body;
 
+    // Use reservationDate if provided, otherwise fall back to reservedFor
+    const finalReservedFor = reservationDate || reservedFor;
+
     const fields = [
       rNo,
       date,
@@ -26,7 +30,7 @@ async function SendReceiptMessage(req, res) {
       resident,
       whatsapp,
       phone,
-      reservedFor,
+      finalReservedFor,
       day,
       functionName,
       noOfGuests,
@@ -53,7 +57,7 @@ async function SendReceiptMessage(req, res) {
       resident,
       whatsapp: formattedWhatsapp,
       phone,
-      reservedFor,
+      reservedFor: finalReservedFor, // Pass standardized variable down
       day,
       functionName,
       noOfGuests,
@@ -61,6 +65,7 @@ async function SendReceiptMessage(req, res) {
       advance,
       balance,
     });
+
     if (!receipt.success) {
       return res.status(502).json({
         success: false,
@@ -76,7 +81,6 @@ async function SendReceiptMessage(req, res) {
     });
   } catch (error) {
     console.log("Error Occurred:", error);
-
     return res.status(500).json({
       success: false,
       message: "Server Error",

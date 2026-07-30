@@ -12,7 +12,11 @@ import {
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllExpenses, useCreateExpense, useDeleteExpense } from "../lib/hooks/expense.hook";
 import { getAllAddons, useCreateAddon, useDeleteAddon } from "../lib/hooks/addon.hook";
-import { useCreateMonthlyExpense } from "../lib/hooks/monthlyExpense.hook";
+import { 
+  getAllMonthlyExpenses, 
+  useCreateMonthlyExpense, 
+  useDeleteMonthlyExpense 
+} from "../lib/hooks/monthlyExpense.hook"; // Added missing hooks
 
 
 
@@ -199,10 +203,14 @@ function EventRow({ booking }) {
 export default function Management() {
   const { data: expenses = [] } = getAllExpenses();
   const { data: addons = [] } = getAllAddons();
+  const { data: allMonthlyExpenses = [] } = getAllMonthlyExpenses(); // Logic Fix 1: Fetch monthly overheads
+
   const createExpenseMutation = useCreateExpense();
   const deleteExpenseMutation = useDeleteExpense();
   const createAddonMutation = useCreateAddon();
   const deleteAddonMutation = useDeleteAddon();
+  const createMonthlyExpenseMutation = useCreateMonthlyExpense();
+  const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense(); // Logic Fix 2: Delete handler
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(null);
@@ -218,7 +226,6 @@ export default function Management() {
     month: new Date().getMonth() + 1, // 1-12, defaults to current month
     year: new Date().getFullYear(),
   });
-  const createMonthlyExpenseMutation = useCreateMonthlyExpense();
 
   const { data: rawBookings = [] } = getAllBookings() || {};
   const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
@@ -273,8 +280,18 @@ export default function Management() {
     const vendorExp = filteredBookings.reduce((s, b) => {
       return s + (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.vendor_cost || 0), 0);
     }, 0);
-    return stdExp + vendorExp;
-  }, [filteredBookings, expensesByBooking, addonsByBooking]);
+
+    // Logic Fix 3: Include monthly overhead in the KPI cards
+    const monthlyOverhead = allMonthlyExpenses
+      .filter(me => {
+        const yMatch = me.year === selectedYear;
+        const mMatch = selectedMonth === null || (me.month - 1) === selectedMonth;
+        return yMatch && mMatch;
+      })
+      .reduce((s, me) => s + Number(me.amount || 0), 0);
+
+    return stdExp + vendorExp + monthlyOverhead;
+  }, [filteredBookings, expensesByBooking, addonsByBooking, allMonthlyExpenses, selectedYear, selectedMonth]);
 
   const totalProfit = totalRevenue - totalExpense;
   const margin = pct(totalProfit, totalRevenue);
@@ -300,15 +317,22 @@ export default function Management() {
         return s + b.revenue + bAddonRev;
       }, 0);
 
-      const exp = bks.reduce((s, b) => {
+      const bookingExp = bks.reduce((s, b) => {
         const bStdExp = (expensesByBooking[b.id] || []).reduce((a, e) => a + Number(e.amount || 0), 0);
         const bVendorExp = (addonsByBooking[b.id] || []).reduce((a, ad) => a + Number(ad.vendor_cost || 0), 0);
         return s + bStdExp + bVendorExp;
       }, 0);
 
+      // Logic Fix 4: Include overhead in the Chart line
+      const monthlyOverhead = allMonthlyExpenses
+        .filter(me => me.year === selectedYear && (me.month - 1) === idx)
+        .reduce((s, me) => s + Number(me.amount || 0), 0);
+
+      const exp = bookingExp + monthlyOverhead;
+
       return { month: m, Revenue: rev, Expenses: exp, profit: rev - exp, bookings: bks.length };
     });
-  }, [bookings, selectedYear, hallFilter, expensesByBooking, addonsByBooking]);
+  }, [bookings, selectedYear, hallFilter, expensesByBooking, addonsByBooking, allMonthlyExpenses]);
 
   const hallMonthlyData = useMemo(() => {
     return MONTHS.map((m, idx) => {
@@ -340,8 +364,20 @@ export default function Management() {
         map["Vendor Payouts"] = (map["Vendor Payouts"] || 0) + val;
       });
     });
+
+    // Logic Fix 5: Include overheads in the breakdown list
+    allMonthlyExpenses
+      .filter(me => {
+        const yMatch = me.year === selectedYear;
+        const mMatch = selectedMonth === null || (me.month - 1) === selectedMonth;
+        return yMatch && mMatch;
+      })
+      .forEach(me => {
+        map[me.category] = (map[me.category] || 0) + Number(me.amount || 0);
+      });
+
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [filteredBookings, expensesByBooking, addonsByBooking]);
+  }, [filteredBookings, expensesByBooking, addonsByBooking, allMonthlyExpenses, selectedYear, selectedMonth]);
 
   const upcomingEvents = useMemo(() => {
     return [...bookings]
@@ -734,6 +770,25 @@ export default function Management() {
                 </button>
               )}
             </div>
+
+            {/* Logic Fix 6: Show the list of overheads so you can see/delete what you add */}
+            <div className="space-y-2 mb-4">
+              {allMonthlyExpenses
+                .filter(me => me.year === selectedYear && (selectedMonth === null || (me.month - 1) === selectedMonth))
+                .map(me => (
+                  <div key={me.id} className="flex justify-between items-center bg-stone-50 p-2 rounded border border-stone-100 group">
+                    <div>
+                      <p className="text-[12px] font-medium text-stone-800">{me.label}</p>
+                      <p className="text-[10px] text-stone-400">{me.category} • {MONTHS[me.month - 1]}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-semibold">{currency(me.amount)}</span>
+                      <button onClick={() => deleteMonthlyExpenseMutation.mutate(me.id)} className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-rose-600 transition-all"><Trash2 size={12}/></button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
             {addingMonthly && (
               <div className="flex flex-col gap-2 pt-2 border-t border-stone-100">
                 <div className="grid grid-cols-2 gap-2">

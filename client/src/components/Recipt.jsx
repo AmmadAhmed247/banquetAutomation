@@ -11,7 +11,7 @@ const defaultForm = {
   resident: "",
   whatsapp: "",
   phone: "",
-  reservedFor: "",
+  reservationDate: "",
   day: "",
   functionName: "",
   noOfGuests: "",
@@ -116,11 +116,11 @@ function ReceiptPreview({ data }) {
         </div>
       </div>
 
-      {/* Reserved For & Day */}
+      {/* Reserved For Date & Day */}
       <div className="flex items-end gap-2 mb-2.5">
         <span className="text-[13px] font-bold whitespace-nowrap">has been reserved for</span>
         <div className="flex-[2] border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
-          {data.reservedFor && <span className="text-[13px]">{data.reservedFor}</span>}
+          {data.reservationDate && <span className="text-[13px]">{data.reservationDate}</span>}
         </div>
         <span className="text-[13px] font-bold whitespace-nowrap">Day</span>
         <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
@@ -243,6 +243,18 @@ export default function DarbarReceiptForm() {
   const printRef = useRef();
   const formData = watch();
 
+  const handleReservationDateChange = (e) => {
+    const val = e.target.value;
+    setValue("reservationDate", val);
+    if (val) {
+      const dateObj = new Date(val);
+      if (!isNaN(dateObj.getTime())) {
+        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        setValue("day", days[dateObj.getDay()]);
+      }
+    }
+  };
+
   const autoBalance = () => {
     const l = parseFloat(String(formData.lumpSum).replace(/,/g, "")) || 0;
     const a = parseFloat(String(formData.advance).replace(/,/g, "")) || 0;
@@ -269,7 +281,7 @@ export default function DarbarReceiptForm() {
         resident: data.resident,
         whatsapp: data.whatsapp,
         phone: data.phone,
-        reservedFor: data.reservedFor,
+        reservationDate: data.reservationDate,
         day: data.day,
         functionName: data.functionName,
         noOfGuests: data.noOfGuests,
@@ -355,11 +367,13 @@ export default function DarbarReceiptForm() {
             <div className="bg-white rounded-2xl border border-zinc-200 p-4 sm:p-5 shadow-sm">
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Event Details</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Reserved For" icon={Building2}>
-                  <select className={sel} {...register("reservedFor", { required: true })}>
-                    <option value="">Select Hall</option>
-                    {HALLS.map(h => <option key={h}>{h}</option>)}
-                  </select>
+                <Field label="Reserved For Date" icon={CalendarDays}>
+                  <input 
+                    type="date" 
+                    className={inp} 
+                    {...register("reservationDate", { required: true })}
+                    onChange={handleReservationDateChange}
+                  />
                 </Field>
                 <Field label="Day">
                   <select className={sel} {...register("day", { required: true })}>

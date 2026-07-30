@@ -124,10 +124,11 @@ async function generateReceipt(data = {}) {
   const phoneNum = data.phone || "03008928058";
   centeredText(cleanPhone(phoneNum), 448, W - 42, 328, { size: 14 });
 
-  // Reserved for / Day
+  // Reserved for Date / Day (Mapping fallback for both reservedFor and reservationDate)
   text('has been reserved for', 42, 372, { size: 14, weight: 'bold' });
   line(200, 376, 435, 376);
-  if (data.reservedFor) centeredText(data.reservedFor, 200, 435, 372, { size: 14 });
+  const reservationDate = data.reservationDate || data.reservedFor;
+  if (reservationDate) centeredText(reservationDate, 200, 435, 372, { size: 14 });
   text('Day', 445, 372, { size: 14, weight: 'bold' });
   line(475, 376, W - 42, 376);
   if (data.day) centeredText(data.day, 475, W - 42, 372, { size: 14 });
@@ -238,7 +239,7 @@ async function generateReceipt(data = {}) {
 
   // Left Side: Address
   text('D-16, Block "N" Near Sakhi Hassan,', 45, footY, { size: 12, weight: 'bold', color: '#111', align: 'left' });
-  text('North Nazimabad, Karachi.', 45, footY + 18, { size: 12, weight: 'bold', color: '#111', align: 'left' });
+  text('North Nazimabad, Karachi.', 45, footY + 18, { size: 12, weight: 'bold', color: '#111', align: 'left'	});
 
   // Right Side: Contact Numbers with Heading
   text('Contact Numbers:', midX + 25, footY - 2, { size: 12, weight: 'bold', color: '#c0392b', align: 'left' });
@@ -252,7 +253,5 @@ async function generateReceipt(data = {}) {
 
   return { fileName, url: uploaded.url, fileId: uploaded.fileId };
 }
-
-module.exports = { generateReceipt };
 
 module.exports = { generateReceipt };
