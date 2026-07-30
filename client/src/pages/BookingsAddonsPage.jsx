@@ -1,14 +1,16 @@
 import { useState, useMemo } from "react";
 import {
-  Sparkles, ChevronDown, ChevronRight, X, Calendar, Building, Wallet, TrendingUp, Inbox, PlusCircle, BarChart3, Layers
+  Sparkles, ChevronDown, ChevronRight, X, Calendar, Building, Wallet, TrendingUp, Inbox, PlusCircle, BarChart3, Layers, Zap, Trash2, Plus
 } from "lucide-react";
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllAddons } from "../lib/hooks/addon.hook";
+import { getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense } from "../lib/hooks/monthlyExpense.hook";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = [CURRENT_YEAR, CURRENT_YEAR + 1];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHLY_EXPENSE_CATEGORIES = ["Electric Bill", "Diesel"];
 
 function currency(n) {
   return "₨ " + Number(n || 0).toLocaleString("en-PK");
@@ -49,12 +51,25 @@ export default function BookingsAddonsPage() {
   const { data: rawBookings = [] } = getAllBookings() || {};
   const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
 
+  const { data: monthlyExpenses = [] } = getAllMonthlyExpenses();
+  const createMonthlyExpenseMutation = useCreateMonthlyExpense();
+  const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense();
+
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [hallFilter, setHallFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
-  const [activeTab, setActiveTab] = useState("service"); // "service" | "bookings"
+  const [activeTab, setActiveTab] = useState("service"); // "service" | "bookings" | "monthly"
+
+  const [addingMonthly, setAddingMonthly] = useState(false);
+  const [newMonthly, setNewMonthly] = useState({
+    category: MONTHLY_EXPENSE_CATEGORIES[0],
+    label: "",
+    amount: "",
+    month: new Date().getMonth() + 1,
+    year: CURRENT_YEAR,
+  });
 
   // Add-ons grouped by booking
   const addonsByBooking = useMemo(() => {
@@ -88,10 +103,6 @@ export default function BookingsAddonsPage() {
   const margin = pct(totalCommission, totalClientRevenue);
 
   // ── Per-service breakdown ────────────────────────────────────────────────
-  // Groups every add-on line item by its `service` name across the currently
-  // filtered bookings, tracking totals plus a month-by-month split (using the
-  // parent booking's event date) so you can see "Dance Floor made X this
-  // month, Y last month" as well as overall service performance.
   const serviceBreakdown = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
@@ -104,7 +115,7 @@ export default function BookingsAddonsPage() {
             revenue: 0,
             cost: 0,
             commission: 0,
-            monthly: {}, // { 0: {revenue, cost, commission, count}, ... }
+            monthly: {},
           };
         }
         const s = map[item.service];
@@ -128,6 +139,65 @@ export default function BookingsAddonsPage() {
   }, [filteredBookings, addonsByBooking]);
 
   const maxServiceCommission = Math.max(...serviceBreakdown.map((s) => s.commission), 1);
+
+  // ── Monthly overhead breakdown ───────────────────────────────────────────
+  // Uses the same year/month filters as the rest of the page. "All Months"
+  // shows every entry for the selected year, grouped by month; picking a
+  // specific month narrows to just that period's entries.
+  const filteredMonthlyExpenses = useMemo(() => {
+    return monthlyExpenses.filter((e) => {
+      const yearMatch = e.year === selectedYear;
+      const monthMatch = selectedMonth === "all" || e.month === MONTHS.indexOf(selectedMonth) + 1;
+      return yearMatch && monthMatch;
+    });
+  }, [monthlyExpenses, selectedYear, selectedMonth]);
+
+  const totalMonthlyOverhead = filteredMonthlyExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+
+  const monthlyExpensesByMonth = useMemo(() => {
+    const map = {};
+    filteredMonthlyExpenses.forEach((e) => {
+      if (!map[e.month]) map[e.month] = [];
+      map[e.month].push(e);
+    });
+    return map;
+  }, [filteredMonthlyExpenses]);
+
+  const monthlyByCategory = useMemo(() => {
+    const map = {};
+    filteredMonthlyExpenses.forEach((e) => {
+      map[e.category] = (map[e.category] || 0) + Number(e.amount || 0);
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [filteredMonthlyExpenses]);
+
+  function addMonthlyExpense() {
+    try {
+      if (!newMonthly.label || !newMonthly.amount) return;
+      const payload = {
+        category: newMonthly.category,
+        label: newMonthly.label,
+        amount: Number(newMonthly.amount || 0),
+        month: newMonthly.month,
+        year: newMonthly.year,
+      };
+      createMonthlyExpenseMutation.mutate(payload);
+      setNewMonthly({
+        category: MONTHLY_EXPENSE_CATEGORIES[0],
+        label: "",
+        amount: "",
+        month: new Date().getMonth() + 1,
+        year: CURRENT_YEAR,
+      });
+      setAddingMonthly(false);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  function deleteMonthlyExpense(id) {
+    deleteMonthlyExpenseMutation.mutate(id);
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 p-6 md:p-8 antialiased selection:bg-emerald-100">
@@ -224,6 +294,16 @@ export default function BookingsAddonsPage() {
         >
           <PlusCircle size={14} className={activeTab === "bookings" ? "text-green-600" : "text-stone-400"} />
           Bookings with Add-ons
+        </button>
+        <button
+          onClick={() => setActiveTab("monthly")}
+          className={`px-4 py-2 rounded-md text-[13px] font-semibold transition-all flex items-center gap-2
+            ${activeTab === "monthly"
+              ? "bg-white text-stone-900 shadow-sm"
+              : "text-stone-500 hover:text-stone-800"}`}
+        >
+          <Zap size={14} className={activeTab === "monthly" ? "text-amber-600" : "text-stone-400"} />
+          Monthly Expenses
         </button>
       </div>
 
@@ -491,6 +571,155 @@ export default function BookingsAddonsPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Monthly Expenses ─────────────────────────────────────────────────── */}
+      {activeTab === "monthly" && (
+        <div className="flex flex-col gap-6">
+
+          {/* KPI + Add form */}
+          <div className="bg-white rounded-xl border border-stone-200 p-5">
+            <div className="flex items-start justify-between flex-wrap gap-3 mb-1">
+              <div>
+                <p className="text-[13px] font-semibold text-stone-900 flex items-center gap-2">
+                  <Zap size={14} className="text-amber-600" /> Monthly Overhead
+                </p>
+                <p className="text-[11px] text-stone-400 mt-0.5">
+                  Electric bill, diesel — not tied to a specific booking · {currency(totalMonthlyOverhead)} for {selectedMonth === "all" ? selectedYear : `${selectedMonth} ${selectedYear}`}
+                </p>
+              </div>
+              {!addingMonthly && (
+                <button onClick={() => setAddingMonthly(true)}
+                  className="text-[11px] font-medium px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-600 hover:text-white hover:border-amber-600 transition-colors flex items-center gap-1.5">
+                  <Plus size={12} /> Add Monthly Expense
+                </button>
+              )}
+            </div>
+
+            {addingMonthly && (
+              <div className="flex flex-col gap-2 pt-3 mt-3 border-t border-stone-100">
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={newMonthly.month} onChange={(e) => setNewMonthly({ ...newMonthly, month: Number(e.target.value) })}
+                    className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-amber-500 bg-white text-stone-700">
+                    {MONTHS.map((m, idx) => <option key={m} value={idx + 1}>{m}</option>)}
+                  </select>
+                  <select value={newMonthly.year} onChange={(e) => setNewMonthly({ ...newMonthly, year: Number(e.target.value) })}
+                    className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-amber-500 bg-white text-stone-700">
+                    {YEARS.map((y) => <option key={y}>{y}</option>)}
+                  </select>
+                </div>
+                <select value={newMonthly.category} onChange={(e) => setNewMonthly({ ...newMonthly, category: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-amber-500 bg-white text-stone-700">
+                  {MONTHLY_EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                </select>
+                <input value={newMonthly.label} onChange={(e) => setNewMonthly({ ...newMonthly, label: e.target.value })}
+                  placeholder="Line item description"
+                  className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-amber-500 placeholder:text-stone-300" />
+                <input type="number" value={newMonthly.amount} onChange={(e) => setNewMonthly({ ...newMonthly, amount: e.target.value })}
+                  placeholder="Amount (₨)"
+                  className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-amber-500 placeholder:text-stone-300" />
+                <div className="flex gap-2 mt-1">
+                  <button onClick={addMonthlyExpense}
+                    className="flex-1 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-medium rounded-lg transition-colors">
+                    Add Monthly Expense
+                  </button>
+                  <button onClick={() => setAddingMonthly(false)}
+                    className="px-3 py-1.5 bg-white text-stone-600 border border-stone-200 text-[12px] font-medium rounded-lg hover:bg-stone-50 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
+
+            {/* Entries, grouped by month */}
+            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-[15px] font-semibold text-stone-900">Logged Entries</h2>
+                  <p className="text-[11px] text-stone-400 mt-0.5">{filteredMonthlyExpenses.length} entries for these filters</p>
+                </div>
+                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                  {currency(totalMonthlyOverhead)}
+                </span>
+              </div>
+
+              <div className="px-6 py-4">
+                {filteredMonthlyExpenses.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Inbox size={24} className="text-stone-200 mx-auto mb-2" />
+                    <p className="text-stone-400 text-[12px]">No monthly expenses logged for these filters.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-6">
+                    {Object.keys(monthlyExpensesByMonth)
+                      .sort((a, b) => Number(a) - Number(b))
+                      .map((monthNum) => {
+                        const entries = monthlyExpensesByMonth[monthNum];
+                        const monthTotal = entries.reduce((s, e) => s + Number(e.amount || 0), 0);
+                        return (
+                          <div key={monthNum}>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-[11px] font-bold uppercase tracking-wider text-stone-400">
+                                {MONTHS[Number(monthNum) - 1]} {selectedYear}
+                              </p>
+                              <span className="text-[11px] font-semibold text-stone-600">{currency(monthTotal)}</span>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              {entries.map((e) => (
+                                <div key={e.id} className="flex items-center gap-4 py-2.5 px-3 rounded-lg bg-stone-50 border border-stone-100 group">
+                                  <div className="flex flex-col flex-1 min-w-0">
+                                    <span className="text-[13px] font-medium text-stone-800 truncate">{e.label}</span>
+                                    <span className="text-[10px] font-semibold tracking-wider text-amber-600 uppercase mt-0.5">{e.category}</span>
+                                  </div>
+                                  <span className="text-[13px] font-semibold text-stone-900 flex-shrink-0">{currency(e.amount)}</span>
+                                  <button onClick={() => deleteMonthlyExpense(e.id)}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-stone-300 hover:text-rose-600 rounded flex-shrink-0">
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Category breakdown */}
+            <div className="bg-white rounded-xl border border-stone-200 p-6">
+              <h2 className="text-[15px] font-semibold text-stone-900 mb-5">By Category</h2>
+              {monthlyByCategory.length === 0 ? (
+                <div className="text-center py-12">
+                  <Inbox size={24} className="text-stone-200 mx-auto mb-2" />
+                  <p className="text-stone-400 text-[12px]">No data for these filters.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {monthlyByCategory.map(([cat, amt]) => {
+                    const p = pct(amt, totalMonthlyOverhead);
+                    return (
+                      <div key={cat}>
+                        <div className="flex justify-between items-baseline mb-1">
+                          <span className="text-[12px] font-medium text-stone-700">{cat}</span>
+                          <span className="text-[11px] font-semibold text-amber-700">{p}%</span>
+                        </div>
+                        <div className="w-full h-[5px] bg-stone-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-amber-500 rounded-full" style={{ width: `${p}%` }} />
+                        </div>
+                        <p className="text-[11px] text-stone-400 mt-1">{currency(amt)}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
