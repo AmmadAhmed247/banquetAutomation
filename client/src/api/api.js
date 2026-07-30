@@ -1,6 +1,6 @@
 import axios from "axios"
 
 export default axios.create({
-    baseURL: "https://raabta.tech",
+    baseURL: "https://api.raabta.tech",
     withCredentials: true,
 })      
