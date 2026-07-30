@@ -9,16 +9,40 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function BookingChip({ booking }) {
   const isA = booking.hall === "a";
+  const isPending = booking.status?.toLowerCase() === "pending";
+
+  const themeClasses = isPending
+    ? "bg-amber-50 border-amber-200 text-amber-800"
+    : isA
+    ? "bg-red-50 border-red-200 text-red-800"
+    : "bg-blue-50 border-blue-200 text-blue-800";
+
+  const accentColorClass = isPending
+    ? "text-amber-700"
+    : isA
+    ? "text-red-700"
+    : "text-blue-700";
+
+  const borderColor = isPending ? "#f59e0b" : isA ? "#dc2626" : "#2563eb";
+
   return (
-    <div className={`p-3 rounded-xl mb-2 border ${isA ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200"}`}>
-      <p className={`text-[10px] font-semibold mb-1 ${isA ? "text-red-700" : "text-blue-700"}`}>
-        Hall {booking.hall.toUpperCase()}
-      </p>
+    <div className={`p-3 rounded-xl mb-2 border ${themeClasses}`}>
+      <div className="flex justify-between items-center mb-1">
+        <p className={`text-[10px] font-semibold ${accentColorClass}`}>
+          Hall {booking.hall.toUpperCase()}
+        </p>
+        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+          isPending ? "bg-amber-200 text-amber-900" : isA ? "bg-red-200 text-red-900" : "bg-blue-200 text-blue-900"
+        }`}>
+          {booking.status}
+        </span>
+      </div>
+
       <p className="text-xs font-semibold text-gray-900 mb-0.5">{booking.client}</p>
       <p className="text-[11px] text-slate-500 mb-2">{booking.event} • {booking.package}</p>
       
       {/* Additional details */}
-      <div className="space-y-1.5 text-[10px] mb-2 pb-2 border-b border-opacity-20" style={{ borderColor: isA ? "#dc2626" : "#2563eb" }}>
+      <div className="space-y-1.5 text-[10px] mb-2 pb-2 border-b border-opacity-20" style={{ borderColor }}>
         {booking.phone && (
           <div className="flex justify-between">
             <span className="text-slate-600">Phone:</span>
@@ -69,7 +93,7 @@ function BookingChip({ booking }) {
         )}
       </div>
 
-      <p className={`text-[10px] font-semibold ${isA ? "text-red-700" : "text-blue-700"}`}>
+      <p className={`text-[10px] font-semibold ${accentColorClass}`}>
         {booking.status}
       </p>
     </div>
@@ -87,33 +111,35 @@ export default function CalendarView() {
 
   const { data: fetchedBookings = [], isLoading, error } = getAllBookings();
 
-  const BOOKINGS = fetchedBookings.map((b) => {
-    const dateObj  = new Date(b.date);
-    const month    = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
-    const day      = String(dateObj.getUTCDate()).padStart(2, "0");
-    const year     = dateObj.getUTCFullYear();
-    const hallChar =
-      b.venue?.toLowerCase().includes("hall a") ? "a" :
-      b.venue?.toLowerCase().includes("hall b") ? "b" : "a";
-    return {
-      id:              b.id,
-      hall:            hallChar,
-      date:            `${year}-${month}-${day}`,
-      client:          b.client,
-      event:           b.event,
-      package:         b.package_name || b.package,
-      status:          b.status,
-      phone:           b.phone,
-      guests:          b.guests,
-      totalAmount:     b.total_amount || b.totalAmount,
-      advancePaid:     b.advance_paid || b.advancePaid,
-      advanceDueDate:  b.advance_due_date || b.advanceDueDate,
-      paymentMethod:   b.payment_method || b.paymentMethod,
-      paymentNote:     b.payment_note || b.paymentNote,
-      timeSlot:        b.time_slot || b.timeSlot,
-      bankName:        b.bank_name || b.bankName,
-    };
-  });
+  const BOOKINGS = fetchedBookings
+    .filter((b) => b.status?.toLowerCase() !== "cancelled") // Filter out cancelled bookings
+    .map((b) => {
+      const dateObj  = new Date(b.date);
+      const month    = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+      const day      = String(dateObj.getUTCDate()).padStart(2, "0");
+      const year     = dateObj.getUTCFullYear();
+      const hallChar =
+        b.venue?.toLowerCase().includes("hall a") ? "a" :
+        b.venue?.toLowerCase().includes("hall b") ? "b" : "a";
+      return {
+        id:             b.id,
+        hall:           hallChar,
+        date:           `${year}-${month}-${day}`,
+        client:         b.client,
+        event:          b.event,
+        package:        b.package_name || b.package,
+        status:         b.status,
+        phone:          b.phone,
+        guests:         b.guests,
+        totalAmount:    b.total_amount || b.totalAmount,
+        advancePaid:    b.advance_paid || b.advancePaid,
+        advanceDueDate: b.advance_due_date || b.advanceDueDate,
+        paymentMethod:  b.payment_method || b.paymentMethod,
+        paymentNote:    b.payment_note || b.paymentNote,
+        timeSlot:       b.time_slot || b.timeSlot,
+        bankName:       b.bank_name || b.bankName,
+      };
+    });
 
   const yr = current.getFullYear();
   const mo = current.getMonth();
@@ -230,6 +256,9 @@ export default function CalendarView() {
             <span className="w-2.5 h-2.5 rounded-[3px] bg-blue-300 inline-block" />Hall B
           </div>
         )}
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+          <span className="w-2.5 h-2.5 rounded-[3px] bg-amber-300 inline-block" />Pending
+        </div>
       </div>
 
       {/* ── Main layout ── */}
@@ -279,23 +308,42 @@ export default function CalendarView() {
 
                   {/* Pills — hidden on very small, shown on sm+ */}
                   <div className="hidden sm:block">
-                    {bookings.slice(0, 2).map((b) => (
-                      <div
-                        key={b.id}
-                        className={`text-[9px] xl:text-[10px] px-1 py-0.5 mb-0.5 rounded font-semibold truncate ${
-                          b.hall === "a" ? "bg-red-200 text-red-900" : "bg-blue-200 text-blue-900"
-                        }`}
-                      >
-                        {b.client.split("&")[0].trim()}
-                      </div>
-                    ))}
+                    {bookings.slice(0, 2).map((b) => {
+                      const isPending = b.status?.toLowerCase() === "pending";
+                      return (
+                        <div
+                          key={b.id}
+                          className={`text-[9px] xl:text-[10px] px-1 py-0.5 mb-0.5 rounded font-semibold truncate ${
+                            isPending 
+                              ? "bg-amber-200 text-amber-900" 
+                              : b.hall === "a" 
+                              ? "bg-red-200 text-red-900" 
+                              : "bg-blue-200 text-blue-900"
+                          }`}
+                        >
+                          {b.client.split("&")[0].trim()}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Dot indicators on mobile */}
                   <div className="flex gap-0.5 sm:hidden flex-wrap">
-                    {bookings.slice(0, 3).map((b) => (
-                      <span key={b.id} className={`w-1.5 h-1.5 rounded-full ${b.hall === "a" ? "bg-red-400" : "bg-blue-400"}`} />
-                    ))}
+                    {bookings.slice(0, 3).map((b) => {
+                      const isPending = b.status?.toLowerCase() === "pending";
+                      return (
+                        <span 
+                          key={b.id} 
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isPending 
+                              ? "bg-amber-400" 
+                              : b.hall === "a" 
+                              ? "bg-red-400" 
+                              : "bg-blue-400"
+                          }`} 
+                        />
+                      );
+                    })}
                   </div>
 
                   {bookings.length > 2 && (
@@ -308,7 +356,6 @@ export default function CalendarView() {
         </div>
 
         {/* ── Side panel ── */}
-        {/* Desktop: always visible | Mobile: shown after selecting a day */}
         <div className={`bg-white rounded-2xl border border-green-100 p-4 xl:block ${showPanel || selectedDay ? "block" : "hidden xl:block"}`}>
           <div className="flex items-center justify-between mb-4">
             <p className="font-semibold text-sm text-gray-800">

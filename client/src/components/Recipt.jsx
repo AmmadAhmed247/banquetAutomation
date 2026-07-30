@@ -292,7 +292,7 @@ export default function DarbarReceiptForm() {
         clientName: data.clientName,
         resident: data.resident,
         whatsapp: data.whatsapp,
-        phone: data.phone,
+        phone: !data.phone || data.phone === "-" ? "-" : data.phone,
         reservationDate: formatDate(data.reservationDate),
         day: data.day,
         functionName: data.functionName,
@@ -371,7 +371,7 @@ export default function DarbarReceiptForm() {
                   <input className={inp} placeholder="0300-1234567" {...register("whatsapp", { required: true })} />
                 </Field>
                 <Field label="Phone Number" icon={Phone}>
-                  <input className={inp} placeholder="021-1234567" {...register("phone", { required: true })} />
+                  <input className={inp} placeholder="021-1234567" {...register("phone")} />
                 </Field>
               </div>
             </div>
