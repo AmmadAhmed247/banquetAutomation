@@ -1,6 +1,6 @@
 import axios from "axios"
 
 export default axios.create({
-    baseURL: "https://banquetautomation.onrender.com",
+    baseURL: "https://raabta.tech",
     withCredentials: true,
 })      
