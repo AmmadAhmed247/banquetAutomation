@@ -4,6 +4,18 @@ import { Printer, RotateCcw, User, Phone, MessageCircle, MapPin, CalendarDays, U
 import receiptService from "../services/receipt.service";
 import toast from "react-hot-toast";
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  const dateObj = new Date(dateStr);
+  if (isNaN(dateObj.getTime())) return dateStr;
+  
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const year = dateObj.getFullYear();
+  
+  return `${day}-${month}-${year}`;
+};
+
 const defaultForm = {
   rNo: "",
   date: "",
@@ -84,7 +96,7 @@ function ReceiptPreview({ data }) {
       <div className="flex items-end gap-1.5 mb-2.5">
         <span className="text-[13px] font-bold whitespace-nowrap">Date :</span>
         <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
-          {data.date && <span className="text-[13px]">{data.date}</span>}
+          {data.date && <span className="text-[13px]">{formatDate(data.date)}</span>}
         </div>
       </div>
 
@@ -120,7 +132,7 @@ function ReceiptPreview({ data }) {
       <div className="flex items-end gap-2 mb-2.5">
         <span className="text-[13px] font-bold whitespace-nowrap">has been reserved for</span>
         <div className="flex-[2] border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
-          {data.reservationDate && <span className="text-[13px]">{data.reservationDate}</span>}
+          {data.reservationDate && <span className="text-[13px]">{formatDate(data.reservationDate)}</span>}
         </div>
         <span className="text-[13px] font-bold whitespace-nowrap">Day</span>
         <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
@@ -260,7 +272,7 @@ export default function DarbarReceiptForm() {
     const a = parseFloat(String(formData.advance).replace(/,/g, "")) || 0;
     if (l && a) setValue("balance", (l - a).toLocaleString());
   };
-
+  
   const onError = (errors) => {
     const firstKey = Object.keys(errors)[0];
     if (firstKey) {
@@ -276,12 +288,12 @@ export default function DarbarReceiptForm() {
     try {
       const fixedData = {
         rNo: data.rNo,
-        date: data.date,
+        date: formatDate(data.date),
         clientName: data.clientName,
         resident: data.resident,
         whatsapp: data.whatsapp,
         phone: data.phone,
-        reservationDate: data.reservationDate,
+        reservationDate: formatDate(data.reservationDate),
         day: data.day,
         functionName: data.functionName,
         noOfGuests: data.noOfGuests,
