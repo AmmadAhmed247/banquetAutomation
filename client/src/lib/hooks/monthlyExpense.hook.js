@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import monthlyExpenseService from "../services/monthlyExpense.service";
+import monthlyExpenseService from "../../services/monthlyexpense.service";
 
 export function getAllMonthlyExpenses() {
   return useQuery({

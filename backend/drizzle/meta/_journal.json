@@ -50,6 +50,13 @@
       "when": 1785235973208,
       "tag": "0006_foamy_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785416507013,
+      "tag": "0007_fearless_lockjaw",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import {
-  Sparkles, ChevronDown, ChevronRight, X, Calendar, Building, Wallet, TrendingUp, Inbox, PlusCircle 
+  Sparkles, ChevronDown, ChevronRight, X, Calendar, Building, Wallet, TrendingUp, Inbox, PlusCircle, BarChart3, Layers
 } from "lucide-react";
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllAddons } from "../lib/hooks/addon.hook";
@@ -53,6 +53,8 @@ export default function BookingsAddonsPage() {
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [hallFilter, setHallFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [selectedService, setSelectedService] = useState(null);
+  const [activeTab, setActiveTab] = useState("service"); // "service" | "bookings"
 
   // Add-ons grouped by booking
   const addonsByBooking = useMemo(() => {
@@ -84,6 +86,48 @@ export default function BookingsAddonsPage() {
   );
   const totalCommission = totalClientRevenue - totalVendorCost;
   const margin = pct(totalCommission, totalClientRevenue);
+
+  // ── Per-service breakdown ────────────────────────────────────────────────
+  // Groups every add-on line item by its `service` name across the currently
+  // filtered bookings, tracking totals plus a month-by-month split (using the
+  // parent booking's event date) so you can see "Dance Floor made X this
+  // month, Y last month" as well as overall service performance.
+  const serviceBreakdown = useMemo(() => {
+    const map = {};
+    filteredBookings.forEach((b) => {
+      const monthIdx = new Date(b.date).getMonth();
+      (addonsByBooking[b.id] || []).forEach((item) => {
+        if (!map[item.service]) {
+          map[item.service] = {
+            service: item.service,
+            count: 0,
+            revenue: 0,
+            cost: 0,
+            commission: 0,
+            monthly: {}, // { 0: {revenue, cost, commission, count}, ... }
+          };
+        }
+        const s = map[item.service];
+        const rev = Number(item.client_price || 0);
+        const cost = Number(item.vendor_cost || 0);
+        const comm = Number(item.commission ?? (rev - cost));
+
+        s.count += 1;
+        s.revenue += rev;
+        s.cost += cost;
+        s.commission += comm;
+
+        if (!s.monthly[monthIdx]) s.monthly[monthIdx] = { revenue: 0, cost: 0, commission: 0, count: 0 };
+        s.monthly[monthIdx].revenue += rev;
+        s.monthly[monthIdx].cost += cost;
+        s.monthly[monthIdx].commission += comm;
+        s.monthly[monthIdx].count += 1;
+      });
+    });
+    return Object.values(map).sort((a, b) => b.commission - a.commission);
+  }, [filteredBookings, addonsByBooking]);
+
+  const maxServiceCommission = Math.max(...serviceBreakdown.map((s) => s.commission), 1);
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 p-6 md:p-8 antialiased selection:bg-emerald-100">
@@ -159,139 +203,296 @@ export default function BookingsAddonsPage() {
         <KpiCard label="Active Bookings" value={filteredBookings.length} sub="With add-ons attached" icon={Sparkles} />
       </div>
 
-      {/* ── Table & Detail Drawer ─────────────────────────────────────────────── */}
-      <div className={`grid gap-6 items-start ${selectedBooking ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
+      {/* ── Tab Switcher ──────────────────────────────────────────────────────── */}
+      <div className="flex gap-1 mb-6 bg-stone-100 p-1 rounded-lg border border-stone-200 w-max">
+        <button
+          onClick={() => setActiveTab("service")}
+          className={`px-4 py-2 rounded-md text-[13px] font-semibold transition-all flex items-center gap-2
+            ${activeTab === "service"
+              ? "bg-white text-stone-900 shadow-sm"
+              : "text-stone-500 hover:text-stone-800"}`}
+        >
+          <Layers size={14} className={activeTab === "service" ? "text-green-600" : "text-stone-400"} />
+          Service Performance
+        </button>
+        <button
+          onClick={() => setActiveTab("bookings")}
+          className={`px-4 py-2 rounded-md text-[13px] font-semibold transition-all flex items-center gap-2
+            ${activeTab === "bookings"
+              ? "bg-white text-stone-900 shadow-sm"
+              : "text-stone-500 hover:text-stone-800"}`}
+        >
+          <PlusCircle size={14} className={activeTab === "bookings" ? "text-green-600" : "text-stone-400"} />
+          Bookings with Add-ons
+        </button>
+      </div>
 
-        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
-            <div>
-              <h2 className="text-[15px] font-semibold text-stone-900">Bookings with Add-ons</h2>
-              <p className="text-[11px] text-stone-400 mt-0.5">Click a row to see every add-on item and its commission</p>
+      {/* ── Service Performance ──────────────────────────────────────────────── */}
+      {activeTab === "service" && (
+        <div className={`grid gap-6 items-start mb-8 ${selectedService ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
+
+          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-stone-900 flex items-center gap-2">
+                  <Layers size={15} className="text-green-600" /> Service Performance
+                </h2>
+                <p className="text-[11px] text-stone-400 mt-0.5">Profit and cost broken down per service — click a row for its monthly trend</p>
+              </div>
+              <span className="text-[11px] font-semibold text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                {serviceBreakdown.length} services
+              </span>
             </div>
-            <span className="text-[11px] font-semibold text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-100">
-              {filteredBookings.length} bookings
-            </span>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-stone-50 border-b border-stone-100">
-                  {["Client", "Hall", "Event", "Date", "Items", "Client Revenue", "Commission", ""].map((h) => (
-                    <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {filteredBookings.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">
-                      No bookings with add-ons for these filters.
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-100">
+                    {["Service", "Sold", "Client Revenue", "Vendor Cost", "Commission", "Margin", ""].map((h) => (
+                      <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                )}
-                {filteredBookings.map((b) => {
-                  const items = addonsByBooking[b.id] || [];
-                  const rev = items.reduce((s, x) => s + Number(x.client_price || 0), 0);
-                  const cost = items.reduce((s, x) => s + Number(x.vendor_cost || 0), 0);
-                  const comm = rev - cost;
-                  const isSel = selectedBooking?.id === b.id;
-
-                  return (
-                    <tr key={b.id}
-                      onClick={() => setSelectedBooking(isSel ? null : b)}
-                      className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-green-50/50" : "hover:bg-stone-50"}`}>
-                      <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}</td>
-                      <td className="px-5 py-3.5">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border
-                          ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>
-                          {b.hall}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td>
-                      <td className="px-5 py-3.5 text-[12px] text-stone-400">
-                        {new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1 w-max">
-                          <PlusCircle size={9} /> {items.length}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(rev)}</td>
-                      <td className="px-5 py-3.5 text-[13px] font-semibold text-violet-700">+{currency(comm)}</td>
-                      <td className="px-5 py-3.5 text-right">
-                        <ChevronRight size={16} className={`text-stone-400 inline transition-transform ${isSel ? "rotate-90 text-violet-600" : ""}`} />
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {serviceBreakdown.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="text-center py-12 text-stone-400 text-[12px]">
+                        No add-on services for these filters.
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  )}
+                  {serviceBreakdown.map((s) => {
+                    const svcMargin = pct(s.commission, s.revenue);
+                    const isSel = selectedService?.service === s.service;
+                    return (
+                      <tr key={s.service}
+                        onClick={() => setSelectedService(isSel ? null : s)}
+                        className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-green-50/50" : "hover:bg-stone-50"}`}>
+                        <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900 flex items-center gap-2">
+                          <PlusCircle size={12} className="text-green-600" /> {s.service}
+                        </td>
+                        <td className="px-5 py-3.5 text-[12px] text-stone-500">{s.count}×</td>
+                        <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(s.revenue)}</td>
+                        <td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(s.cost)}</td>
+                        <td className="px-5 py-3.5 text-[13px] font-semibold text-violet-700">+{currency(s.commission)}</td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-violet-500 rounded-full" style={{ width: `${Math.max(0, svcMargin)}%` }} />
+                            </div>
+                            <span className="text-[11px] font-semibold text-stone-500">{svcMargin}%</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <ChevronRight size={16} className={`text-stone-400 inline transition-transform ${isSel ? "rotate-90 text-violet-600" : ""}`} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        {/* Detail Drawer */}
-        {selectedBooking && (
-          <div className="bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden sticky top-6">
-            <div className="p-5 border-b border-stone-100 bg-stone-50/60 flex items-start justify-between">
-              <div>
-                <span className="text-[9px] font-semibold uppercase tracking-wider bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100">
-                  Add-on Breakdown
-                </span>
-                <p className="text-[14px] font-semibold text-stone-900 mt-1.5">{selectedBooking.client}</p>
-                <p className="text-[11px] text-stone-400 mt-0.5">
-                  {selectedBooking.event} · {selectedBooking.hall} ·{" "}
-                  {new Date(selectedBooking.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
-                </p>
+          {/* Service Monthly Drawer */}
+          {selectedService && (
+            <div className="bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden sticky top-6">
+              <div className="p-5 border-b border-stone-100 bg-stone-50/60 flex items-start justify-between">
+                <div>
+                  <span className="text-[9px] font-semibold uppercase tracking-wider bg-violet-50 text-violet-700 px-2 py-0.5 rounded border border-violet-100 flex items-center gap-1 w-max">
+                    <BarChart3 size={10} /> Monthly Breakdown
+                  </span>
+                  <p className="text-[14px] font-semibold text-stone-900 mt-1.5">{selectedService.service}</p>
+                  <p className="text-[11px] text-stone-400 mt-0.5">
+                    Sold {selectedService.count}× · {currency(selectedService.commission)} total commission · {selectedYear}
+                  </p>
+                </div>
+                <button onClick={() => setSelectedService(null)} className="text-stone-400 hover:text-stone-900 p-1">
+                  <X size={16} />
+                </button>
               </div>
-              <button onClick={() => setSelectedBooking(null)} className="text-stone-400 hover:text-stone-900 p-1">
-                <X size={16} />
-              </button>
+
+              <div className="flex-1 overflow-y-auto px-5 py-4 max-h-[calc(100vh-260px)]">
+                <div className="flex flex-col gap-3">
+                  {MONTHS.map((m, idx) => {
+                    const md = selectedService.monthly[idx];
+                    if (!md) return null;
+                    const mMargin = pct(md.commission, md.revenue);
+                    return (
+                      <div key={m} className="bg-stone-50 p-3.5 rounded-xl border border-stone-200 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-stone-900 text-[13px]">{m}</span>
+                          <span className="text-[9px] font-bold bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full">
+                            {md.count} sold
+                          </span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-stone-100 flex flex-col gap-1 text-[12px]">
+                          <div className="flex justify-between text-stone-600">
+                            <span>Revenue</span>
+                            <span className="font-semibold text-stone-900">{currency(md.revenue)}</span>
+                          </div>
+                          <div className="flex justify-between text-stone-600">
+                            <span>Vendor Cost</span>
+                            <span className="font-semibold text-rose-600">{currency(md.cost)}</span>
+                          </div>
+                          <div className="flex justify-between text-stone-900 pt-1 border-t border-stone-100 font-bold">
+                            <span>Commission</span>
+                            <span className="text-violet-700">+{currency(md.commission)} · {mMargin}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {Object.keys(selectedService.monthly).length === 0 && (
+                    <div className="text-center py-12">
+                      <Inbox size={24} className="text-stone-200 mx-auto mb-2" />
+                      <p className="text-stone-400 text-[12px]">No monthly data for this filter set.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Table & Detail Drawer (per booking) ───────────────────────────────── */}
+      {activeTab === "bookings" && (
+        <div className={`grid gap-6 items-start ${selectedBooking ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
+
+          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-stone-900">Bookings with Add-ons</h2>
+                <p className="text-[11px] text-stone-400 mt-0.5">Click a row to see every add-on item and its commission</p>
+              </div>
+              <span className="text-[11px] font-semibold text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                {filteredBookings.length} bookings
+              </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-4 max-h-[calc(100vh-260px)]">
-              {(addonsByBooking[selectedBooking.id] || []).length === 0 ? (
-                <div className="text-center py-12">
-                  <Inbox size={24} className="text-stone-200 mx-auto mb-2" />
-                  <p className="text-stone-400 text-[12px]">No add-ons recorded for this booking.</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {(addonsByBooking[selectedBooking.id] || []).map((item) => (
-                    <div key={item.id} className="bg-stone-50 p-3.5 rounded-xl border border-stone-200 flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-stone-900 text-[13px] flex items-center gap-1.5">
-                          <PlusCircle size={12} className="text-green-600" /> {item.service}
-                        </span>
-                        <span className="text-[9px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                          Add-on
-                        </span>
-                      </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-100">
+                    {["Client", "Hall", "Event", "Date", "Items", "Client Revenue", "Commission", ""].map((h) => (
+                      <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {filteredBookings.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">
+                        No bookings with add-ons for these filters.
+                      </td>
+                    </tr>
+                  )}
+                  {filteredBookings.map((b) => {
+                    const items = addonsByBooking[b.id] || [];
+                    const rev = items.reduce((s, x) => s + Number(x.client_price || 0), 0);
+                    const cost = items.reduce((s, x) => s + Number(x.vendor_cost || 0), 0);
+                    const comm = rev - cost;
+                    const isSel = selectedBooking?.id === b.id;
 
-                      <div className="bg-white p-2.5 rounded-lg border border-stone-100 flex flex-col gap-1 text-[12px]">
-                        <div className="flex justify-between text-stone-600">
-                          <span>Client Price</span>
-                          <span className="font-semibold text-stone-900">{currency(item.client_price)}</span>
-                        </div>
-                        <div className="flex justify-between text-stone-600">
-                          <span>Vendor Cost</span>
-                          <span className="font-semibold text-rose-600">{currency(item.vendor_cost)}</span>
-                        </div>
-                        <div className="flex justify-between text-stone-900 pt-1 border-t border-stone-100 font-bold">
-                          <span>Commission</span>
-                          <span className="text-violet-700">+{currency(item.commission)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    return (
+                      <tr key={b.id}
+                        onClick={() => setSelectedBooking(isSel ? null : b)}
+                        className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-green-50/50" : "hover:bg-stone-50"}`}>
+                        <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}</td>
+                        <td className="px-5 py-3.5">
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border
+                            ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>
+                            {b.hall}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td>
+                        <td className="px-5 py-3.5 text-[12px] text-stone-400">
+                          {new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1 w-max">
+                            <PlusCircle size={9} /> {items.length}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(rev)}</td>
+                        <td className="px-5 py-3.5 text-[13px] font-semibold text-violet-700">+{currency(comm)}</td>
+                        <td className="px-5 py-3.5 text-right">
+                          <ChevronRight size={16} className={`text-stone-400 inline transition-transform ${isSel ? "rotate-90 text-violet-600" : ""}`} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Detail Drawer */}
+          {selectedBooking && (
+            <div className="bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden sticky top-6">
+              <div className="p-5 border-b border-stone-100 bg-stone-50/60 flex items-start justify-between">
+                <div>
+                  <span className="text-[9px] font-semibold uppercase tracking-wider bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100">
+                    Add-on Breakdown
+                  </span>
+                  <p className="text-[14px] font-semibold text-stone-900 mt-1.5">{selectedBooking.client}</p>
+                  <p className="text-[11px] text-stone-400 mt-0.5">
+                    {selectedBooking.event} · {selectedBooking.hall} ·{" "}
+                    {new Date(selectedBooking.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                </div>
+                <button onClick={() => setSelectedBooking(null)} className="text-stone-400 hover:text-stone-900 p-1">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-5 py-4 max-h-[calc(100vh-260px)]">
+                {(addonsByBooking[selectedBooking.id] || []).length === 0 ? (
+                  <div className="text-center py-12">
+                    <Inbox size={24} className="text-stone-200 mx-auto mb-2" />
+                    <p className="text-stone-400 text-[12px]">No add-ons recorded for this booking.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {(addonsByBooking[selectedBooking.id] || []).map((item) => (
+                      <div key={item.id} className="bg-stone-50 p-3.5 rounded-xl border border-stone-200 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-stone-900 text-[13px] flex items-center gap-1.5">
+                            <PlusCircle size={12} className="text-green-600" /> {item.service}
+                          </span>
+                          <span className="text-[9px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                            Add-on
+                          </span>
+                        </div>
+
+                        <div className="bg-white p-2.5 rounded-lg border border-stone-100 flex flex-col gap-1 text-[12px]">
+                          <div className="flex justify-between text-stone-600">
+                            <span>Client Price</span>
+                            <span className="font-semibold text-stone-900">{currency(item.client_price)}</span>
+                          </div>
+                          <div className="flex justify-between text-stone-600">
+                            <span>Vendor Cost</span>
+                            <span className="font-semibold text-rose-600">{currency(item.vendor_cost)}</span>
+                          </div>
+                          <div className="flex justify-between text-stone-900 pt-1 border-t border-stone-100 font-bold">
+                            <span>Commission</span>
+                            <span className="text-violet-700">+{currency(item.commission)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
