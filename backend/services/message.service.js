@@ -1,5 +1,5 @@
 const { getAllPackages } = require("../services/package.service");
-const { sendMessage, sendMediaMessage, sendReceiptTemplate } = require("./meta.service.");
+const { sendMessage, sendMediaMessage, sendReceiptTemplate, sleep } = require("./meta.service.");
 const { generateCalendarImage } = require("../services/calender.service");
 const { generateReceipt } = require("./recipt.service");
 const { getUserByPhone, isWithinWindow } = require("./session.service");
@@ -67,6 +67,8 @@ async function getCalendarMessage(phone, hall, year, month) {
       `Here is ${hall}'s availability!\n\n${hall === "Hall B" ? "🔵 Blue" : "🔴 Red"} = Booked\n⚪ White = Available`,
       url 
     );
+    await sleep(1500);
+    return await sendMessage(phone, `Type *HELP* to show the menu or *SWITCH* to change halls.`);
   } catch (error) {
     console.log("An Error Occurred: ", error);
   }

@@ -140,23 +140,27 @@ async function generateReceipt(data = {}) {
   line(494, 416, W - 42, 416);
   if (data.noOfGuests) centeredText(data.noOfGuests, 494, W - 42, 412, { size: 14 });
 
+  // Standardized Payment Lines Layout (Lump Sum, Advance, Balance)
+  const payStartX = 120;
+  const payEndX = 350;
+
   // Lump Sum
   text('Lump Sum', 42, 460, { size: 14, weight: 'bold' });
-  line(120, 464, 480, 464);
-  if (data.lumpSum) centeredText(data.lumpSum, 120, 480, 460, { size: 14 });
+  line(payStartX, 464, payEndX, 464);
+  if (data.lumpSum) centeredText(data.lumpSum, payStartX, payEndX, 460, { size: 14 });
 
   // Advance
   text('Advance', 42, 500, { size: 14, weight: 'bold' });
-  line(106, 504, 300, 504);
-  if (data.advance) centeredText(data.advance, 106, 300, 500, { size: 14 });
+  line(payStartX, 504, payEndX, 504);
+  if (data.advance) centeredText(data.advance, payStartX, payEndX, 500, { size: 14 });
 
   // Balance & Manager Block
   const rowY = 538;
   
   // Balance Row
   text('Balance', 42, rowY, { size: 14, weight: 'bold' });
-  line(100, rowY + 4, 300, rowY + 4);
-  if (data.balance) centeredText(data.balance, 100, 300, rowY, { size: 14 });
+  line(payStartX, rowY + 4, payEndX, rowY + 4);
+  if (data.balance) centeredText(data.balance, payStartX, payEndX, rowY, { size: 14 });
 
   // Manager Signature Line and Label
   const lineY = rowY + 4;
@@ -248,5 +252,7 @@ async function generateReceipt(data = {}) {
 
   return { fileName, url: uploaded.url, fileId: uploaded.fileId };
 }
+
+module.exports = { generateReceipt };
 
 module.exports = { generateReceipt };

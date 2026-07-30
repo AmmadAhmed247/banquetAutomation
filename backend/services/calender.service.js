@@ -10,8 +10,9 @@ async function generateCalendarImage(year, month, hall) {
         throw new Error(`Invalid inputs: year=${year}, month=${month}, hall=${hall}`);
     }
 
+    // Use local time for layout rendering to match user expectation
     const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
-    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
     const booked = await db
         .select({ date: booking.date })
@@ -20,20 +21,20 @@ async function generateCalendarImage(year, month, hall) {
             and(
                 gte(booking.date, start),
                 lte(booking.date, end),
-                eq(booking.venue, hall) // filter by the specific hall
+                eq(booking.venue, hall)
             )
         );
 
     const bookedDays = booked
-        .map(b => b?.date)
-        .filter(Boolean)
-        .map(d => {
-            const dateObj = typeof d === "string" ? new Date(d) : d;
-            return dateObj.getUTCDate();
-        });
+    .map(b => b?.date)
+    .filter(Boolean)
+    .map(d => {
+        const dateObj = typeof d === "string" ? new Date(d) : d;
+        return dateObj.getUTCDate();
+    });
 
     // Hall-specific booked color
-    const bookedColor = hall === "Hall B" ? "#3b82f6" : "#ef4444"; // blue for B, red for A
+    const bookedColor = hall === "Hall B" ? "#3b82f6" : "#ef4444"; 
     const headerColor = "#10b981";
 
     const canvas = createCanvas(600, 500);
@@ -48,7 +49,8 @@ async function generateCalendarImage(year, month, hall) {
     ctx.font = "bold 24px Arial";
     ctx.textAlign = "center";
 
-    const monthName = start.toLocaleString("default", { month: "long", timeZone: "UTC" });
+    // Use local month name formatting
+    const monthName = start.toLocaleString("default", { month: "long" });
     ctx.fillText(`${hall} — ${monthName} ${year}`, 300, 45);
 
     ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((d, i) => {
@@ -57,8 +59,9 @@ async function generateCalendarImage(year, month, hall) {
         ctx.fillText(d, 50 + i * 80, 100);
     });
 
-    const firstDay = start.getUTCDay();
-    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    // Use local day mapping (getDay instead of getUTCDay)
+    const firstDay = start.getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
     let row = 0;
 
     for (let day = 1; day <= daysInMonth; day++) {
@@ -96,7 +99,7 @@ async function generateCalendarImage(year, month, hall) {
     ctx.fillStyle = "#64748b";
     ctx.fillText("Available", 358, 465);
 
-     const fileName = `calendar-${hall.replace(/\s+/g, '')}-${year}-${month}.png`;
+     const fileName = `calendar-${hall.replace(/\s+/g, '')}-${year}-${month}-${Date.now()}.png`;
      const buffer = canvas.toBuffer("image/png");
     const uploaded = await uploadBuffer(buffer, fileName, "/calendars");
      return { fileName, url: uploaded.url, fileId: uploaded.fileId };

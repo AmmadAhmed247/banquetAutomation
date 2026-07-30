@@ -147,10 +147,12 @@ async function handleWhatsappWebhook(req, res) {
 
             const year = new Date().getFullYear();
             const hallToQuery = session.hall || session.active_hall || "Hall A";
+            
+            // Pass monthNum directly (1-12). Ensure your calendar image generator handles (month - 1)
             await getCalendarMessage(phone, hallToQuery, year, monthNum);
 
             setSession(phone, { ...session, step: "ready" }); 
-            return sendMessage(phone, `Type *HELP* to show the menu or *SWITCH* to change halls.`);
+            
         }
 
         // 6. Ready State / Fallback for unrecognized keywords
