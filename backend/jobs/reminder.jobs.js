@@ -2,12 +2,12 @@ const cron = require("node-cron")
 const { db } = require("../config/db")
 const { booking } = require("../model/schema")
 const { and, gte, lte, lt, eq, or, isNull } = require("drizzle-orm")
-const { sendTemplateMessage, sleep } = require("../services/meta.service..js")
+const { sendAdvanceReminder, sendBookingReminder, sleep } = require("../services/meta.service..js")
 
 // CONSTANTS
-const BOOKING_STATUS_ACTIVE = "Confirmed" 
-const ADVANCE_REMINDER_INTERVAL_DAYS = 2  // don't nag daily, every 2 days
-const WHATSAPP_SEND_DELAY_MS = 1200       // gap between sends to avoid Meta rate limits
+const BOOKING_STATUS_PENDING = "Pending" 
+const ADVANCE_REMINDER_INTERVAL_DAYS = 2  
+const WHATSAPP_SEND_DELAY_MS = 1200       
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000  
 
 
@@ -22,7 +22,23 @@ function getDayWindowPKT(daysFromNow) {
 
     return { start: startUTC, end: endUTC }
 }
+function normalizePakistaniNumber(phone) {
+    // strip anything that isn't a digit
+    let digits = String(phone).replace(/\D/g, "");
 
+    // strip leading 0 (local format: 03XXXXXXXXX)
+    if (digits.startsWith("0")) {
+        digits = digits.slice(1);
+    }
+
+    // strip 92 if someone already added it, so we don't double it up
+    if (digits.startsWith("92")) {
+        digits = digits.slice(2);
+    }
+
+    // now digits should be 10 digits like 3XXXXXXXXX
+    return `92${digits}`;
+}
 
 async function processBatch(rows, sendFn, jobName) {
     let sent = 0, failed = 0
@@ -46,10 +62,11 @@ async function processBatch(rows, sendFn, jobName) {
     console.log(`[${jobName}] Done. Sent: ${sent}, Failed: ${failed}, Total: ${rows.length}`)
 }
 
-// DAY-BEFORE EVENT REMINDER (sent once) 
+
+// 1. DAY-BEFORE EVENT REMINDER (sent once) 
 async function sendBookingReminders() {
     try {
-        const { start, end } = getDayWindowPKT(1)
+        const { start, end } = getDayWindowPKT(2);
         console.log(`[BookingReminder] Checking window ${start.toISOString()} - ${end.toISOString()}`)
 
         const rows = await db
@@ -58,14 +75,15 @@ async function sendBookingReminders() {
                 client: booking.client,
                 phone: booking.phone,
                 event: booking.event,
-                package: booking.package_name,
+                date: booking.date, 
+                venue: booking.venue,
             })
             .from(booking)
             .where(
                 and(
                     gte(booking.date, start),
                     lte(booking.date, end),
-                    eq(booking.status, BOOKING_STATUS_ACTIVE),
+                    eq(booking.status, "Confirmed"),
                     eq(booking.booking_reminder_sent, false)
                 )
             )
@@ -76,12 +94,20 @@ async function sendBookingReminders() {
         }
 
         await processBatch(rows, async (bk) => {
-            const result = await sendTemplateMessage(
+            const formattedDate = new Date(bk.date).toISOString().split('T')[0]
+
+            // Using the dedicated booking reminder function
+            const result = await sendBookingReminder(
                 bk.phone,
-                "booking_reminder_v1", // TODO: your approved template name
                 "en",
+                bk.client, 
+                bk.event, 
+                formattedDate, 
+                bk.venue
             )
+            
             if (result.success) {
+                console.log("Meta API Response Data:", JSON.stringify(result.data, null, 2))
                 await db.update(booking)
                     .set({ booking_reminder_sent: true })
                     .where(eq(booking.id, bk.bookingId))
@@ -94,7 +120,7 @@ async function sendBookingReminders() {
     }
 }
 
-//2. ADVANCE DUE REMINDER (repeats every N days until paid)
+// 2. ADVANCE DUE REMINDER (repeats every N days until paid)
 async function sendAdvanceDueReminders() {
     try {
         const now = new Date()
@@ -108,7 +134,7 @@ async function sendAdvanceDueReminders() {
                 client: booking.client,
                 phone: booking.phone,
                 event: booking.event,
-                package: booking.package_name,
+                venue: booking.venue,
                 advanceAmount: booking.advance_amount,
                 advancePaid: booking.advance_paid,
             })
@@ -116,7 +142,7 @@ async function sendAdvanceDueReminders() {
             .where(
                 and(
                     lte(booking.advance_due_date, now),
-                    eq(booking.status, BOOKING_STATUS_ACTIVE),
+                    eq(booking.status, "Pending"),
                     lt(booking.advance_paid, booking.advance_amount),
                     or(
                         isNull(booking.last_advance_reminder_at),
@@ -132,13 +158,18 @@ async function sendAdvanceDueReminders() {
 
         await processBatch(rows, async (bk) => {
             const remaining = (Number(bk.advanceAmount) - Number(bk.advancePaid)).toFixed(2)
-            const result = await sendTemplateMessage(
+            
+            // Using the dedicated advance reminder function
+            const result = await sendAdvanceReminder(
                 bk.phone,
-                "advance_due_v1", // TODO: your approved template name
                 "en",
-                [bk.client, bk.event, remaining]
+                bk.client, 
+                bk.event, 
+                remaining
             )
+            
             if (result.success) {
+                console.log("Meta API Response Data:", JSON.stringify(result.data, null, 2))
                 await db.update(booking)
                     .set({ last_advance_reminder_at: new Date() })
                     .where(eq(booking.id, bk.bookingId))
@@ -151,70 +182,19 @@ async function sendAdvanceDueReminders() {
     }
 }
 
-// RESOURCE/ADD-ONS REMINDER (sent once, 2 days before event) 
-async function sendResourceReminders() {
-    try {
-        const { start, end } = getDayWindowPKT(2)
-        console.log(`[ResourceReminder] Checking window ${start.toISOString()} - ${end.toISOString()}`)
-
-        const rows = await db
-            .select({
-                bookingId: booking.id,
-                client: booking.client,
-                phone: booking.phone,
-                event: booking.event,
-                package: booking.package_name,
-            })
-            .from(booking)
-            .where(
-                and(
-                    gte(booking.date, start),
-                    lte(booking.date, end),
-                    eq(booking.status, BOOKING_STATUS_ACTIVE),
-                    eq(booking.resource_reminder_sent, false)
-                )
-            )
-
-        if (rows.length === 0) {
-            console.log("[ResourceReminder] Nothing to send.")
-            return
-        }
-
-        await processBatch(rows, async (bk) => {
-            const result = await sendTemplateMessage(
-                bk.phone,
-                "resource_addons_v1", // TODO: your approved template name
-                "en",
-                [bk.client, bk.event]
-            )
-            if (result.success) {
-                await db.update(booking)
-                    .set({ resource_reminder_sent: true })
-                    .where(eq(booking.id, bk.bookingId))
-            }
-            return result
-        }, "ResourceReminder")
-
-    } catch (error) {
-        console.error("[ResourceReminder] Job-level error:", error)
-    }
-}
-
 // SCHEDULER (registered once at module load) 
 function startReminderJobs() {
-    cron.schedule("0 9 * * *", async () => {
-        console.log("=== Running daily reminder jobs (9AM PKT) ===")
+    cron.schedule("*0 9 * * *", async () => {
+        console.log("=== Running test reminder job ===")
         await sendBookingReminders()
         await sendAdvanceDueReminders()
-        await sendResourceReminders()
-        console.log("=== Daily reminder jobs complete ===")
+        console.log("=== Test job complete ===")
     })
-    console.log("Reminder cron jobs scheduled.")
+    console.log("Reminder cron jobs scheduled to run every minute.")
 }
 
 module.exports = {
     startReminderJobs,
     sendBookingReminders,
     sendAdvanceDueReminders,
-    sendResourceReminders,
 }

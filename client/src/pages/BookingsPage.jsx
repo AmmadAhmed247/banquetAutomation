@@ -23,6 +23,7 @@ function formatDateInput(value) {
 const emptyForm = {
   client: "",
   phone: "",
+  rNo: "",
   date: "",
   event: "Wedding",
   status: "Pending",
@@ -70,24 +71,31 @@ export default function Bookings({ showToast }) {
   const openEdit = (b) => setModal({ mode: "edit", booking: { ...b } });
   const closeModal = () => setModal(null);
 
-  const handleSave = async (form) => {
+const handleSave = async (form) => {
   if (!form.client || !form.date || !form.phone || !form.event || !form.package) {
-    showToast?.("Please fill in all required fields");
+    toast.error("Please fill in all required fields");
     return;
   }
   try {
     setSaveLoading(true);
-    if (modal.mode === "new") {
-      await bookingService.createBooking(form);
-      showToast?.("Booking created successfully!");
-    } else {
-      await bookingService.updateBooking(form);
-      showToast?.("Booking updated successfully!");
+
+    const result = modal.mode === "new"
+      ? await bookingService.createBooking(form)
+      : await bookingService.updateBooking(form);
+
+
+    if (result?.success === false) {
+      toast.error(result.message || "Failed to save booking");
+      return; 
     }
+
+    toast.success(modal.mode === "new" ? "Booking created successfully!" : "Booking updated successfully!");
     closeModal();
     queryClient.invalidateQueries({ queryKey: ["bookings"] });
-  } catch {
-    showToast?.("Failed to save booking");
+  } catch (error) {
+
+    const message = error?.response?.data?.message || "Failed to save booking";
+    toast.error(message);
   } finally {
     setSaveLoading(false);
   }
@@ -129,7 +137,10 @@ const handleDelete = (booking) => {
     .filter(b => filter === "All" || b.status === filter)
     .filter(b =>
       b.client?.toLowerCase().includes(search.toLowerCase()) ||
-      b.event?.toLowerCase().includes(search.toLowerCase())
+      b.event?.toLowerCase().includes(search.toLowerCase()) ||
+      b.r_no?.includes(search) ||
+      b.venue?.toLowerCase().includes(search.toLowerCase()) ||
+      b.phone?.includes(search)
     );
 
   return (

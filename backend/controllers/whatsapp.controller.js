@@ -6,10 +6,23 @@ const { getHelpMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage
 const { createOrGetConversation, addAdminToConversation } = require("../services/conversation.service");
 
 async function handleWhatsappWebhook(req, res) {
-    res.sendStatus(200); // acknowledge Meta immediately
+    res.sendStatus(200);
+    const statusEntry = req.body.entry?.[0]?.changes?.[0]?.value?.statuses?.[0];
+    if (statusEntry) {
+        console.log("[WA Status]", JSON.stringify({
+            messageId: statusEntry.id,
+            recipient: statusEntry.recipient_id,
+            status: statusEntry.status,       
+            timestamp: statusEntry.timestamp,
+            errors: statusEntry.errors || null 
+        }, null, 2));
+        return; 
+    }
 
     const parsed = parseIncoming(req);
-    if (!parsed) return; 
+    if (!parsed) return; // acknowledge Meta immediately
+
+ 
 
     const { phone, body } = parsed;
     const cleanBody = body.trim();

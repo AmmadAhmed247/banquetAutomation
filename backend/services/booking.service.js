@@ -1,23 +1,27 @@
-const { eq } = require("drizzle-orm");
+const { eq , and , ne } = require("drizzle-orm");
 const { db } = require("../config/db");
 const { booking } = require("../model/schema");
 const { sendMessage } = require("./meta.service.");
 const { getOrCreateUser } = require("./user.service");
 
+
+
+
 async function CreateBooking(bookingData) {
     try {
         const {
+            rNo,
             event,
             date,
             packageName,
             phone,
-            client = "New Client",
+            client,
             guests = 0,
             venue,
             totalAmount = 0,
             totalAdvanceAmount = 0,
             advancePaid = 0,
-            advanceDueDate = null,   
+            advanceDueDate = null,
             paymentMethod = "Cash",
             paymentNote = "",
             status = "Pending",
@@ -25,66 +29,93 @@ async function CreateBooking(bookingData) {
             bankName = null
         } = bookingData
 
-        const userResult = await getOrCreateUser(phone, client)
-        if (!userResult?.success || !userResult?.user) {
-            return {
-                success: false,
-                message: "Failed to create/retrieve user",
-                error: userResult?.error
+        const bookingDate = new Date(date);
+
+        if (rNo) {
+            const dupRNo = await db
+                .select()
+                .from(booking)
+                .where(eq(booking.r_no, rNo));
+
+            if (dupRNo.length > 0) {
+                return {
+                    success: false,
+                    message: `Receipt number ${rNo} is already used on another booking.`
+                };
             }
         }
 
-        const userId = Array.isArray(userResult.user) ? userResult.user[0]?.id : userResult.user?.id
+        // 2. Prevent double-booking the same hall, same date, same shift (ignoring Cancelled bookings)
+        const clash = await db
+            .select()
+            .from(booking)
+            .where(
+                and(
+                    eq(booking.venue, venue),
+                    eq(booking.date, bookingDate),
+                    eq(booking.time_slot, timeSlot),
+                    ne(booking.status, "Cancelled")
+                )
+            );
 
-        const [newBooking] = await db
-        .insert(booking)
-        .values({
-            userId: userId,
-            event: event,
-            date: new Date(date),
-            package_name: packageName,
-            phone: phone,
-            client: client,
-            guests: guests,
-            venue: venue,
-            total_amount: totalAmount.toString(),
-            advance_amount: totalAdvanceAmount.toString(),
-            advance_paid: advancePaid.toString(),
-            advance_due_date: advanceDueDate ? new Date(advanceDueDate) : null,   // ← added
-            payment_method: paymentMethod,
-            payment_note: paymentNote,
-            status: status,
-            time_slot: timeSlot,
-            bank_name: paymentMethod === "Bank Transfer" ? (bankName || null) : null
-        })
-        .returning()
-
-        if(!newBooking){
+        if (clash.length > 0) {
             return {
                 success: false,
-                message: "Booking Not Created!"
-            }
+                message: `${venue} already has a booking for the ${timeSlot} slot on this date.`
+            };
         }
 
-        try {
-            await sendMessage(phone, `Your booking for ${newBooking.event} on ${newBooking.date} has been confirmed by our team!`)
-        } catch (msgError) {
-            console.log("Warning: Failed to send message:", msgError.message)
-        }
+        const newBooking = await db
+            .insert(booking)
+            .values({
+                r_no: rNo || null,
+                event: event,
+                date: bookingDate,
+                package_name: packageName,
+                phone: phone,
+                client: client,
+                guests: guests,
+                venue: venue,
+                total_amount: totalAmount.toString(),
+                advance_amount: totalAdvanceAmount.toString(),
+                advance_paid: advancePaid.toString(),
+                advance_due_date: advanceDueDate ? new Date(advanceDueDate) : null,
+                payment_method: paymentMethod,
+                payment_note: paymentNote,
+                time_slot: timeSlot,
+                bank_name: paymentMethod === "Bank Transfer" ? (bankName || null) : null,
+                status: status,
+            })
+            .returning();
 
         return {
             success: true,
-            booking: newBooking,
+            booking: newBooking[0],
             message: "Booking created successfully!"
-        }
+        };
 
     } catch (error) {
-        console.log("Error In Booking Creation (Service): ", error)
+        // Backstop: if the partial unique index catches a race the app-level check missed
+        if (error?.code === "23505") {
+            if (error?.constraint?.includes("unique_active_booking_slot")) {
+                return {
+                    success: false,
+                    message: "That hall is already booked for this date and shift."
+                }
+            }
+            if (error?.constraint?.includes("r_no")) {
+                return {
+                    success: false,
+                    message: "That receipt number is already used on another booking."
+                }
+            }
+        }
+        console.log("Error In Booking Creation (Service): ", error);
         return {
             success: false,
             message: "Failed to create booking",
             error: error.message
-        }
+        };
     }
 }
 
@@ -212,6 +243,7 @@ async function UpdateBooking(bookingId, bookingData) {
         const {
             event,
             date,
+            rNo,
             packageName,
             phone,
             client,
@@ -220,7 +252,7 @@ async function UpdateBooking(bookingId, bookingData) {
             totalAmount = 0,
             advanceAmount = 0,
             advancePaid = 0,
-            advanceDueDate = null,   
+            advanceDueDate = null,
             paymentMethod = "Cash",
             paymentNote = "",
             timeSlot = "",
@@ -228,11 +260,53 @@ async function UpdateBooking(bookingId, bookingData) {
             status = "Pending"
         } = bookingData
 
+        const bookingDate = new Date(date);
+
+        // 1. Prevent duplicate receipt numbers — ignoring this booking's own row.
+        //    Checked first: if someone's testing with the same hall/date/shift repeatedly,
+        //    a duplicate R.No. is the more specific, more likely-intended error to surface.
+        if (rNo) {
+            const dupRNo = await db
+                .select()
+                .from(booking)
+                .where(and(eq(booking.r_no, rNo), ne(booking.id, bookingId)));
+
+            if (dupRNo.length > 0) {
+                return {
+                    success: false,
+                    message: `Receipt number ${rNo} is already used on another booking.`
+                };
+            }
+        }
+
+        // 2. Prevent double-booking the same hall, same date, same shift — ignoring
+        //    this booking's own row (so saving an unrelated field doesn't clash with itself)
+        //    and ignoring any Cancelled booking (a cancelled slot is free to rebook).
+        const clash = await db
+            .select()
+            .from(booking)
+            .where(
+                and(
+                    eq(booking.venue, venue),
+                    eq(booking.date, bookingDate),
+                    eq(booking.time_slot, timeSlot),
+                    ne(booking.status, "Cancelled"),
+                    ne(booking.id, bookingId)
+                )
+            );
+
+        if (clash.length > 0) {
+            return {
+                success: false,
+                message: `${venue} already has a booking for the ${timeSlot} slot on this date.`
+            };
+        }
+
         const updatedBooking = await db
         .update(booking)
         .set({
             event: event,
-            date: new Date(date),
+            date: bookingDate,
             package_name: packageName,
             phone: phone,
             client: client,
@@ -246,15 +320,13 @@ async function UpdateBooking(bookingId, bookingData) {
             payment_note: paymentNote,
             time_slot: timeSlot,
             bank_name: paymentMethod === "Bank Transfer" ? (bankName || null) : null,
-
+            r_no: rNo || null,
             status: status,
             updated_at: new Date()
         })
         .where(eq(booking.id, bookingId))
         .returning()
 
-
-        console.log("Updated booking result:", updatedBooking)
 
         if(!updatedBooking || updatedBooking.length === 0){
             return {
@@ -270,6 +342,21 @@ async function UpdateBooking(bookingId, bookingData) {
         }
 
     } catch (error) {
+        // Backstop: if the partial unique index catches a race the app-level check missed
+        if (error?.code === "23505") {
+            if (error?.constraint?.includes("unique_active_booking_slot")) {
+                return {
+                    success: false,
+                    message: "That hall is already booked for this date and shift."
+                }
+            }
+            if (error?.constraint?.includes("r_no")) {
+                return {
+                    success: false,
+                    message: "That receipt number is already used on another booking."
+                }
+            }
+        }
         console.log("Error In Booking Update (Service): ", error)
         return {
             success: false,

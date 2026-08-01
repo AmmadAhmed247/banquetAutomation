@@ -4,6 +4,8 @@ const bookingService = {
   getAllBookings: async () => {
     try {
       const res = await api.get('/api/booking/allBookings');
+      console.log(res);
+      
     
       return res.data.bookings || [];
     } catch (error) {
@@ -16,6 +18,7 @@ const bookingService = {
   createBooking: async (form) => {
     try {
       const res = await api.post('/api/booking/createBooking', {
+        rNo:            form.rNo,
         event:          form.event,
         date:           form.date,
         packageName:    form.package,
@@ -44,6 +47,7 @@ const bookingService = {
     try {
       const res = await api.put('/api/booking/updateBooking', {
         id:             form.id,
+        rNo:            form.rNo,
         event:          form.event,
         date:           form.date,
         packageName:    form.package,

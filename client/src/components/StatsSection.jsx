@@ -4,73 +4,78 @@ import { LayoutGrid, CheckCircle2, Clock, Wallet, ChevronDown } from "lucide-rea
 export default function StatsSection({ bookings }) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("Cash");
 
-  const revenue = bookings.reduce((a, b) => a + Number(b.totalAmount || 0), 0);
-  const revenueLabel =
-    revenue >= 1000000
-      ? `PKR ${(revenue / 1000000).toFixed(1)}M`
-      : `PKR ${(revenue / 1000).toFixed(0)}K`;
-
-  // Calculate revenue filtered by the selected payment method or bank safely and exclusively
-  const filteredPaymentRevenue = bookings
-    .filter((b) => {
-      const method = (b.paymentMethod || "").toLowerCase();
-      const bank = (b.bankName || "").toLowerCase();
-      const target = selectedPaymentMethod.toLowerCase();
-
-      const isHabib = method.includes("habib") || method.includes("hbl") || bank.includes("habib") || bank.includes("hbl") || bank.includes("metro");
-      const isCash = method.includes("cash") || (!method && !bank);
-      const isJazzCash = method.includes("jazz") || bank.includes("jazz");
-      const isEasyPaisa = method.includes("easy") || bank.includes("easy");
-
-      if (target === "habib") return isHabib;
-      if (target === "cash") return isCash;
-      if (target === "jazzcash") return isJazzCash;
-      if (target === "easypaisa") return isEasyPaisa;
-      
-      if (target === "bank") {
-        // Exclude all specific known types so "Other Bank" only grabs true outliers
-        return !isHabib && !isCash && !isJazzCash && !isEasyPaisa && (method || bank);
-      }
-
-      return method.includes(target) || bank.includes(target);
-    })
-    .reduce((a, b) => a + Number(b.totalAmount || 0), 0);
-
-  const filteredPaymentLabel =
-    filteredPaymentRevenue >= 1000000
-      ? `PKR ${(filteredPaymentRevenue / 1000000).toFixed(1)}M`
-      : `PKR ${(filteredPaymentRevenue / 1000).toFixed(0)}K`;
-
-  const stats = [
-    {
-      label: "Total Bookings",
-      value: bookings.length,
-      icon: LayoutGrid,
-      color: "text-green-600",
-      bg: "bg-green-50",
-    },
-    {
-      label: "Confirmed",
-      value: bookings.filter((b) => b.status === "Confirmed").length,
-      icon: CheckCircle2,
-      color: "text-green-600",
-      bg: "bg-green-50",
-    },
-    {
-      label: "Pending",
-      value: bookings.filter((b) => b.status === "Pending").length,
-      icon: Clock,
-      color: "text-amber-500",
-      bg: "bg-amber-50",
-    },
-    {
-      label: "Total Revenue",
-      value: revenueLabel,
-      icon: Wallet,
-      color: "text-green-600",
-      bg: "bg-green-50",
-    },
-  ];
+  function countedAmount(b) {
+  if (b.status === "Confirmed") return Number(b.totalAmount || 0);
+  return Number(b.advancePaid || 0);
+}
+ 
+const revenue = bookings.reduce((a, b) => a + countedAmount(b), 0);
+const revenueLabel =
+  revenue >= 1000000
+    ? `PKR ${(revenue / 1000000).toFixed(1)}M`
+    : `PKR ${(revenue / 1000).toFixed(0)}K`;
+ 
+// Calculate revenue filtered by the selected payment method or bank safely and exclusively
+const filteredPaymentRevenue = bookings
+  .filter((b) => {
+    const method = (b.paymentMethod || "").toLowerCase();
+    const bank = (b.bankName || "").toLowerCase();
+    const target = selectedPaymentMethod.toLowerCase();
+ 
+    const isHabib = method.includes("habib") || method.includes("hbl") || bank.includes("habib") || bank.includes("hbl") || bank.includes("metro");
+    const isCash = method.includes("cash") || (!method && !bank);
+    const isJazzCash = method.includes("jazz") || bank.includes("jazz");
+    const isEasyPaisa = method.includes("easy") || bank.includes("easy");
+ 
+    if (target === "habib") return isHabib;
+    if (target === "cash") return isCash;
+    if (target === "jazzcash") return isJazzCash;
+    if (target === "easypaisa") return isEasyPaisa;
+ 
+    if (target === "bank") {
+      // Exclude all specific known types so "Other Bank" only grabs true outliers
+      return !isHabib && !isCash && !isJazzCash && !isEasyPaisa && (method || bank);
+    }
+ 
+    return method.includes(target) || bank.includes(target);
+  })
+  .reduce((a, b) => a + countedAmount(b), 0);
+ 
+const filteredPaymentLabel =
+  filteredPaymentRevenue >= 1000000
+    ? `PKR ${(filteredPaymentRevenue / 1000000).toFixed(1)}M`
+    : `PKR ${(filteredPaymentRevenue / 1000).toFixed(0)}K`;
+ 
+const stats = [
+  {
+    label: "Total Bookings",
+    value: bookings.length,
+    icon: LayoutGrid,
+    color: "text-green-600",
+    bg: "bg-green-50",
+  },
+  {
+    label: "Confirmed",
+    value: bookings.filter((b) => b.status === "Confirmed").length,
+    icon: CheckCircle2,
+    color: "text-green-600",
+    bg: "bg-green-50",
+  },
+  {
+    label: "Pending",
+    value: bookings.filter((b) => b.status === "Pending").length,
+    icon: Clock,
+    color: "text-amber-500",
+    bg: "bg-amber-50",
+  },
+  {
+    label: "Total Revenue",
+    value: revenueLabel,
+    icon: Wallet,
+    color: "text-green-600",
+    bg: "bg-green-50",
+  },
+];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">

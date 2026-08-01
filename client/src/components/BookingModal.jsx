@@ -27,6 +27,7 @@ function normalizeBooking(booking) {
     advanceDueDate: booking.advanceDueDate ?? ((booking.advance_due_date ? formatDateInput(booking.advance_due_date) : "") || ""),
     timeSlot: booking.timeSlot ?? booking.time_slot ?? "Night",
     bankName: booking.bankName ?? booking.bank_name ?? "",
+    rNo: booking.rNo ?? booking.r_no ?? "",
   };
 }
 
@@ -135,6 +136,18 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
         </div>
 
         <div className="px-8 py-6 space-y-6">
+
+          {/* Receipt Info */}
+          <section>
+            <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <Pencil size={12} /> Receipt Info
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="R. No.">
+                <input type="text" placeholder="e.g. 730" value={form.rNo || ""} onChange={e => f("rNo", e.target.value)} className={inputCls} disabled={isLoading} />
+              </Field>
+            </div>
+          </section>
 
           {/* Client Info */}
           <section>

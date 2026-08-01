@@ -19,6 +19,9 @@ function getTimeSlot(booking) {
 function getBankName(booking) {
   return booking.bankName ?? booking.bank_name ?? "";
 }
+function getRNo(booking) {
+  return booking.rNo ?? booking.r_no ?? "";
+}
 
 function PaymentBar({ total, advance }) {
   if (!total) return null;
@@ -49,7 +52,14 @@ function BookingCard({ booking, onEdit , onDelete }) {
         {/* Header */}
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div className="min-w-0">
-            <p className="font-bold text-zinc-900 text-sm truncate">{booking.client}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-bold text-zinc-900 text-sm truncate">{booking.client}</p>
+              {getRNo(booking) && (
+                <span className="text-[9px] font-bold bg-zinc-100 border border-zinc-200 text-zinc-500 px-1.5 py-0.5 rounded shrink-0">
+                  #{getRNo(booking)}
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-zinc-400 mt-0.5 truncate">{booking.phone}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -142,7 +152,7 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-green-50/60 border-b border-green-100">
-            {["Client", "Event", "Date", "Time Slot", "Guests", "Venue", "Total Amount", "Advance Amount", "Payment", "Advance Due", "Payment Note", "Status",  "", ""].map((h) => (
+            {["R. No.", "Client", "Event", "Date", "Time Slot", "Guests", "Venue", "Total Amount", "Advance Amount", "Payment", "Advance Due", "Payment Note", "Status",  "", ""].map((h) => (
               <th key={h} className="text-left text-[10px] font-semibold text-green-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">
                 {h}
               </th>
@@ -155,6 +165,12 @@ function BookingsTable({ filteredBookings, onEdit , onDelete }) {
             const bankName = getBankName(booking);
             return (
               <tr key={booking.id} className="hover:bg-green-50/40 transition-colors">
+
+                <td className="px-4 py-3.5 whitespace-nowrap">
+                  <span className="text-[11px] font-semibold text-green-700">
+                    {getRNo(booking) ? `#${getRNo(booking)}` : "—"}
+                  </span>
+                </td>
 
                 <td className="px-4 py-3.5">
                   <p className="font-semibold text-green-900">{booking.client}</p>

@@ -40,6 +40,9 @@ const booking = pgTable("bookings", {
   time_slot: varchar("time_slot", { length: 20 }).default("Night"),   
   bank_name: varchar("bank_name", { length: 50 }),
 
+    // Receipt
+  r_no: varchar("r_no", { length: 50 }).unique(),
+
 
     // Reminder tracking
   booking_reminder_sent: boolean("booking_reminder_sent").default(false),

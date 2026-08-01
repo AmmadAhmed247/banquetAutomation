@@ -226,9 +226,23 @@ export default function Management() {
     month: new Date().getMonth() + 1, // 1-12, defaults to current month
     year: new Date().getFullYear(),
   });
-
+  function normalizeBooking(b) {
+  return {
+    id: b.id,
+    hall: b.venue,
+    client: b.client,
+    event: b.event,
+    date: b.date,
+    status: b.status, // Add this line
+    revenue: Number(b.total_amount) || 0,
+  };
+}
   const { data: rawBookings = [] } = getAllBookings() || {};
-  const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
+  const bookings = useMemo(() => {
+  return rawBookings
+    .filter((b) => b.status?.toLowerCase() !== "cancelled" && b.status?.toLowerCase() !== "pending" ) // Filter while 'status' still exists
+    .map(normalizeBooking);                                 // Then transform the data
+}, [rawBookings]);
 
   const [mode, setMode] = useState("expense");
   const [newExp, setNewExp] = useState({ category: STANDARD_EXPENSE_CATEGORIES[0], label: "", amount: "" });

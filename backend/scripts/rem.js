@@ -12,15 +12,9 @@ async function run() {
 
   await client.query(`
     ALTER TABLE bookings
-    ADD COLUMN IF NOT EXISTS time_slot varchar(20) DEFAULT 'Night';
+    ADD COLUMN IF NOT EXISTS r_no varchar(50) UNIQUE;
   `);
-  console.log("Column 'time_slot' added successfully.");
-
-  await client.query(`
-    ALTER TABLE bookings
-    ADD COLUMN IF NOT EXISTS bank_name varchar(50);
-  `);
-  console.log("Column 'bank_name' added successfully.");
+  console.log("Column 'r_no' added successfully (unique constraint applied).");
 
   await client.end();
   console.log("Migration completed and connection closed.");

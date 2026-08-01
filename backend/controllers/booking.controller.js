@@ -3,13 +3,12 @@ const { CreateBooking, GetAllBookings, GetAllBookingsUnfiltered, UpdateBooking ,
 async function CreateUserBooking(req, res) {
     try {
         const {
-            event, date, packageName, phone, client, guests, venue,
+            rNo, event, date, packageName, phone, client, guests, venue,
             totalAmount, advanceAmount, advancePaid, advanceDueDate,
             paymentMethod, paymentNote, status, timeSlot, bankName
         } = req.body
 
         console.log("Create Booking Request body:", req.body)
-        console.log("Create Booking advanceDueDate:", advanceDueDate)
 
         if (!event || !packageName || !date || !phone || !client || !venue) {
             return res.status(400).json({
@@ -18,6 +17,7 @@ async function CreateUserBooking(req, res) {
         }
 
         const result = await CreateBooking({
+            rNo: rNo || null,
             event,
             date,
             packageName,
@@ -42,6 +42,12 @@ async function CreateUserBooking(req, res) {
 
         return res.status(200).json(result)
     } catch (error) {
+        
+        if (error?.code === "23505" && error?.constraint?.includes("r_no")) {
+            return res.status(409).json({
+                message: "That receipt number (R.No.) is already in use on another booking."
+            })
+        }
         console.log("Error In Booking Creation (Controller): ", error)
         return res.status(500).json({ message: "Internal server error" })
     }
@@ -78,7 +84,7 @@ async function GetAllBookingsAdmin(req, res) {
             return res.status(200).json(result)
         }
 
-        console.log(result)
+        // console.log(result)
 
         return res.status(200).json(result)
 
@@ -90,9 +96,9 @@ async function GetAllBookingsAdmin(req, res) {
 
 async function UpdateUserBooking(req, res) {
     try {
-        const { id, event, date, packageName, phone, client, guests, venue, totalAmount, advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status , timeSlot, bankName } = req.body
+        const { id, event, date, packageName, phone, client, guests, venue, totalAmount, advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status , timeSlot, bankName ,rNo } = req.body
 
-        console.log("Update Booking Request:", { id, event, date, packageName, phone, client, guests, venue, totalAmount, advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status })
+        // console.log("Update Booking Request:", { id, event, date, packageName, phone, client, guests, venue, totalAmount, advanceAmount, advancePaid, advanceDueDate, paymentMethod, paymentNote, status })
 
         if(!id){
             return res.status(400).json({
@@ -122,7 +128,9 @@ async function UpdateUserBooking(req, res) {
             paymentNote: paymentNote || "",
             status: status || "Pending",
             timeSlot: timeSlot || "Night",
-            bankName: paymentMethod === "Bank Transfer" ? (bankName || null) : null
+            bankName: paymentMethod === "Bank Transfer" ? (bankName || null) : null,
+            rNo: rNo || null
+
         })
 
         console.log("Update Result:", result)
