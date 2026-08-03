@@ -2,7 +2,7 @@ const { db } = require("../config/db");
 const { addons } = require("../model/schema");
 const { eq } = require("drizzle-orm");
 
-async function addAddon({ bookingId, service, client_price, vendor_cost }) {
+async function addAddon({ bookingId, service, client_price, vendor_cost , description}) {
     // Commission is computed server-side so it can never drift from
     // whatever client_price/vendor_cost the frontend happens to send.
     const commission = Number(client_price || 0) - Number(vendor_cost || 0);
@@ -15,6 +15,7 @@ async function addAddon({ bookingId, service, client_price, vendor_cost }) {
             client_price: client_price || 0,
             vendor_cost: vendor_cost || 0,
             commission,
+            description: description || "",
         })
         .returning();
 

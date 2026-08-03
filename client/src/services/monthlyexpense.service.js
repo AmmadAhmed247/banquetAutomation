@@ -3,7 +3,9 @@ import api from "../api/api";
 const monthlyExpenseService = {
   getAll: async () => {
     const res = await api.get("/api/monthlyexpense/getMonthlyExpenses");
+    console.log(res.data);
     return res.data;
+    
   },
   create: async (data) => {
     const res = await api.post("/api/monthlyexpense/addMonthlyExpense", data);

@@ -12,11 +12,11 @@ async function GetAddons(req, res) {
 
 async function AddAddon(req, res) {
     try {
-        const { bookingId, service, client_price, vendor_cost } = req.body;
+        const { bookingId, service, client_price, vendor_cost , description } = req.body;
         if (!bookingId || !service || client_price === undefined || vendor_cost === undefined) {
             return res.status(400).json({ success: false, message: "All fields are required" });
         }
-        const newAddon = await addAddon({ bookingId, service, client_price, vendor_cost });
+        const newAddon = await addAddon({ bookingId, service, client_price, vendor_cost, description });
         return res.status(201).json({ success: true, data: newAddon });
     } catch (error) {
         console.error(error);

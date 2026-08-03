@@ -8,6 +8,7 @@ import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllAddons } from "../lib/hooks/addon.hook";
 import { getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense } from "../lib/hooks/monthlyExpense.hook";
 import { getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense } from "../lib/hooks/dailyExpense.hook";
+import { getAllExpenses } from "../lib/hooks/expense.hook";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const CURRENT_YEAR = new Date().getFullYear();
@@ -70,19 +71,14 @@ function DetailSidebar({ title, subtitle, children, onClose }) {
 }
 
 export default function BookingsAddonsPage() {
+  
   const { data: addons = [] } = getAllAddons();
   const { data: rawBookings = [] } = getAllBookings() || {};
   const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
-
   const { data: monthlyExpenses = [] } = getAllMonthlyExpenses();
   const createMonthlyExpenseMutation = useCreateMonthlyExpense();
   const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense();
-
-  const {data: dailyExpenses = [] } = getAllDailyExpenses();
-  const createDailyExpenseMutation = useCreateDailyExpense();
-  const deleteDailyExpenseMutation = useDeleteDailyExpense();
-
-
+  const { data: dailyExpenses = [] } = getAllDailyExpenses();
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [hallFilter, setHallFilter] = useState("all");
@@ -92,6 +88,7 @@ export default function BookingsAddonsPage() {
   const [selectedStdExp, setSelectedStdExp] = useState(null);
   const [selectedDailyExp, setSelectedDailyExp] = useState(null);
   console.log(selectedDailyExp)
+  
 
   const [addingMonthly, setAddingMonthly] = useState(false);
   const [newMonthly, setNewMonthly] = useState({
@@ -101,6 +98,7 @@ export default function BookingsAddonsPage() {
     month: new Date().getMonth() + 1,
     year: CURRENT_YEAR,
   });
+  
 
   // Add-ons grouped by booking
   const addonsByBooking = useMemo(() => {
@@ -123,6 +121,7 @@ export default function BookingsAddonsPage() {
     });
   }, [bookings, selectedYear, selectedMonth, hallFilter, addonsByBooking]);
 
+  
   // Totals across the filtered set
   const totalClientRevenue = filteredBookings.reduce(
     (s, b) => s + (addonsByBooking[b.id] || []).reduce((a, x) => a + Number(x.client_price || 0), 0), 0
@@ -171,10 +170,17 @@ export default function BookingsAddonsPage() {
 
   const maxServiceCommission = Math.max(...serviceBreakdown.map((s) => s.commission), 1);
 
-  // ── Monthly overhead breakdown ───────────────────────────────────────────
-  // Uses the same year/month filters as the rest of the page. "All Months"
-  // shows every entry for the selected year, grouped by month; picking a
-  // specific month narrows to just that period's entries.
+  const { data: rawMonthlyExpenses } = getAllExpenses() || {};
+  const standardExpenses = Array.isArray(rawMonthlyExpenses) ? rawMonthlyExpenses : (rawMonthlyExpenses?.data || []);
+  const filteredStandardExpenses = useMemo(() => {
+    return standardExpenses.filter((e) => {
+      if (!e.created_at) return false;
+      const d = new Date(e.created_at);
+      const yearMatch = d.getFullYear() === selectedYear;
+      const monthMatch = selectedMonth === "all" || d.getMonth() === MONTHS.indexOf(selectedMonth);
+      return yearMatch && monthMatch;
+    });
+  }, [standardExpenses, selectedYear, selectedMonth]);
   const filteredMonthlyExpenses = useMemo(() => {
     return monthlyExpenses.filter((e) => {
       const yearMatch = e.year === selectedYear;
@@ -193,6 +199,15 @@ export default function BookingsAddonsPage() {
     });
     return map;
   }, [filteredMonthlyExpenses]);
+
+  const filteredDailyExpenses = useMemo(() => {
+    return dailyExpenses.filter((e) => {
+      const d = new Date(e.date);
+      const yearMatch = d.getFullYear() === selectedYear;
+      const monthMatch = selectedMonth === "all" || d.getMonth() === MONTHS.indexOf(selectedMonth);
+      return yearMatch && monthMatch;
+    });
+  }, [dailyExpenses, selectedYear, selectedMonth]);
 
   const monthlyByCategory = useMemo(() => {
     const map = {};
@@ -229,6 +244,7 @@ export default function BookingsAddonsPage() {
   function deleteMonthlyExpense(id) {
     deleteMonthlyExpenseMutation.mutate(id);
   }
+  
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 p-6 md:p-8 antialiased selection:bg-emerald-100">
@@ -486,6 +502,7 @@ export default function BookingsAddonsPage() {
       )}
 
       {/* ── Table & Detail Drawer (per booking) ───────────────────────────────── */}
+     {/* ── Table & Detail Drawer (per booking) ───────────────────────────────── */}
       {activeTab === "bookings" && (
         <div className={`grid gap-6 items-start ${selectedBooking ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
 
@@ -559,26 +576,14 @@ export default function BookingsAddonsPage() {
             </div>
           </div>
 
-          {/* Detail Drawer */}
+          {/* ── FIXED SIDEBAR LOGIC BELOW ── */}
           {selectedBooking && (
-            <div className="bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden sticky top-6">
-              <div className="p-5 border-b border-stone-100 bg-stone-50/60 flex items-start justify-between">
-                <div>
-                  <span className="text-[9px] font-semibold uppercase tracking-wider bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100">
-                    Add-on Breakdown
-                  </span>
-                  <p className="text-[14px] font-semibold text-stone-900 mt-1.5">{selectedBooking.client}</p>
-                  <p className="text-[11px] text-stone-400 mt-0.5">
-                    {selectedBooking.event} · {selectedBooking.hall} ·{" "}
-                    {new Date(selectedBooking.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
-                  </p>
-                </div>
-                <button onClick={() => setSelectedBooking(null)} className="text-stone-400 hover:text-stone-900 p-1">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-5 py-4 max-h-[calc(100vh-260px)]">
+            <DetailSidebar
+              title="Add-on Breakdown"
+              subtitle={selectedBooking.client}
+              onClose={() => setSelectedBooking(null)}
+            >
+              <div className="flex flex-col gap-4">
                 {(addonsByBooking[selectedBooking.id] || []).length === 0 ? (
                   <div className="text-center py-12">
                     <Inbox size={24} className="text-stone-200 mx-auto mb-2" />
@@ -599,6 +604,10 @@ export default function BookingsAddonsPage() {
 
                         <div className="bg-white p-2.5 rounded-lg border border-stone-100 flex flex-col gap-1 text-[12px]">
                           <div className="flex justify-between text-stone-600">
+                            <span>Description / Detail</span>
+                            <span className="font-semibold text-stone-900">{item.description || "N/A"}</span>
+                          </div>
+                          <div className="flex justify-between text-stone-600">
                             <span>Client Price</span>
                             <span className="font-semibold text-stone-900">{currency(item.client_price)}</span>
                           </div>
@@ -616,11 +625,10 @@ export default function BookingsAddonsPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </DetailSidebar>
           )}
         </div>
       )}
-
       {/* ── Monthly Expenses ─────────────────────────────────────────────────── */}
       {activeTab === "monthly" && (
         <div className="flex flex-col gap-6">
@@ -770,95 +778,79 @@ export default function BookingsAddonsPage() {
         </div>
       )}
       {/* ── Standard Expenses (Grouped by Category) ─────────────────────────── */}
-      {activeTab === "standard" && (
-        <div className={`grid gap-6 items-start ${selectedStdExp ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
-          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-[15px] font-semibold text-stone-900">Standard Expenses</h2>
-                <p className="text-[11px] text-stone-400 mt-0.5">Fixed recurring costs and operational overhead</p>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-stone-50 border-b border-stone-100">
-                    {["Category", "Allocated To", "Frequency", "Amount", ""].map((h) => (
-                      <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {/* Map through your standardExpenses here */}
-                  <tr onClick={() => setSelectedStdExp({ name: 'Staff Salary' })} className="cursor-pointer hover:bg-stone-50 transition-colors">
-                    <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">Staff Salaries</td>
-                    <td className="px-5 py-3.5 text-[12px] text-stone-500">Hall A & B</td>
-                    <td className="px-5 py-3.5"><span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">Monthly</span></td>
-                    <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(450000)}</td>
-                    <td className="px-5 py-3.5 text-right"><ChevronRight size={16} className="text-stone-400 inline" /></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          {selectedStdExp && (
-            <DetailSidebar title="Expense History" subtitle={selectedStdExp.name} onClose={() => setSelectedStdExp(null)}>
-              {/* History content goes here */}
-              <p className="text-stone-400 text-[12px]">View history of {selectedStdExp.name} payments...</p>
-            </DetailSidebar>
-          )}
-        </div>
-      )}
+  {/* ── Standard Expenses (Grouped by Category) ─────────────────────────── */}
+  {activeTab === "standard" && (
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-stone-50 border-b border-stone-100">
+                {["Date", "Category", "Event / Client", "Hall", "Description", "Amount"].map((h) => (
+                  <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100">
+              {filteredStandardExpenses.map((expense) => {
+                const linkedBooking = bookings.find(b => b.id === expense.bookingId);
+                return (
+                  <tr key={expense.id} className="hover:bg-stone-50 transition-colors">
+                    <td className="px-5 py-3.5 text-[12px] text-stone-400">{new Date(expense.created_at).toLocaleDateString("en-PK", { day: 'numeric', month: 'short' })}</td>
+                    <td className="px-5 py-3.5"><span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100 font-bold uppercase">{expense.category}</span></td>
+                    <td className="px-5 py-3.5">
+                      {linkedBooking ? (
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-medium text-stone-900">{linkedBooking.client}</span>
+                          <span className="text-[11px] text-stone-400">{linkedBooking.event}</span>
+                        </div>
+                      ) : <span className="text-[12px] text-stone-400 italic">General Overhead</span>}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {linkedBooking ? <span className="text-[10px] font-bold text-stone-500">{linkedBooking.hall}</span> : "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-[12px] text-stone-500">{expense.label}</td>
+                    <td className="px-5 py-3.5 text-[13px] font-bold text-stone-800">{currency(expense.amount)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* ── Daily Expenses (Log Format) ────────────────────────────────────── */}
-      {activeTab === "daily" && (
-        <div className={`grid gap-6 items-start ${selectedDailyExp ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
-          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-[15px] font-semibold text-stone-900">Daily Expense Log</h2>
-                <p className="text-[11px] text-stone-400 mt-0.5">Petty cash and small daily operational spends</p>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-stone-50 border-b border-stone-100">
-                    {["Date", "Description", "Category", "Amount", ""].map((h) => (
-                      <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {/* Map through your dailyExpenses here */}
-                  {dailyExpenses.map((expense) => {
-                    return (
-                      <tr className="hover:bg-stone-50 cursor-pointer" onClick={() => setSelectedDailyExp(expense)}>
-                        <td className="px-5 py-3.5 text-[12px] text-stone-400">{expense?.date}</td>
-                        <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{expense?.label}</td>
-                        <td className="px-5 py-3.5 text-[11px] text-indigo-600 font-semibold uppercase">{expense?.category}</td>
-                        <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{expense?.amount}</td>
-                        <td className="px-5 py-3.5 text-right"><ChevronRight size={16} className="text-stone-400 inline" /></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          {selectedDailyExp && (
-            <DetailSidebar title="Receipt Details" subtitle={`Transaction #${selectedDailyExp?.id}`} onClose={() => setSelectedDailyExp(null)}>
-              <div className="bg-stone-50 p-4 rounded-xl border border-stone-200">
-                <span className="text-[10px] text-stone-400 uppercase">Paid To</span>
-                <p className="text-[13px] font-semibold text-stone-900">Local Vendor</p>
-                <div className="mt-3 pt-3 border-t border-stone-200">
-                  <p className="text-[11px] text-stone-500 italic">{selectedDailyExp?.label}</p>
-                </div>
-              </div>
-            </DetailSidebar>
-          )}
-        </div>
-      )}
+     {activeTab === "daily" && (
+  <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+    <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+      <div>
+        <h2 className="text-[15px] font-semibold text-stone-900">Daily Expense Log</h2>
+        <p className="text-[11px] text-stone-400 mt-0.5">Petty cash and small daily operational spends</p>
+      </div>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-stone-50 border-b border-stone-100">
+            {["Date", "Description", "Category", "Amount"].map((h) => (
+              <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-stone-100">
+          {filteredDailyExpenses.map((expense) => (
+            <tr key={expense.id} className="hover:bg-stone-50 transition-colors">
+              <td className="px-5 py-3.5 text-[12px] text-stone-400">
+                {new Date(expense?.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+              </td>
+              <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{expense?.label}</td>
+              <td className="px-5 py-3.5 text-[11px] text-indigo-600 font-semibold uppercase">{expense?.category}</td>
+              <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{expense?.amount}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
     </div>
   );
 }

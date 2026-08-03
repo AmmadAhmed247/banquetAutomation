@@ -3,6 +3,8 @@ import api from "../api/api";
 const addonService = {
   getAll: async () => {
     const res = await api.get("api/addon/getAddons");
+    console.log(res.data);
+    
     return res.data;
   },
   create: async (data) => {

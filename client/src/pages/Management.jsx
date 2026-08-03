@@ -195,11 +195,17 @@ function EventRow({ booking }) {
 }
 
 export default function Management() {
-  const { data: expenses = [] } = getAllExpenses();
-  const { data: addons = [] } = getAllAddons();
-  const { data: allMonthlyExpenses = [] } = getAllMonthlyExpenses();
-  const { data: allDailyExpenses = [] } = getAllDailyExpenses();
+  const { data: rawExpenses } = getAllExpenses() || {};
+  const expenses = Array.isArray(rawExpenses) ? rawExpenses : (rawExpenses?.data || []);
 
+  const { data: rawAddons } = getAllAddons() || {};
+  const addons = Array.isArray(rawAddons) ? rawAddons : (rawAddons?.data || []);
+
+  const { data: rawMonthlyExpenses } = getAllMonthlyExpenses() || {};
+  const allMonthlyExpenses = Array.isArray(rawMonthlyExpenses) ? rawMonthlyExpenses : (rawMonthlyExpenses?.data || []);
+
+  const { data: rawDailyExpenses } = getAllDailyExpenses() || {};
+  const allDailyExpenses = Array.isArray(rawDailyExpenses) ? rawDailyExpenses : (rawDailyExpenses?.data || []);
   const createExpenseMutation = useCreateExpense();
   const deleteExpenseMutation = useDeleteExpense();
   const createAddonMutation = useCreateAddon();
@@ -208,12 +214,10 @@ export default function Management() {
   const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense();
   const createDailyExpenseMutation = useCreateDailyExpense();
   const deleteDailyExpenseMutation = useDeleteDailyExpense();
-
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [hallFilter, setHallFilter] = useState("all");
-
   const [addingMonthly, setAddingMonthly] = useState(false);
   const [newMonthly, setNewMonthly] = useState({
     category: MONTHLY_EXPENSE_CATEGORIES[0], label: "", amount: "", month: new Date().getMonth() + 1, year: new Date().getFullYear(),
