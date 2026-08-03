@@ -5,6 +5,8 @@ const expenseService = {
   getAllExpenses: async () => {
     try {
       const res = await api.get('/api/expense/allExpenses');
+      console.log(res.data);
+      
       return res.data.expenses || [];
     } catch (error) {
       console.error("Error fetching expenses:", error);

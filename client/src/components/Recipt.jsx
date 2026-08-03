@@ -292,7 +292,7 @@ export default function DarbarReceiptForm() {
         clientName: data.clientName,
         resident: data.resident,
         whatsapp: data.whatsapp,
-        phone: !data.phone || data.phone === "-" ? "-" : data.phone,
+        phone: !data.phone || data.phone === "-" ? "" : data.phone,
         reservationDate: formatDate(data.reservationDate),
         day: data.day,
         functionName: data.functionName,

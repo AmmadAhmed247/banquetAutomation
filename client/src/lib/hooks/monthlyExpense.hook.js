@@ -6,6 +6,7 @@ export function getAllMonthlyExpenses() {
     queryKey: ["monthlyExpenses"],
     queryFn: async () => {
       const res = await monthlyExpenseService.getAll();
+      console.log(res)
       return res.monthlyExpenses || [];
     },
   });

@@ -57,6 +57,13 @@
       "when": 1785416507013,
       "tag": "0007_fearless_lockjaw",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785770753690,
+      "tag": "0008_romantic_nebula",
+      "breakpoints": true
     }
   ]
 }
