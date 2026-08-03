@@ -7,6 +7,7 @@ import {
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllAddons } from "../lib/hooks/addon.hook";
 import { getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense } from "../lib/hooks/monthlyExpense.hook";
+import { getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense } from "../lib/hooks/dailyExpense.hook";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const CURRENT_YEAR = new Date().getFullYear();
@@ -77,6 +78,11 @@ export default function BookingsAddonsPage() {
   const createMonthlyExpenseMutation = useCreateMonthlyExpense();
   const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense();
 
+  const {data: dailyExpenses = [] } = getAllDailyExpenses();
+  const createDailyExpenseMutation = useCreateDailyExpense();
+  const deleteDailyExpenseMutation = useDeleteDailyExpense();
+
+
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [hallFilter, setHallFilter] = useState("all");
@@ -85,6 +91,7 @@ export default function BookingsAddonsPage() {
   const [activeTab, setActiveTab] = useState("service");
   const [selectedStdExp, setSelectedStdExp] = useState(null);
   const [selectedDailyExp, setSelectedDailyExp] = useState(null);
+  console.log(selectedDailyExp)
 
   const [addingMonthly, setAddingMonthly] = useState(false);
   const [newMonthly, setNewMonthly] = useState({
@@ -763,91 +770,95 @@ export default function BookingsAddonsPage() {
         </div>
       )}
       {/* ── Standard Expenses (Grouped by Category) ─────────────────────────── */}
-{activeTab === "standard" && (
-  <div className={`grid gap-6 items-start ${selectedStdExp ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
-    <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
-        <div>
-          <h2 className="text-[15px] font-semibold text-stone-900">Standard Expenses</h2>
-          <p className="text-[11px] text-stone-400 mt-0.5">Fixed recurring costs and operational overhead</p>
+      {activeTab === "standard" && (
+        <div className={`grid gap-6 items-start ${selectedStdExp ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
+          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-stone-900">Standard Expenses</h2>
+                <p className="text-[11px] text-stone-400 mt-0.5">Fixed recurring costs and operational overhead</p>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-100">
+                    {["Category", "Allocated To", "Frequency", "Amount", ""].map((h) => (
+                      <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {/* Map through your standardExpenses here */}
+                  <tr onClick={() => setSelectedStdExp({ name: 'Staff Salary' })} className="cursor-pointer hover:bg-stone-50 transition-colors">
+                    <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">Staff Salaries</td>
+                    <td className="px-5 py-3.5 text-[12px] text-stone-500">Hall A & B</td>
+                    <td className="px-5 py-3.5"><span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">Monthly</span></td>
+                    <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(450000)}</td>
+                    <td className="px-5 py-3.5 text-right"><ChevronRight size={16} className="text-stone-400 inline" /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {selectedStdExp && (
+            <DetailSidebar title="Expense History" subtitle={selectedStdExp.name} onClose={() => setSelectedStdExp(null)}>
+              {/* History content goes here */}
+              <p className="text-stone-400 text-[12px]">View history of {selectedStdExp.name} payments...</p>
+            </DetailSidebar>
+          )}
         </div>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-stone-50 border-b border-stone-100">
-              {["Category", "Allocated To", "Frequency", "Amount", ""].map((h) => (
-                <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-100">
-            {/* Map through your standardExpenses here */}
-            <tr onClick={() => setSelectedStdExp({name: 'Staff Salary'})} className="cursor-pointer hover:bg-stone-50 transition-colors">
-              <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">Staff Salaries</td>
-              <td className="px-5 py-3.5 text-[12px] text-stone-500">Hall A & B</td>
-              <td className="px-5 py-3.5"><span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">Monthly</span></td>
-              <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(450000)}</td>
-              <td className="px-5 py-3.5 text-right"><ChevronRight size={16} className="text-stone-400 inline" /></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {selectedStdExp && (
-        <DetailSidebar title="Expense History" subtitle={selectedStdExp.name} onClose={() => setSelectedStdExp(null)}>
-            {/* History content goes here */}
-            <p className="text-stone-400 text-[12px]">View history of {selectedStdExp.name} payments...</p>
-        </DetailSidebar>
-    )}
-  </div>
-)}
+      )}
 
-{/* ── Daily Expenses (Log Format) ────────────────────────────────────── */}
-{activeTab === "daily" && (
-  <div className={`grid gap-6 items-start ${selectedDailyExp ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
-    <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
-        <div>
-          <h2 className="text-[15px] font-semibold text-stone-900">Daily Expense Log</h2>
-          <p className="text-[11px] text-stone-400 mt-0.5">Petty cash and small daily operational spends</p>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-stone-50 border-b border-stone-100">
-              {["Date", "Description", "Category", "Amount", ""].map((h) => (
-                <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-100">
-            {/* Map through your dailyExpenses here */}
-            <tr className="hover:bg-stone-50 cursor-pointer" onClick={() => setSelectedDailyExp({id: 1})}>
-              <td className="px-5 py-3.5 text-[12px] text-stone-400">Aug 02, 2026</td>
-              <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">Tea & Snacks for Staff</td>
-              <td className="px-5 py-3.5 text-[11px] text-indigo-600 font-semibold uppercase">Kitchen</td>
-              <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(1250)}</td>
-              <td className="px-5 py-3.5 text-right"><ChevronRight size={16} className="text-stone-400 inline" /></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {selectedDailyExp && (
-        <DetailSidebar title="Receipt Details" subtitle="Transaction #DE-992" onClose={() => setSelectedDailyExp(null)}>
-            <div className="bg-stone-50 p-4 rounded-xl border border-stone-200">
+      {/* ── Daily Expenses (Log Format) ────────────────────────────────────── */}
+      {activeTab === "daily" && (
+        <div className={`grid gap-6 items-start ${selectedDailyExp ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
+          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-stone-900">Daily Expense Log</h2>
+                <p className="text-[11px] text-stone-400 mt-0.5">Petty cash and small daily operational spends</p>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-100">
+                    {["Date", "Description", "Category", "Amount", ""].map((h) => (
+                      <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {/* Map through your dailyExpenses here */}
+                  {dailyExpenses.map((expense) => {
+                    return (
+                      <tr className="hover:bg-stone-50 cursor-pointer" onClick={() => setSelectedDailyExp(expense)}>
+                        <td className="px-5 py-3.5 text-[12px] text-stone-400">{expense?.date}</td>
+                        <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{expense?.label}</td>
+                        <td className="px-5 py-3.5 text-[11px] text-indigo-600 font-semibold uppercase">{expense?.category}</td>
+                        <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{expense?.amount}</td>
+                        <td className="px-5 py-3.5 text-right"><ChevronRight size={16} className="text-stone-400 inline" /></td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {selectedDailyExp && (
+            <DetailSidebar title="Receipt Details" subtitle={`Transaction #${selectedDailyExp?.id}`} onClose={() => setSelectedDailyExp(null)}>
+              <div className="bg-stone-50 p-4 rounded-xl border border-stone-200">
                 <span className="text-[10px] text-stone-400 uppercase">Paid To</span>
                 <p className="text-[13px] font-semibold text-stone-900">Local Vendor</p>
                 <div className="mt-3 pt-3 border-t border-stone-200">
-                    <p className="text-[11px] text-stone-500 italic">"Tea and biscuits for the evening shift staff."</p>
+                  <p className="text-[11px] text-stone-500 italic">{selectedDailyExp?.label}</p>
                 </div>
-            </div>
-        </DetailSidebar>
-    )}
-  </div>
-)}
+              </div>
+            </DetailSidebar>
+          )}
+        </div>
+      )}
     </div>
   );
 }

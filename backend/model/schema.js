@@ -1,4 +1,4 @@
-const { pgTable, integer, serial, varchar, text, timestamp, numeric, time, boolean } = require("drizzle-orm/pg-core");
+const { pgTable, integer, serial, varchar, text, timestamp, numeric, time, boolean, date } = require("drizzle-orm/pg-core");
 
 
 const user = pgTable("users", {
@@ -71,6 +71,14 @@ const clients=pgTable("clients",{
 
 })
 
+const dailyExpenses = pgTable("daily_expenses", {
+    id: serial("id").primaryKey().notNull(),
+    date: date("date").notNull(),
+    label: text("label").notNull(),
+    category: text("category").notNull(),
+    amount: numeric("amount").notNull()
+})
+
 const expenses = pgTable("expenses", {
     id: serial("id").primaryKey().notNull(),
     bookingId: integer("booking_id").notNull().references(() => booking.id, { onDelete: "cascade" }),
@@ -88,6 +96,7 @@ const addons = pgTable("addons", {
     vendor_cost: numeric("vendor_cost", { precision: 12, scale: 2 }).notNull().default("0"),
     commission: numeric("commission", { precision: 12, scale: 2 }).notNull().default("0"), // = client_price - vendor_cost
     created_at: timestamp("created_at").defaultNow(),
+    description: text("description").notNull().default("")
 });
 
 
@@ -108,5 +117,6 @@ module.exports = {
     clients,
     expenses,
     addons,
-    monthlyExpenses
+    monthlyExpenses,
+    dailyExpenses
 }
