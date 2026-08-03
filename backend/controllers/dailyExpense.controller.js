@@ -32,9 +32,9 @@ async function createExpense(req, res) {
 
 async function deleteExpense(req, res) {
     try {
-        const { expenseId } = req.params
+        const { id } = req.params
 
-        const result = await DeleteDailyExpense(expenseId)
+        const result = await DeleteDailyExpense(id)
 
         return res.status(200).json(result)
     } catch (error) {
