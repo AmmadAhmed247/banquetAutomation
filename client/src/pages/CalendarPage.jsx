@@ -14,16 +14,16 @@ function BookingChip({ booking }) {
   const themeClasses = isPending
     ? "bg-amber-50 border-amber-200 text-amber-800"
     : isA
-    ? "bg-red-50 border-red-200 text-red-800"
-    : "bg-blue-50 border-blue-200 text-blue-800";
+    ? "bg-blue-50 border-blue-200 text-blue-800"
+    : "bg-red-50 border-red-200 text-red-800";
 
   const accentColorClass = isPending
     ? "text-amber-700"
     : isA
-    ? "text-red-700"
-    : "text-blue-700";
+    ? "text-blue-700"
+    : "text-red-700";
 
-  const borderColor = isPending ? "#f59e0b" : isA ? "#dc2626" : "#2563eb";
+  const borderColor = isPending ? "#f59e0b" : isA ? "#2563eb" : "#dc2626";
 
   return (
     <div className={`p-3 rounded-xl mb-2 border ${themeClasses}`}>
@@ -32,7 +32,7 @@ function BookingChip({ booking }) {
           Hall {booking.hall.toUpperCase()}
         </p>
         <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-          isPending ? "bg-amber-200 text-amber-900" : isA ? "bg-red-200 text-red-900" : "bg-blue-200 text-blue-900"
+          isPending ? "bg-amber-200 text-amber-900" : isA ? "bg-blue-200 text-blue-900" : "bg-red-200 text-red-900"
         }`}>
           {booking.status}
         </span>
@@ -248,12 +248,12 @@ export default function CalendarView() {
       <div className="flex gap-4 mb-4">
         {(view === "both" || view === "a") && (
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-red-300 inline-block" />Hall A
+            <span className="w-2.5 h-2.5 rounded-[3px] bg-blue-300 inline-block" />Hall A
           </div>
         )}
         {(view === "both" || view === "b") && (
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-blue-300 inline-block" />Hall B
+            <span className="w-2.5 h-2.5 rounded-[3px] bg-red-300 inline-block" />Hall B
           </div>
         )}
         <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
@@ -317,8 +317,8 @@ export default function CalendarView() {
                             isPending 
                               ? "bg-amber-200 text-amber-900" 
                               : b.hall === "a" 
-                              ? "bg-red-200 text-red-900" 
-                              : "bg-blue-200 text-blue-900"
+                              ? "bg-blue-200 text-blue-900" 
+                              : "bg-red-200 text-red-900"
                           }`}
                         >
                           {b.client.split("&")[0].trim()}
@@ -338,8 +338,8 @@ export default function CalendarView() {
                             isPending 
                               ? "bg-amber-400" 
                               : b.hall === "a" 
-                              ? "bg-red-400" 
-                              : "bg-blue-400"
+                              ? "bg-blue-400" 
+                              : "bg-red-400"
                           }`} 
                         />
                       );

@@ -31,6 +31,20 @@ const defaultForm = {
   advance: "",
   balance: "",
 };
+const isValidPhoneLength = (number) => {
+  if (!number) return true; // let `required` handle emptiness separately
+  const digits = number.replace(/\D/g, ""); // strip spaces, dashes, +, etc.
+
+  if (digits.startsWith("92")) {
+    // +923001234567 / 923001234567 -> 92 + 10 digits = 12 digits total
+    return digits.length === 12;
+  }
+  if (digits.startsWith("0")) {
+    // 03001234567 -> 11 digits total
+    return digits.length === 11;
+  }
+  return false; // doesn't start with 0 or 92 at all — reject
+};
 
 const HALLS = ["Hall A", "Hall B", "Hall A & B"];
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -274,13 +288,16 @@ export default function DarbarReceiptForm() {
   };
   
   const onError = (errors) => {
-    const firstKey = Object.keys(errors)[0];
-    if (firstKey) {
-      toast.error(`Please fill out the required field: ${firstKey}`);
-    } else {
-      toast.error("Please fill out all required fields.");
-    }
-  };
+  const firstKey = Object.keys(errors)[0];
+  const message = errors[firstKey]?.message;
+  if (message) {
+    toast.error(message);
+  } else if (firstKey) {
+    toast.error(`Please fill out the required field: ${firstKey}`);
+  } else {
+    toast.error("Please fill out all required fields.");
+  }
+};
 
   const onSubmit = async (data) => {
     if (isSubmitting) return;
@@ -368,11 +385,25 @@ export default function DarbarReceiptForm() {
                   <input className={inp} placeholder="North Nazimabad, Karachi" {...register("resident", { required: true })} />
                 </Field>
                 <Field label="WhatsApp Number" icon={MessageCircle}>
-                  <input className={inp} placeholder="0300-1234567" {...register("whatsapp", { required: true })} />
-                </Field>
-                <Field label="Phone Number" icon={Phone}>
-                  <input className={inp} placeholder="021-1234567" {...register("phone")} />
-                </Field>
+  <input
+    className={inp}
+    placeholder="0300-1234567"
+    {...register("whatsapp", {
+      required: true,
+      validate: (v) => isValidPhoneLength(v) || "Enter a valid 11-digit number",
+    })}
+  />
+</Field>
+
+<Field label="Phone Number" icon={Phone}>
+  <input
+    className={inp}
+    placeholder="021-1234567"
+    {...register("phone", {
+      validate: (v) => isValidPhoneLength(v) || "Enter a valid 11-digit number",
+    })}
+  />
+</Field>
               </div>
             </div>
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   TrendingUp, Plus, Trash2, Receipt,
   ChevronDown, BarChart3, DollarSign,
@@ -217,6 +217,9 @@ export default function Management() {
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
+  const [ledgerSearch, setLedgerSearch] = useState("");
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const ledgerPerPage = 10;
   const [hallFilter, setHallFilter] = useState("all");
   const [addingMonthly, setAddingMonthly] = useState(false);
   const [newMonthly, setNewMonthly] = useState({
@@ -250,6 +253,28 @@ export default function Management() {
       return yearMatch && monthMatch && hallMatch;
     });
   }, [bookings, selectedYear, selectedMonth, hallFilter]);
+
+  // ledger search + pagination
+  const ledgerFilteredBookings = useMemo(() => {
+    const q = ledgerSearch.trim().toLowerCase();
+    if (!q) return filteredBookings;
+    return filteredBookings.filter((b) => {
+      return (
+        (b.client || "").toLowerCase().includes(q) ||
+        (b.event || "").toLowerCase().includes(q) ||
+        (b.hall || "").toLowerCase().includes(q)
+      );
+    });
+  }, [filteredBookings, ledgerSearch]);
+
+  const ledgerTotalPages = ledgerSearch.trim() ? 1 : Math.max(1, Math.ceil(ledgerFilteredBookings.length / ledgerPerPage));
+  useEffect(() => {
+    if (ledgerPage > ledgerTotalPages) setLedgerPage(ledgerTotalPages);
+  }, [ledgerPage, ledgerTotalPages]);
+
+  const displayedLedgerBookings = ledgerSearch.trim()
+    ? ledgerFilteredBookings
+    : ledgerFilteredBookings.slice((ledgerPage - 1) * ledgerPerPage, ledgerPage * ledgerPerPage);
 
   const expensesByBooking = useMemo(() => {
     const map = {};
@@ -550,7 +575,37 @@ export default function Management() {
       <div className="grid lg:grid-cols-[1fr_380px] gap-6 items-start">
         <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center"><div><h2 className="text-[15px] font-semibold text-stone-900">Booking Ledger</h2><p className="text-[11px] text-stone-400 mt-0.5">Select a row to inspect gross costs and add-ons</p></div><SlidersHorizontal size={14} className="text-stone-400" /></div>
-          <div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead><tr className="bg-stone-50 border-b border-stone-100">{["Client", "Hall", "Event", "Date", "Revenue", "Costs", "Profit", ""].map((h) => (<th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>))}</tr></thead><tbody className="divide-y divide-stone-100">{filteredBookings.length === 0 ? <tr><td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">No bookings found.</td></tr> : filteredBookings.map((b) => { const bAddons = addonsByBooking[b.id] || []; const bExpenses = expensesByBooking[b.id] || []; const bAddonRev = bAddons.reduce((s, a) => s + Number(a.client_price || 0), 0); const bVendorExp = bAddons.reduce((s, a) => s + Number(a.vendor_cost || 0), 0); const bStdExp = bExpenses.reduce((s, e) => s + Number(e.amount || 0), 0); const bTotalRev = b.revenue + bAddonRev; const bTotalExp = bStdExp + bVendorExp; const bPro = bTotalRev - bTotalExp; const isSel = selectedBookingId === b.id; return (<tr key={b.id} onClick={() => setSelectedBookingId(isSel ? null : b.id)} className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-emerald-50/50" : "hover:bg-stone-50"}`}><td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}{bAddons.length > 0 && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded"><PlusCircle size={9} /> {bAddons.length}</span>}</td><td className="px-5 py-3.5"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>{b.hall}</span></td><td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td><td className="px-5 py-3.5 text-[12px] text-stone-400">{new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}</td><td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(bTotalRev)}</td><td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(bTotalExp)}</td><td className={`px-5 py-3.5 text-[13px] font-semibold ${bPro >= 0 ? "text-emerald-700" : "text-rose-600"}`}>{bPro >= 0 ? "+" : ""}{currency(bPro)}</td><td className="px-5 py-3.5 text-right"><button onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }} className="text-[11px] font-medium px-2.5 py-1 bg-stone-50 text-stone-700 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors">+ Add</button></td></tr>); })}</tbody></table></div>
+          <div className="px-6 py-3 border-b border-stone-100">
+            <div className="flex items-center gap-3">
+              <input
+                value={ledgerSearch}
+                onChange={(e) => { setLedgerSearch(e.target.value); setLedgerPage(1); }}
+                placeholder="Search bookings..."
+                className="px-3 py-2 border border-stone-200 rounded-lg text-[13px] outline-none w-64"
+              />
+              <div className="text-[12px] text-stone-500">{ledgerFilteredBookings.length} results</div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-stone-50 border-b border-stone-100">{["Client", "Hall", "Event", "Date", "Revenue", "Costs", "Profit", ""].map((h) => (<th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>))}</tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {ledgerFilteredBookings.length === 0 ? <tr><td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">No bookings found.</td></tr> : displayedLedgerBookings.map((b) => { const bAddons = addonsByBooking[b.id] || []; const bExpenses = expensesByBooking[b.id] || []; const bAddonRev = bAddons.reduce((s, a) => s + Number(a.client_price || 0), 0); const bVendorExp = bAddons.reduce((s, a) => s + Number(a.vendor_cost || 0), 0); const bStdExp = bExpenses.reduce((s, e) => s + Number(e.amount || 0), 0); const bTotalRev = b.revenue + bAddonRev; const bTotalExp = bStdExp + bVendorExp; const bPro = bTotalRev - bTotalExp; const isSel = selectedBookingId === b.id; return (<tr key={b.id} onClick={() => setSelectedBookingId(isSel ? null : b.id)} className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-emerald-50/50" : "hover:bg-stone-50"}`}><td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}{bAddons.length > 0 && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded"><PlusCircle size={9} /> {bAddons.length}</span>}</td><td className="px-5 py-3.5"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>{b.hall}</span></td><td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td><td className="px-5 py-3.5 text-[12px] text-stone-400">{new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}</td><td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(bTotalRev)}</td><td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(bTotalExp)}</td><td className={`px-5 py-3.5 text-[13px] font-semibold ${bPro >= 0 ? "text-emerald-700" : "text-rose-600"}`}>{bPro >= 0 ? "+" : ""}{currency(bPro)}</td><td className="px-5 py-3.5 text-right"><button onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }} className="text-[11px] font-medium px-2.5 py-1 bg-stone-50 text-stone-700 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors">+ Add</button></td></tr>); })}
+              </tbody>
+            </table>
+          </div>
+
+          { /* pagination controls */ }
+          {!ledgerSearch.trim() && ledgerFilteredBookings.length > 0 && (
+            <div className="px-6 py-3 flex items-center justify-end gap-2">
+              <button onClick={() => setLedgerPage((p) => Math.max(1, p - 1))} disabled={ledgerPage === 1} className={`px-3 py-1 rounded-lg border text-sm ${ledgerPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}>Prev</button>
+              <div className="text-sm text-stone-500">Page {ledgerPage} of {ledgerTotalPages}</div>
+              <button onClick={() => setLedgerPage((p) => Math.min(ledgerTotalPages, p + 1))} disabled={ledgerPage === ledgerTotalPages} className={`px-3 py-1 rounded-lg border text-sm ${ledgerPage === ledgerTotalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}>Next</button>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-3">

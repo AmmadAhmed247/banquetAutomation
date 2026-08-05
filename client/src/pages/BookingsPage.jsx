@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlusCircle, AlertCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -42,6 +42,8 @@ export default function Bookings({ showToast }) {
   const [modal, setModal] = useState(null);
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const perPage = 10;
   const [saveLoading, setSaveLoading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -143,6 +145,16 @@ const handleDelete = (booking) => {
       b.phone?.includes(search)
     );
 
+  // If there's an active search, show all results. Otherwise paginate.
+  const totalPages = search.trim() ? 1 : Math.max(1, Math.ceil(filtered.length / perPage));
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const displayedBookings = search.trim()
+    ? filtered
+    : filtered.slice((page - 1) * perPage, page * perPage);
+
   return (
     <div className="min-h-screen bg-[#F8F7F3] p-4 sm:p-8">
       {/* Header */}
@@ -176,19 +188,52 @@ const handleDelete = (booking) => {
       {/* Filters Section */}
       <FiltersSection
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={(v) => { setSearch(v); setPage(1); }}
         filter={filter}
-        onFilterChange={setFilter}
+        onFilterChange={(v) => { setFilter(v); setPage(1); }}
         filteredCount={filtered.length}
       />
 
       {/* Bookings List */}
       <BookingsList
-        filteredBookings={filtered}
+        filteredBookings={displayedBookings}
         isLoading={isLoading}
         onEdit={openEdit}
         onDelete={handleDelete}
       />
+
+      {/* Pagination */}
+      {!search.trim() && filtered.length > 0 && (
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <div className="text-sm text-gray-600">{
+            `Showing ${Math.min((page - 1) * perPage + 1, filtered.length)}-${Math.min(page * perPage, filtered.length)} of ${filtered.length}`
+          }</div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className={`px-3 py-1 rounded-lg border text-sm ${page === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+            >Prev</button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`px-3 py-1 rounded-lg text-sm border ${p === page ? 'bg-green-600 text-white' : 'hover:bg-gray-100'}`}
+                >{p}</button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className={`px-3 py-1 rounded-lg border text-sm ${page === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+            >Next</button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {modal && (
