@@ -277,7 +277,110 @@ function ProcessStep({ num, title, desc, index }) {
     </Reveal>
   );
 }
+const reviews = [
+  {
+    name: "Darbar Banquet",
+    location: "Pakistan",
+    tag: "Venue Automation",
+    rating: 5,
+    time: "Recent",
+    whatsappLink: "https://wa.me/923008207221",
+    text: "Automated our entire process with a custom WhatsApp bot and dedicated venue CRM. Handles date availability via pictures, digital receipts, client onboarding, and booking management seamlessly.",
+  },
+  {
+    name: "Aaron",
+    location: "United States",
+     tag: "Fiver",
+    rating: 5,
+    time: "5 months ago",
+    text: "Ammad and his team are very professional and solution based. Any obstacle that presented itself Ahmad displayed great problem solving skills.",
+  },
+  {
+    name: "teamstack",
+    location: "Thailand",
+    tag: "Fiver",
+    rating: 5,
+    time: "9 months ago",
+    text: "Really matched the level of hustle we needed on a last minute project. Currently spinning up a second project with him right now, highly recommended for anything web3 payments related.",
+  },
+  {
+    name: "Richard",
+    location: "United States",
+    tag: "Fiver",
+    rating: 5,
+    time: "6 months ago",
+    text: "Great job! Seller was very informative and helpful. End product came out great! Highly recommend.",
+  },
+];
 
+function ReviewsMarquee() {
+  const marqueeItems = [...reviews, ...reviews];
+
+  return (
+    <section id="reviews" className="py-20 bg-white overflow-hidden border-y border-[#E9F9EF]">
+      <div className="max-w-6xl mx-auto px-6 lg:pl-24 mb-10">
+        <p className="font-mono text-[11.5px] text-[#16A34A] font-medium tracking-wider mb-2">TESTIMONIALS</p>
+        <h2 className="font-serif text-[28px] sm:text-[34px] font-semibold text-[#122019] tracking-tight">
+          Trusted by businesses worldwide
+        </h2>
+      </div>
+
+      <div className="relative w-full overflow-hidden">
+        {/* Gradient Mask */}
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-white to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white to-transparent z-10" />
+
+        <div className="animate-marquee flex gap-6">
+          {marqueeItems.map((item, index) => (
+            <div
+              key={index}
+              className="w-[340px] sm:w-[380px] shrink-0 bg-[#FFFFFF] border border-[#E9F9EF] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#16A34A] text-white font-bold text-sm flex items-center justify-center">
+                      {item.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="text-[14px] font-bold text-[#122019] leading-tight">{item.name}</h4>
+                      <p className="text-[11px] text-[#5B6B63]">{item.location}</p>
+                    </div>
+                  </div>
+                  {item.tag && (
+                    <span className="text-[10px] font-mono bg-[#F0FDF4] text-[#15803D] px-2.5 py-1 rounded-full font-medium">
+                      {item.tag}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 mb-3">
+                  <div className="flex text-[#16A34A] text-sm">★★★★★</div>
+                  <span className="text-[11px] text-[#8B978F] font-mono">• {item.time}</span>
+                </div>
+
+                <p className="text-[13px] text-[#3F4B45] leading-relaxed mb-4">
+                  "{item.text}"
+                </p>
+
+                {item.whatsappLink && (
+                  <a
+                    href={item.whatsappLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-[12px] font-medium text-[#16A34A] hover:text-[#15803D] hover:underline transition-colors"
+                  >
+                    <span>Try live WhatsApp bot</span> →
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 // ─────────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -498,6 +601,20 @@ export default function HomePage() {
           .drift-blob, .raabta-node-lit { animation: none !important; }
           * { transition-duration: 0.01ms !important; }
         }
+          @keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 35s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
       `}</style>
 
       <RaabtaLine progress={scrollProgress} />
@@ -506,7 +623,7 @@ export default function HomePage() {
       <div className="nav-wrap">
         <div className={`nav-pill ${scrolled ? "nav-pill-scrolled" : ""}`}>
           <a href="#top" onClick={(e) => scrollToAnchor(e, "#top")} className="flex items-center gap-2">
-            <span className="font-serif text-[19px] font-semibold text-[#122019] tracking-tight">Raabta</span>
+            <span className="font-serif text-[19px] font-semibold text-[#122019] tracking-tight"><img src="./text.png" alt="logo" className="h-6" /></span>
           </a>
 
           <div className="hidden md:flex items-center gap-7">
@@ -652,6 +769,7 @@ export default function HomePage() {
           <ProcessStep num="04" index={3} title="Grow" desc="We keep tuning the system as your business changes — it's a partnership, not a handoff." />
         </div>
       </section>
+      <ReviewsMarquee />
 
       {/* ── Closing CTA — light card, no dark panel ── */}
       <section id="contact" className="cta-section py-24 px-6">
@@ -673,6 +791,7 @@ export default function HomePage() {
           </div>
         </Reveal>
       </section>
+      
 
       {/* ── Footer ── */}
       <footer className="bg-white">
