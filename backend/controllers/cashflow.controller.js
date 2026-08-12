@@ -1,171 +1,176 @@
 const { db } = require("../config/db");
-const { bookings, booking, payments, addons, expenses, dailyExpenses, monthlyExpenses } = require("../model/schema");
-const { sql } = require("drizzle-orm");
-
-// NOTE: model/schema exports `booking` singular etc. We'll reference those directly.
 const b = require("../model/schema");
-
-function parseDateInput(q) {
-  if (!q) return null;
-  const d = new Date(q);
-  if (isNaN(d.getTime())) return null;
-  return d;
-}
+const { gte, lte, and, sql } = require("drizzle-orm");
 
 // GET /api/cashflow?start=YYYY-MM-DD&end=YYYY-MM-DD
 const getCashflow = async (req, res) => {
   try {
-    const startQ = req.query.start;
-    const endQ = req.query.end;
+    const { start: startQ, end: endQ } = req.query;
 
-    // When start/end are passed as YYYY-MM-DD, treat them as full-day bounds
-    const startDate = startQ ? new Date(`${startQ}T00:00:00.000`) : new Date(new Date().setHours(0,0,0,0));
-    const endDate = endQ ? new Date(`${endQ}T23:59:59.999`) : new Date(new Date().setHours(23,59,59,999));
+    const todayStr = new Date().toISOString().split("T")[0];
+    const startDate = new Date(`${startQ || todayStr}T00:00:00.000`);
+    const endDate = new Date(`${endQ || startQ || todayStr}T23:59:59.999`);
 
-    // Fetch raw data in parallel
-    const [allBookings, allPayments, allAddons, allExpenses, allDailyExpenses, allMonthlyExpenses] = await Promise.all([
-      db.select().from(b.booking),
-      db.select().from(b.payments).orderBy(sql`${b.payments.created_at} DESC`),
-      db.select().from(b.addons),
-      db.select().from(b.expenses),
-      db.select().from(b.dailyExpenses),
+    const [
+      rangePayments,
+      rangeAddons,
+      rangeExpenses,
+      rangeDailyExpenses,
+      rangeMonthlyExpenses,
+      allBookings
+    ] = await Promise.all([
+      // Real payment receipts in range
+      db.select().from(b.payments)
+        .where(and(gte(b.payments.created_at, startDate), lte(b.payments.created_at, endDate)))
+        .orderBy(sql`${b.payments.created_at} DESC`),
+
+      // Addons in range
+      db.select().from(b.addons)
+        .where(and(gte(b.addons.created_at, startDate), lte(b.addons.created_at, endDate))),
+
+      // Direct booking expenses in range
+      db.select().from(b.expenses)
+        .where(and(gte(b.expenses.created_at, startDate), lte(b.expenses.created_at, endDate))),
+
+      // Daily petty cash
+      db.select().from(b.dailyExpenses)
+        .where(and(
+          gte(b.dailyExpenses.date, startQ || todayStr),
+          lte(b.dailyExpenses.date, endQ || startQ || todayStr)
+        )),
+
+      // Monthly overhead expenses
       db.select().from(b.monthlyExpenses),
+
+      // Fetch bookings created or updated in date range
+      db.select().from(b.booking)
+        .where(and(gte(b.booking.created_at, startDate), lte(b.booking.created_at, endDate)))
     ]);
 
-    // Helper to check if a timestamp falls in range
-    const inRange = (raw) => {
-      if (!raw) return false;
-      const d = new Date(raw);
-      return d >= startDate && d <= endDate;
-    };
+    // Map of existing payments by booking ID
+    const paymentBookingIds = new Set(rangePayments.map((p) => p.bookingId));
 
-    // Map payments by bookingId (for lookups and totals)
-    const paymentsByBooking = {};
-    allPayments.forEach((p) => {
-      const bId = p.booking_id || p.bookingId;
-      if (!bId) return;
-      paymentsByBooking[bId] = paymentsByBooking[bId] || [];
-      paymentsByBooking[bId].push(p);
-    });
-
-    // Build activity list and running sums
     const activity = [];
     let totalIn = 0;
     let totalOut = 0;
     const byMethod = {};
 
-    // 1) Payments table entries (real receipts)
-    allPayments.forEach((p) => {
-      if (!inRange(p.created_at)) return;
-      const amount = Number(p.amount || 0);
+    // Helper to add Inflow
+    const addInflow = (id, time, category, note, who, method, amount) => {
       if (amount <= 0) return;
-
-      const method = p.payment_method || p.paymentMethod || "Cash";
-      byMethod[method] = (byMethod[method] || 0) + amount;
-
-      activity.push({
-        id: `payment-${p.id}`,
-        time: p.created_at,
-        flow: "IN",
-        category: p.type || "Payment",
-        note: p.note || p.type || "Booking Payment",
-        who: null,
-        method,
-        amount,
-      });
-
+      const m = method || "Cash";
+      byMethod[m] = (byMethod[m] || 0) + amount;
       totalIn += amount;
+      activity.push({ id, time, flow: "IN", category, note, who, method: m, amount });
+    };
+
+    // Helper to add Outflow
+    const addOutflow = (id, time, category, note, who, method, amount) => {
+      if (amount <= 0) return;
+      totalOut += amount;
+      activity.push({ id, time, flow: "OUT", category, note, who, method: method || "Cash", amount });
+    };
+
+    // 1. Real Payments Inflow from Payments Table
+    rangePayments.forEach((p) => {
+      addInflow(
+        `payment-${p.id}`,
+        p.created_at,
+        p.type || "Payment",
+        p.note || `${p.type || "Booking"} Payment Received`,
+        null,
+        p.payment_method,
+        Number(p.amount || 0)
+      );
     });
 
-    // 2) Addons (inflows) and their vendor payouts (outflows)
-    allAddons.forEach((a) => {
-      if (!inRange(a.created_at)) return;
-      const price = Number(a.client_price || a.clientPrice || 0);
-      const vendor = Number(a.vendor_cost || a.vendorCost || 0);
-      if (price > 0) {
-        activity.push({ id: `addon-${a.id}`, time: a.created_at, flow: "IN", category: "Add-on", note: a.service, who: null, method: "Cash/Direct", amount: price });
-        totalIn += price;
-      }
-      if (vendor > 0) {
-        activity.push({ id: `addon-vendor-${a.id}`, time: a.created_at, flow: "OUT", category: "Vendor Payout", note: a.service, who: null, method: "Cash/Bank", amount: vendor });
-        totalOut += vendor;
-      }
-    });
-
-    // 3) Expenses
-    allExpenses.forEach((e) => {
-      if (!inRange(e.created_at)) return;
-      const amt = Number(e.amount || 0);
-      if (amt <= 0) return;
-      activity.push({ id: `expense-${e.id}`, time: e.created_at, flow: "OUT", category: e.category || "Expense", note: e.label || e.description, who: null, method: "—", amount: amt });
-      totalOut += amt;
-    });
-
-    // 4) Daily petty cash
-    allDailyExpenses.forEach((d) => {
-      if (!inRange(d.date)) return;
-      const amt = Number(d.amount || 0);
-      if (amt <= 0) return;
-      // dailyExpenses use `date` instead of created_at
-      activity.push({ id: `daily-${d.id}`, time: d.date, flow: "OUT", category: d.category || "Daily Expense", note: d.label || "Daily", who: null, method: "Cash", amount: amt });
-      totalOut += amt;
-    });
-
-    // 5) For bookings that do not have payments records within the range, infer inflow from booking fields
+    // 2. Bookings Inflow Logic (Status-Based & Legacy Handling)
     allBookings.forEach((bk) => {
-      // ignore cancelled bookings
-      if ((bk.status || "").toLowerCase() === "cancelled") return;
+      const status = (bk.status || "").toLowerCase();
+      if (status === "cancelled") return;
 
-      // prefer payment records if present (they were already added above)
-      const hasAnyPayment = (paymentsByBooking[bk.id] || []).length > 0;
+      const totalAmt = Number(bk.total_amount || 0);
+      const advancePaid = Number(bk.advance_paid || 0);
+      const remainingBalance = Math.max(0, totalAmt - advancePaid);
+      const method = bk.payment_method || "Cash";
 
-      // Determine an appropriate date for inferred booking entries
-      const refDate = bk.updated_at || bk.created_at || bk.date || new Date();
-      if (!inRange(refDate)) return; // skip booking if not in requested date range
-
-      if (!hasAnyPayment) {
-        // If booking is finished, assume full amount received
-        const total = Number(bk.total_amount || bk.totalAmount || 0);
-        const advance = Number(bk.advance_paid || bk.advancePaid || 0);
-
-        if ((bk.status || "").toLowerCase() === "finished") {
-          // Add one inflow for total
-          if (total > 0) {
-            activity.push({ id: `booking-${bk.id}`, time: refDate, flow: "IN", category: "Booking (inferred)", note: `Booking ${bk.event || ""}`, who: bk.client || null, method: bk.payment_method || "Cash", amount: total });
-            totalIn += total;
-            byMethod[bk.payment_method || "Cash"] = (byMethod[bk.payment_method || "Cash"] || 0) + total;
-          }
-        } else {
-          // Not finished: treat recorded advance_paid as inflow
-          if (advance > 0) {
-            activity.push({ id: `booking-adv-${bk.id}`, time: refDate, flow: "IN", category: "Advance (inferred)", note: `Advance for ${bk.event || ""}`, who: bk.client || null, method: bk.payment_method || "Cash", amount: advance });
-            totalIn += advance;
-            byMethod[bk.payment_method || "Cash"] = (byMethod[bk.payment_method || "Cash"] || 0) + advance;
-          }
+      // Case A: Legacy/Manual Booking without entry in `payments` table
+      if (!paymentBookingIds.has(bk.id)) {
+        if (advancePaid > 0) {
+          addInflow(
+            `booking-adv-${bk.id}`,
+            bk.created_at,
+            "Advance Payment",
+            `Advance for ${bk.event || "Event"} (${bk.client})`,
+            bk.client,
+            method,
+            advancePaid
+          );
         }
-      } else {
-        // There are payment rows for this booking. If some payments occurred outside the requested range, they were already counted; skip.
+      }
+
+      // Case B: Status is Finished / Completed -> Add Remaining Settlement Inflow
+      if (status === "finished" || status === "completed") {
+        if (remainingBalance > 0) {
+          addInflow(
+            `booking-settlement-${bk.id}`,
+            bk.updated_at || bk.created_at,
+            "Final Settlement",
+            `Remaining balance collected for finished event (${bk.client})`,
+            bk.client,
+            method,
+            remainingBalance
+          );
+        }
       }
     });
 
-    // 6) Monthly recurring overheads - include if their month/year falls in range
-    allMonthlyExpenses.forEach((m) => {
-      // monthlyExpenses have month (1-12) and year
-      const month = Number(m.month) - 1; // convert to 0-index
-      const year = Number(m.year);
-      const d = new Date(year, month, 1);
-      if (!inRange(d)) return;
-      const amt = Number(m.amount || 0);
-      if (amt > 0) {
-        activity.push({ id: `monthly-${m.id}`, time: d, flow: "OUT", category: "Monthly Overhead", note: m.label || m.category, who: null, method: "—", amount: amt });
-        totalOut += amt;
+    // 3. Addon Vendor Payouts (Outflow)
+    rangeAddons.forEach((a) => {
+      addOutflow(`addon-vendor-${a.id}`, a.created_at, "Vendor Payout", `${a.service} (Vendor)`, null, "Cash/Bank", Number(a.vendor_cost || 0));
+    });
+
+    // 4. Booking Direct Expenses (Outflow)
+    rangeExpenses.forEach((e) => {
+      addOutflow(`expense-${e.id}`, e.created_at, e.category || "Expense", e.label || "Event Expense", null, "Cash", Number(e.amount || 0));
+    });
+
+    // 5. Daily Petty Cash (Outflow)
+    rangeDailyExpenses.forEach((d) => {
+      addOutflow(`daily-${d.id}`, d.date, d.category || "Daily Expense", d.label || "Daily Petty Cash", null, "Cash", Number(d.amount || 0));
+    });
+
+    // 6. Monthly Overhead Expenses (Outflow)
+    const targetMonth = startDate.getMonth() + 1;
+    const targetYear = startDate.getFullYear();
+
+    rangeMonthlyExpenses.forEach((m) => {
+      if (Number(m.month) === targetMonth && Number(m.year) === targetYear) {
+        addOutflow(
+          `monthly-${m.id}`,
+          new Date(targetYear, targetMonth - 1, 1),
+          "Monthly Overhead",
+          m.label || m.category,
+          null,
+          "Bank/Cash",
+          Number(m.amount || 0)
+        );
       }
     });
 
-    // Sort activity by time desc
+    // Sort all activity by timestamp descending
     activity.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
-    return res.status(200).json({ success: true, data: { totalIn, totalOut, net: totalIn - totalOut, byMethod, activity } });
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalIn,
+        totalOut,
+        net: totalIn - totalOut,
+        byMethod,
+        activity,
+      },
+    });
   } catch (err) {
     console.error("Error building cashflow summary:", err);
     return res.status(500).json({ success: false, message: "Failed to compute cashflow" });

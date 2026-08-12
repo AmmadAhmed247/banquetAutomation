@@ -8,9 +8,9 @@ dotenv.config();
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     // Force SSL if your cloud provider requires it, or fall back to checking NODE_ENV
-    // ssl: {
-    //     rejectUnauthorized: false
-    // }
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 const db = drizzle(pool, { schema });

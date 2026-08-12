@@ -229,8 +229,8 @@ function BookingsTable({ filteredBookings, onEdit, onDelete }) {
                   </td>
 
                   <td className="px-4 py-3.5 whitespace-nowrap">
-                    <span className="text-[11px] font-semibold text-green-700">
-                      {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                    <span className="text-[11px] font-semibold text-green-900">
+                      {(booking.createdAt || booking.created_at) ? new Date(booking.createdAt || booking.created_at).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric" }) : "—"}
                     </span>
                   </td>
 
@@ -239,7 +239,7 @@ function BookingsTable({ filteredBookings, onEdit, onDelete }) {
                     <p className="text-[11px] text-green-500 mt-0.5">{booking.phone}</p>
                   </td>
 
-                  <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
+                  <td className="px-4 py-3.5 whitespace-nowrap font-semibold text-green-900">
                     {booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                   </td>
 
