@@ -46,7 +46,7 @@ const selectCls = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm
 const EVENTS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate"];
 const VENUES = ["Hall A", "Hall B"];
 const PAYMENT_METHODS = ["Cash", "Bank Transfer", "Online", "Cheque"];
-const STATUSES = ["Pending", "Confirmed", "Cancelled"];
+const STATUSES = ["Pending", "Confirmed", "Cancelled", "Finished"];
 const TIME_SLOTS = ["Afternoon", "Night"];
 const BANKS = ["Easypaisa", "JazzCash", "Habib Metro", "Other"];
 
@@ -177,7 +177,7 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
             <div className="grid grid-cols-2 gap-4">
               {[
                 { label: "Event Type", key: "event", options: EVENTS },
-                { label: "Package", key: "package", options: ["Basic", "Standard", "Premium"] },
+                // { label: "Package", key: "package", options: ["Basic", "Standard", "Premium"] },
                 { label: "Venue", key: "venue", options: VENUES },
                 { label: "Time Slot", key: "timeSlot", options: TIME_SLOTS },
                 { label: "Status", key: "status", options: STATUSES },

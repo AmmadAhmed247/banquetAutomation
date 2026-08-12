@@ -29,6 +29,7 @@ export default function RootLayout() {
     { name: "Receipt", path: "recipt", icon: ReceiptIcon },
     { name: "Management System", path: "management", icon: DollarSign },
     { name: "Add-ons", path: "addons", icon: BanknoteArrowDown },
+    { name: "Cash Flow", path: "cash-flow", icon: DollarSign },
   ];
 
   // UPDATED: Check if they are on the main dashboard page

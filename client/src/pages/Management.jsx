@@ -26,7 +26,7 @@ import {
 // ── helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const STANDARD_EXPENSE_CATEGORIES = ["Staff Wages", "Miscellaneous"];
-const MONTHLY_EXPENSE_CATEGORIES = ["Electric Bill", "Diesel"];
+const MONTHLY_EXPENSE_CATEGORIES = ["Electric Bill", "Diesel" , "Sui Gas", "Water Bill", "Internet", "Rent", "Security Guard", "Miscellaneous"];
 const DAILY_EXPENSE_CATEGORIES = ["Kitchen/Tea", "Maintenance", "Petty Cash", "Office"];
 
 const ADDON_CATEGORIES = [
@@ -56,6 +56,19 @@ function daysUntil(dateStr) {
   return Math.round((d - today) / 86400000);
 }
 
+// Revenue rules:
+// - Finished bookings: count full `total_amount`
+// - Confirmed bookings: count only `advance_paid`
+// - Others: count 0
+function getBookingRevenue(b) {
+  const status = (b.status || "").toString().toLowerCase();
+  const total = Number(b.total_amount ?? b.totalAmount ?? 0) || 0;
+  const advance = Number(b.advance_paid ?? b.advancePaid ?? 0) || 0;
+  if (status === "finished" || status === "completed") return total;
+  if (["confirmed", "pending", "cancelled"].includes(status)) return advance;
+  return 0;
+}
+
 function normalizeBooking(b) {
   return {
     id: b.id,
@@ -64,7 +77,7 @@ function normalizeBooking(b) {
     event: b.event,
     date: b.date,
     status: b.status,
-    revenue: Number(b.total_amount) || 0,
+    revenue: getBookingRevenue(b),
   };
 }
 
@@ -232,10 +245,11 @@ export default function Management() {
   });
 
   const { data: rawBookings = [] } = getAllBookings() || {};
+  // Include all bookings (including pending/cancelled) so ledger/breakdowns
+  // can show them — revenue rules will only count advances for non-finished
+  // statuses.
   const bookings = useMemo(() => {
-    return rawBookings
-      .filter((b) => b.status?.toLowerCase() !== "cancelled" && b.status?.toLowerCase() !== "pending")
-      .map(normalizeBooking);
+    return rawBookings.map(normalizeBooking);
   }, [rawBookings]);
 
   const [mode, setMode] = useState("expense");
@@ -531,7 +545,7 @@ export default function Management() {
       </div>
 
       {/* ── Charts ──────────────────────────────────────────────────────────── */}
-      <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
+      {/* <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
         <div className="bg-white rounded-xl border border-stone-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div><h2 className="text-[15px] font-semibold text-stone-900">Revenue vs Expenses</h2><p className="text-[11px] text-stone-400 mt-0.5">{currency(totalRevenue)} gross vs {currency(totalExpense)} costs</p></div>
@@ -552,7 +566,7 @@ export default function Management() {
           <p className="text-[11px] text-stone-400 mb-3">{upcomingEvents.length} scheduled</p>
           <div className="flex-1">{upcomingEvents.length === 0 ? <div className="text-center py-12"><Inbox size={24} className="text-stone-200 mx-auto mb-2" /><p className="text-stone-400 text-[12px]">No upcoming bookings</p></div> : upcomingEvents.map((b) => <EventRow key={b.id} booking={b} />)}</div>
         </div>
-      </div>
+      </div> */}
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
         <div className="bg-white rounded-xl border border-stone-200 p-6">

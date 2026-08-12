@@ -22,6 +22,7 @@ export default function DashboardPage() {
     { name: "Receipt", path: "recipt", icon: ReceiptIcon, desc: "Manage your studio" },
     { name: "Management System", path: "management", icon: DollarSign, desc: "Manage your studio" },
     { name: "Add-ons", path: "addons", icon: BanknoteArrowDown, desc: "Manage your studio" },
+    { name: "Cash Flow", path: "cash-flow", icon: DollarSign, desc: "Manage your studio" },
   ];
 
   const handleLogout = async () => {
