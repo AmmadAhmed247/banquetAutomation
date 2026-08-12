@@ -110,6 +110,19 @@ const monthlyExpenses = pgTable("monthly_expenses", {
     created_at: timestamp("created_at").defaultNow(),
 });
 
+const payments = pgTable("payments", {
+  id: serial("id").primaryKey().notNull(),
+  bookingId: integer("booking_id")
+    .notNull()
+    .references(() => booking.id, { onDelete: "cascade" }),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull().default("Advance"), // 'Advance', 'Settlement', 'Partial'
+  payment_method: varchar("payment_method", { length: 50 }).notNull().default("Cash"),
+  bank_name: varchar("bank_name", { length: 50 }),
+  note: varchar("note", { length: 255 }),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
 module.exports = {
     user,
     booking,
@@ -118,5 +131,6 @@ module.exports = {
     expenses,
     addons,
     monthlyExpenses,
-    dailyExpenses
+    dailyExpenses,
+    payments
 }
