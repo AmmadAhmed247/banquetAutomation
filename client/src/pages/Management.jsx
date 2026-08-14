@@ -26,7 +26,7 @@ import {
 // ── helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const STANDARD_EXPENSE_CATEGORIES = ["Staff Wages", "Miscellaneous"];
-const MONTHLY_EXPENSE_CATEGORIES = ["Electric Bill", "Diesel"];
+const MONTHLY_EXPENSE_CATEGORIES = ["Electric Bill", "Diesel" , "Sui Gas", "Water Bill", "Internet", "Rent", "Security Guard", "Miscellaneous"];
 const DAILY_EXPENSE_CATEGORIES = ["Kitchen/Tea", "Maintenance", "Petty Cash", "Office"];
 
 const ADDON_CATEGORIES = [
@@ -48,12 +48,36 @@ function pct(a, b) {
   if (!b) return 0;
   return Math.round((a / b) * 100);
 }
+function getPKTDateISO(dateInput = new Date()) {
+  const parsed = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (!parsed || Number.isNaN(parsed.getTime())) return "";
+
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(parsed);
+}
 function daysUntil(dateStr) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const d = new Date(dateStr);
   d.setHours(0, 0, 0, 0);
   return Math.round((d - today) / 86400000);
+}
+
+// Revenue rules:
+// - Finished bookings: count full `total_amount`
+// - Confirmed bookings: count only `advance_paid`
+// - Others: count 0
+function getBookingRevenue(b) {
+  const status = (b.status || "").toString().toLowerCase();
+  const total = Number(b.total_amount ?? b.totalAmount ?? 0) || 0;
+  const advance = Number(b.advance_paid ?? b.advancePaid ?? 0) || 0;
+  if (status === "finished" || status === "completed") return total;
+  if (["confirmed", "pending", "cancelled"].includes(status)) return advance;
+  return 0;
 }
 
 function normalizeBooking(b) {
@@ -64,7 +88,7 @@ function normalizeBooking(b) {
     event: b.event,
     date: b.date,
     status: b.status,
-    revenue: Number(b.total_amount) || 0,
+    revenue: getBookingRevenue(b),
   };
 }
 
@@ -188,7 +212,7 @@ function EventRow({ booking }) {
         <p className="text-[11px] text-stone-400 mt-0.5">{booking.hall} · {booking.event}</p>
       </div>
       <span className="text-[11px] text-stone-400 flex-shrink-0">
-        {new Date(booking.date).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
+        {new Date(booking.date).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "numeric", month: "short" })}
       </span>
     </div>
   );
@@ -228,14 +252,15 @@ export default function Management() {
 
   const [addingDaily, setAddingDaily] = useState(false);
   const [newDaily, setNewDaily] = useState({
-    category: DAILY_EXPENSE_CATEGORIES[0], label: "", amount: "", date: new Date().toISOString().split('T')[0],
+    category: DAILY_EXPENSE_CATEGORIES[0], label: "", amount: "", date: getPKTDateISO(),
   });
 
   const { data: rawBookings = [] } = getAllBookings() || {};
+  // Include all bookings (including pending/cancelled) so ledger/breakdowns
+  // can show them — revenue rules will only count advances for non-finished
+  // statuses.
   const bookings = useMemo(() => {
-    return rawBookings
-      .filter((b) => b.status?.toLowerCase() !== "cancelled" && b.status?.toLowerCase() !== "pending")
-      .map(normalizeBooking);
+    return rawBookings.map(normalizeBooking);
   }, [rawBookings]);
 
   const [mode, setMode] = useState("expense");
@@ -459,7 +484,7 @@ export default function Management() {
       ...newDaily, amount: Number(newDaily.amount || 0),
     });
     setNewDaily({
-      category: DAILY_EXPENSE_CATEGORIES[0], label: "", amount: "", date: new Date().toISOString().split('T')[0],
+      category: DAILY_EXPENSE_CATEGORIES[0], label: "", amount: "", date: getPKTDateISO(),
     });
     setAddingDaily(false);
   }
@@ -531,7 +556,7 @@ export default function Management() {
       </div>
 
       {/* ── Charts ──────────────────────────────────────────────────────────── */}
-      <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
+      {/* <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
         <div className="bg-white rounded-xl border border-stone-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div><h2 className="text-[15px] font-semibold text-stone-900">Revenue vs Expenses</h2><p className="text-[11px] text-stone-400 mt-0.5">{currency(totalRevenue)} gross vs {currency(totalExpense)} costs</p></div>
@@ -552,7 +577,7 @@ export default function Management() {
           <p className="text-[11px] text-stone-400 mb-3">{upcomingEvents.length} scheduled</p>
           <div className="flex-1">{upcomingEvents.length === 0 ? <div className="text-center py-12"><Inbox size={24} className="text-stone-200 mx-auto mb-2" /><p className="text-stone-400 text-[12px]">No upcoming bookings</p></div> : upcomingEvents.map((b) => <EventRow key={b.id} booking={b} />)}</div>
         </div>
-      </div>
+      </div> */}
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
         <div className="bg-white rounded-xl border border-stone-200 p-6">
@@ -593,7 +618,7 @@ export default function Management() {
                 <tr className="bg-stone-50 border-b border-stone-100">{["Client", "Hall", "Event", "Date", "Revenue", "Costs", "Profit", ""].map((h) => (<th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>))}</tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {ledgerFilteredBookings.length === 0 ? <tr><td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">No bookings found.</td></tr> : displayedLedgerBookings.map((b) => { const bAddons = addonsByBooking[b.id] || []; const bExpenses = expensesByBooking[b.id] || []; const bAddonRev = bAddons.reduce((s, a) => s + Number(a.client_price || 0), 0); const bVendorExp = bAddons.reduce((s, a) => s + Number(a.vendor_cost || 0), 0); const bStdExp = bExpenses.reduce((s, e) => s + Number(e.amount || 0), 0); const bTotalRev = b.revenue + bAddonRev; const bTotalExp = bStdExp + bVendorExp; const bPro = bTotalRev - bTotalExp; const isSel = selectedBookingId === b.id; return (<tr key={b.id} onClick={() => setSelectedBookingId(isSel ? null : b.id)} className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-emerald-50/50" : "hover:bg-stone-50"}`}><td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}{bAddons.length > 0 && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded"><PlusCircle size={9} /> {bAddons.length}</span>}</td><td className="px-5 py-3.5"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>{b.hall}</span></td><td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td><td className="px-5 py-3.5 text-[12px] text-stone-400">{new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}</td><td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(bTotalRev)}</td><td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(bTotalExp)}</td><td className={`px-5 py-3.5 text-[13px] font-semibold ${bPro >= 0 ? "text-emerald-700" : "text-rose-600"}`}>{bPro >= 0 ? "+" : ""}{currency(bPro)}</td><td className="px-5 py-3.5 text-right"><button onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }} className="text-[11px] font-medium px-2.5 py-1 bg-stone-50 text-stone-700 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors">+ Add</button></td></tr>); })}
+                {ledgerFilteredBookings.length === 0 ? <tr><td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">No bookings found.</td></tr> : displayedLedgerBookings.map((b) => { const bAddons = addonsByBooking[b.id] || []; const bExpenses = expensesByBooking[b.id] || []; const bAddonRev = bAddons.reduce((s, a) => s + Number(a.client_price || 0), 0); const bVendorExp = bAddons.reduce((s, a) => s + Number(a.vendor_cost || 0), 0); const bStdExp = bExpenses.reduce((s, e) => s + Number(e.amount || 0), 0); const bTotalRev = b.revenue + bAddonRev; const bTotalExp = bStdExp + bVendorExp; const bPro = bTotalRev - bTotalExp; const isSel = selectedBookingId === b.id; return (<tr key={b.id} onClick={() => setSelectedBookingId(isSel ? null : b.id)} className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-emerald-50/50" : "hover:bg-stone-50"}`}><td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}{bAddons.length > 0 && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded"><PlusCircle size={9} /> {bAddons.length}</span>}</td><td className="px-5 py-3.5"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>{b.hall}</span></td><td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td><td className="px-5 py-3.5 text-[12px] text-stone-400">{new Date(b.date).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "numeric", month: "short" })}</td><td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(bTotalRev)}</td><td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(bTotalExp)}</td><td className={`px-5 py-3.5 text-[13px] font-semibold ${bPro >= 0 ? "text-emerald-700" : "text-rose-600"}`}>{bPro >= 0 ? "+" : ""}{currency(bPro)}</td><td className="px-5 py-3.5 text-right"><button onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }} className="text-[11px] font-medium px-2.5 py-1 bg-stone-50 text-stone-700 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors">+ Add</button></td></tr>); })}
               </tbody>
             </table>
           </div>
@@ -635,7 +660,7 @@ export default function Management() {
             <div className="space-y-2 mb-2">
               {allDailyExpenses.filter(de => { const d = new Date(de.date); return d.getFullYear() === selectedYear && (selectedMonth === null || d.getMonth() === selectedMonth); }).map(de => (
                 <div key={de.id} className="flex justify-between items-center bg-stone-50 p-2 rounded border border-stone-100 group">
-                  <div><p className="text-[12px] font-medium text-stone-800">{de.label}</p><p className="text-[10px] text-stone-400">{de.category} • {new Date(de.date).toLocaleDateString('en-PK', {day:'numeric', month:'short'})}</p></div>
+                  <div><p className="text-[12px] font-medium text-stone-800">{de.label}</p><p className="text-[10px] text-stone-400">{de.category} • {new Date(de.date).toLocaleDateString('en-US', {timeZone: 'Asia/Karachi', day:'numeric', month:'short'})}</p></div>
                   <div className="flex items-center gap-2"><span className="text-[12px] font-semibold">{currency(de.amount)}</span><button onClick={() => deleteDailyExpenseMutation.mutate(de.id)} className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-rose-600 transition-all"><Trash2 size={12}/></button></div>
                 </div>
               ))}
@@ -650,7 +675,7 @@ export default function Management() {
               <>
                 <div className="p-5 border-b border-stone-100 bg-stone-50/60">
                   <div className="flex items-start justify-between">
-                    <div><span className="text-[9px] font-semibold uppercase tracking-wider bg-stone-100 px-2 py-0.5 rounded text-stone-600 border border-stone-200">{selectedBooking?.hall}</span><p className="text-[14px] font-semibold text-stone-900 mt-1.5">{selectedBooking?.client}</p><p className="text-[11px] text-stone-400 mt-0.5">{selectedBooking?.event} · {new Date(selectedBooking?.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}</p></div>
+                    <div><span className="text-[9px] font-semibold uppercase tracking-wider bg-stone-100 px-2 py-0.5 rounded text-stone-600 border border-stone-200">{selectedBooking?.hall}</span><p className="text-[14px] font-semibold text-stone-900 mt-1.5">{selectedBooking?.client}</p><p className="text-[11px] text-stone-400 mt-0.5">{selectedBooking?.event} · {new Date(selectedBooking?.date).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "numeric", month: "short", year: "numeric" })}</p></div>
                     <button onClick={() => setSelectedBookingId(null)} className="text-stone-400 hover:text-stone-900 p-1"><X size={16} /></button>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-4">{[{ label: "Gross Revenue", value: currency(selectedBookingGrossRev), cls: "text-stone-800" }, { label: "Total Costs", value: currency(selectedBookingGrossExp), cls: "text-rose-600" }, { label: "Net Profit", value: currency(selectedBookingNetProfit), cls: selectedBookingNetProfit >= 0 ? "text-emerald-700" : "text-rose-600" }, { label: "Commission", value: currency(selectedBookingAddonCommission), cls: "text-violet-700" }].map((k) => (<div key={k.label} className="bg-white rounded-lg p-2.5 border border-stone-100"><p className="text-[9px] text-stone-400 uppercase tracking-tight mb-1">{k.label}</p><p className={`text-[12px] font-semibold ${k.cls}`}>{k.value}</p></div>))}</div>

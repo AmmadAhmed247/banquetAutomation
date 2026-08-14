@@ -10,6 +10,7 @@ import LoginPage from "./pages/loginPage";
 import Management from "./pages/Management";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFoundPage from "./pages/NotFoundPage";
+import Cashflow from "./pages/CashflowPage.jsx";
 const ComingSoon = ({ pageName }) => {
   return (
     <div className="flex items-center justify-center h-[80vh]">
@@ -48,6 +49,10 @@ export const router = createBrowserRouter([
       {
         path: "recipt",
         element: <Recipt />,
+      },
+      {
+        path: "cash-flow",
+        element: <Cashflow />,
       },
       {
         path: "calendar",

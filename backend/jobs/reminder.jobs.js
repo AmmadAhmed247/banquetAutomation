@@ -1,7 +1,7 @@
 const cron = require("node-cron")
 const { db } = require("../config/db")
 const { booking } = require("../model/schema")
-const { and, gte, lte, lt, eq, or, isNull } = require("drizzle-orm")
+const { and, gte, lte, lt, eq, or, isNull , inArray } = require("drizzle-orm")
 const { sendAdvanceReminder, sendBookingReminder, sleep } = require("../services/meta.service..js")
 
 // CONSTANTS
@@ -63,7 +63,6 @@ async function processBatch(rows, sendFn, jobName) {
 }
 
 
-// 1. DAY-BEFORE EVENT REMINDER (sent once) 
 async function sendBookingReminders() {
     try {
         const { start, end } = getDayWindowPKT(2);
@@ -83,7 +82,8 @@ async function sendBookingReminders() {
                 and(
                     gte(booking.date, start),
                     lte(booking.date, end),
-                    eq(booking.status, "Confirmed"),
+                    // Matches both "Confirmed" and "Finished" statuses
+                    inArray(booking.status, ["Confirmed", "Finished"]),
                     eq(booking.booking_reminder_sent, false)
                 )
             )
@@ -96,7 +96,6 @@ async function sendBookingReminders() {
         await processBatch(rows, async (bk) => {
             const formattedDate = new Date(bk.date).toISOString().split('T')[0]
 
-            // Using the dedicated booking reminder function
             const result = await sendBookingReminder(
                 bk.phone,
                 "en",
@@ -184,13 +183,13 @@ async function sendAdvanceDueReminders() {
 
 // SCHEDULER (registered once at module load) 
 function startReminderJobs() {
-    cron.schedule("*0 9 * * *", async () => {
+    cron.schedule("0 9 * * *", async () => {
         console.log("=== Running test reminder job ===")
         await sendBookingReminders()
         await sendAdvanceDueReminders()
         console.log("=== Test job complete ===")
     })
-    console.log("Reminder cron jobs scheduled to run every minute.")
+    console.log("Reminder cron jobs scheduled ")
 }
 
 module.exports = {

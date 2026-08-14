@@ -2,12 +2,14 @@ import React from "react";
 import {
   LayoutDashboard,
   Users,
+  FolderKanban ,
   Calendar,
   CalendarCheck,
   ReceiptIcon,
   DollarSign,
   LogOut,
   BanknoteArrowDown ,
+  BanknoteArrowUp 
 
 } from "lucide-react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -27,8 +29,9 @@ export default function RootLayout() {
     { name: "Calendar", path: "calendar", icon: Calendar },
     { name: "Bookings", path: "bookings", icon: CalendarCheck },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon },
-    { name: "Management System", path: "management", icon: DollarSign },
+    { name: "Management System", path: "management", icon: FolderKanban },
     { name: "Add-ons", path: "addons", icon: BanknoteArrowDown },
+    { name: "Cash Flow", path: "cash-flow", icon: DollarSign },
   ];
 
   // UPDATED: Check if they are on the main dashboard page

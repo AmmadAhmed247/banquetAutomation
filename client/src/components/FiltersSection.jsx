@@ -15,7 +15,7 @@ export default function FiltersSection({ search, onSearchChange, filter, onFilte
 
       <div className="flex items-center justify-between gap-3 sm:contents">
         <div className="flex gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 sm:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {["All", "Confirmed", "Pending", "Cancelled"].map(f2 => (
+          {["All", "Confirmed", "Pending", "Cancelled" , "Finished"].map(f2 => (
             <button
               key={f2}
               onClick={() => onFilterChange(f2)}

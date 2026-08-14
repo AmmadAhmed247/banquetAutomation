@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react";
 import {
-  Sparkles, ChevronDown, ChevronRight, X, Calendar, Building, Wallet, TrendingUp, Inbox, PlusCircle, BarChart3, Layers, Zap, Trash2, Plus,
+  Sparkles, ChevronDown, ChevronRight, X, Building, Wallet, TrendingUp, Inbox, PlusCircle, BarChart3, Layers, Zap, Trash2, Plus,
   ClipboardList,
   Receipt
 } from "lucide-react";
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllAddons } from "../lib/hooks/addon.hook";
 import { getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense } from "../lib/hooks/monthlyExpense.hook";
-import { getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense } from "../lib/hooks/dailyExpense.hook";
+import { getAllDailyExpenses } from "../lib/hooks/dailyExpense.hook";
 import { getAllExpenses } from "../lib/hooks/expense.hook";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -85,9 +85,6 @@ export default function BookingsAddonsPage() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [activeTab, setActiveTab] = useState("service");
-  const [selectedStdExp, setSelectedStdExp] = useState(null);
-  const [selectedDailyExp, setSelectedDailyExp] = useState(null);
-  console.log(selectedDailyExp)
   
 
   const [addingMonthly, setAddingMonthly] = useState(false);
@@ -167,8 +164,6 @@ export default function BookingsAddonsPage() {
     });
     return Object.values(map).sort((a, b) => b.commission - a.commission);
   }, [filteredBookings, addonsByBooking]);
-
-  const maxServiceCommission = Math.max(...serviceBreakdown.map((s) => s.commission), 1);
 
   const { data: rawMonthlyExpenses } = getAllExpenses() || {};
   const standardExpenses = Array.isArray(rawMonthlyExpenses) ? rawMonthlyExpenses : (rawMonthlyExpenses?.data || []);
@@ -502,7 +497,6 @@ export default function BookingsAddonsPage() {
       )}
 
       {/* ── Table & Detail Drawer (per booking) ───────────────────────────────── */}
-     {/* ── Table & Detail Drawer (per booking) ───────────────────────────────── */}
       {activeTab === "bookings" && (
         <div className={`grid gap-6 items-start ${selectedBooking ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-1"}`}>
 
@@ -779,8 +773,8 @@ export default function BookingsAddonsPage() {
       )}
       {/* ── Standard Expenses (Grouped by Category) ─────────────────────────── */}
   {/* ── Standard Expenses (Grouped by Category) ─────────────────────────── */}
-  {activeTab === "standard" && (
-        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+ {activeTab === "standard" && (
+ <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-stone-50 border-b border-stone-100">
@@ -843,7 +837,7 @@ export default function BookingsAddonsPage() {
               </td>
               <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{expense?.label}</td>
               <td className="px-5 py-3.5 text-[11px] text-indigo-600 font-semibold uppercase">{expense?.category}</td>
-              <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{expense?.amount}</td>
+              <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(expense?.amount)}</td>
             </tr>
           ))}
         </tbody>
