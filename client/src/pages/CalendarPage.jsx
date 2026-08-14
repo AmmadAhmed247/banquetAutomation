@@ -6,7 +6,25 @@ const MONTH_NAMES = [
   "July","August","September","October","November","December",
 ];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const HIJRI_MONTHS = [
+  "Muharram", "Safar", "Rabbi Ul Awwal", "Rabbi Ul Akhir",
+  "Jumada Al Ula", "Jumada Al Akhirah", "Rajab", "Sha'ban",
+  "Ramadan", "Shawwal", "Dhu Al Qi'dah", "Dhu Al Hijjah"
+];
 
+// Helper to format today's Hijri date as: 1 Rabbi Ul Awwal 1448 AH
+const getTodayIslamicDate = () => {
+  const formatter = new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura-nu-latn", {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric"
+  });
+  const parts = Object.fromEntries(
+    formatter.formatToParts(new Date()).map((p) => [p.type, p.value])
+  );
+  const monthName = HIJRI_MONTHS[parseInt(parts.month, 10) - 1];
+  return `${parts.day} ${monthName} ${parts.year} AH`;
+};
 function BookingChip({ booking }) {
   const isA = booking.hall === "a";
   const isPending = booking.status?.toLowerCase() === "pending";
@@ -206,10 +224,16 @@ export default function CalendarView() {
       {/* ── Top navigation ── */}
       <div className="flex flex-col gap-3 mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
 
-        {/* Title */}
+        {/* Title + Islamic Date */}
         <div>
           <h1 className="font-mono text-2xl xl:text-[28px] font-bold text-gray-900">Hall Bookings</h1>
-          <p className="text-slate-400 text-xs mt-0.5">Visual overview of booked dates by hall</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-slate-400 text-xs">Visual overview of booked dates by hall</p>
+            <span className="text-slate-300">•</span>
+            <p className="text-emerald-700 bg-emerald-50 border border-emerald-100 text-[11px] font-semibold px-2 py-0.5 rounded-md">
+               {getTodayIslamicDate()}
+            </p>
+          </div>
         </div>
 
         {/* Hall tabs + month nav row */}
@@ -226,9 +250,11 @@ export default function CalendarView() {
               </button>
             ))}
           </div>
+          
 
           {/* Month navigator */}
           <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+            
             <button
               className="w-8 h-8 rounded-xl border border-green-100 bg-white flex items-center justify-center hover:bg-green-50 transition-colors cursor-pointer"
               onClick={() => { setCurrent(new Date(yr, mo - 1, 1)); setSelectedDay(null); setShowPanel(false); }}
@@ -236,13 +262,16 @@ export default function CalendarView() {
             <span className="font-semibold text-sm w-36 text-center text-gray-800">
               {MONTH_NAMES[mo]} {yr}
             </span>
+            
             <button
               className="w-8 h-8 rounded-xl border border-green-100 bg-white flex items-center justify-center hover:bg-green-50 transition-colors cursor-pointer"
               onClick={() => { setCurrent(new Date(yr, mo + 1, 1)); setSelectedDay(null); setShowPanel(false); }}
             >›</button>
           </div>
         </div>
+        
       </div>
+      
 
       {/* ── Legend ── */}
       <div className="flex gap-4 mb-4">

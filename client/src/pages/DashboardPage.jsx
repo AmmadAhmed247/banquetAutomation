@@ -8,11 +8,12 @@ import {
   ReceiptIcon,
   DollarSign,
   LogOut,
-  BanknoteArrowDown
+  BanknoteArrowDown,
+  FolderKanban 
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
-
+import StudioHeader from "../components/StudioHeader";
 export default function DashboardPage() {
   const navigate = useNavigate();
 
@@ -20,7 +21,7 @@ export default function DashboardPage() {
     { name: "Calendar", path: "calendar", icon: Calendar, desc: "Manage your studio" },
     { name: "Bookings", path: "bookings", icon: CalendarCheck, desc: "Manage your studio" },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon, desc: "Manage your studio" },
-    { name: "Management System", path: "management", icon: DollarSign, desc: "Manage your studio" },
+    { name: "Management System", path: "management", icon: FolderKanban, desc: "Manage your studio" },
     { name: "Add-ons", path: "addons", icon: BanknoteArrowDown, desc: "Manage your studio" },
     { name: "Cash Flow", path: "cash-flow", icon: DollarSign, desc: "Manage your studio" },
   ];
@@ -48,14 +49,52 @@ export default function DashboardPage() {
             <div className="relative">
                 <h1 className="relative text-4xl font-mono font-bold text-slate-900 tracking-tighter">Darbar</h1>
                 <span className="absolute -bottom-2 left-0 text-[10px] text-emerald-600 font-black uppercase tracking-[0.3em]">CRM</span>
+                
             </div>
           </div>
           
           <div className="flex items-center gap-8">
             <div className="hidden lg:block text-right">
-              <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">System Status: Online</p>
-              <p className="text-slate-900 text-sm font-medium">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-            </div>
+  <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">
+    System Status: Online
+  </p>
+  
+  {/* Gregorian Date */}
+  <p className="text-slate-900 text-sm font-medium">
+    {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+  </p>
+
+  {/* Custom Formatted Islamic Date */}
+  <p className="text-slate-500 text-xs font-medium mt-0.5">
+    {(() => {
+      // 1. Custom transliterated month names
+      const hijriMonths = [
+        "Muharram", "Safar", "Rabbi Ul Awwal", "Rabbi Ul Akhir",
+        "Jumada Al Ula", "Jumada Al Akhirah", "Rajab", "Sha'ban",
+        "Ramadan", "Shawwal", "Dhu Al Qi'dah", "Dhu Al Hijjah"
+      ];
+
+      // 2. Extract numeric day, month index, and year
+      const formatter = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura-nu-latn', {
+        day: 'numeric',
+        month: 'numeric',
+        year: 'numeric'
+      });
+
+      const parts = Object.fromEntries(
+        formatter.formatToParts(new Date()).map(p => [p.type, p.value])
+      );
+
+      const day = parts.day;
+      const monthName = hijriMonths[parseInt(parts.month, 10) - 1];
+      const year = parts.year;
+
+      return `${day} ${monthName} ${year} AH`;
+    })()}
+  </p>
+
+
+</div>
             
             <button 
               onClick={handleLogout}

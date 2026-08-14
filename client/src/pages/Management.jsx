@@ -48,6 +48,17 @@ function pct(a, b) {
   if (!b) return 0;
   return Math.round((a / b) * 100);
 }
+function getPKTDateISO(dateInput = new Date()) {
+  const parsed = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (!parsed || Number.isNaN(parsed.getTime())) return "";
+
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(parsed);
+}
 function daysUntil(dateStr) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -241,7 +252,7 @@ export default function Management() {
 
   const [addingDaily, setAddingDaily] = useState(false);
   const [newDaily, setNewDaily] = useState({
-    category: DAILY_EXPENSE_CATEGORIES[0], label: "", amount: "", date: new Date().toISOString().split('T')[0],
+    category: DAILY_EXPENSE_CATEGORIES[0], label: "", amount: "", date: getPKTDateISO(),
   });
 
   const { data: rawBookings = [] } = getAllBookings() || {};
@@ -473,7 +484,7 @@ export default function Management() {
       ...newDaily, amount: Number(newDaily.amount || 0),
     });
     setNewDaily({
-      category: DAILY_EXPENSE_CATEGORIES[0], label: "", amount: "", date: new Date().toISOString().split('T')[0],
+      category: DAILY_EXPENSE_CATEGORIES[0], label: "", amount: "", date: getPKTDateISO(),
     });
     setAddingDaily(false);
   }
