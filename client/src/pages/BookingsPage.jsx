@@ -7,6 +7,7 @@ import StatsSection from "../components/StatsSection";
 import FiltersSection from "../components/FiltersSection";
 import BookingsList from "../components/BookingsList";
 import bookingService from "../services/booking.service";
+import { useMarkAddonReceived } from "../lib/hooks/addon.hook";
 
 function formatDateInput(value) {
   if (!value) return "";
@@ -46,6 +47,16 @@ export default function Bookings({ showToast }) {
   const perPage = 10;
   const [saveLoading, setSaveLoading] = useState(false);
   const queryClient = useQueryClient();
+  const markReceived = useMarkAddonReceived();
+
+function handleMarkReceived(id, method) {
+  const isBank = method !== "Cash" && method !== "JazzCash" && method !== "EasyPaisa";
+  markReceived.mutate({
+    id,
+    payment_method: isBank ? "Bank Transfer" : method,
+    bank_name: isBank ? method : null,
+  });
+}
 
 
   const { data: rawBookings = [], isLoading , error } = useQuery({
@@ -69,7 +80,7 @@ export default function Bookings({ showToast }) {
     };
   }) || [];
 
-  const openNew = () => setModal({ mode: "new", booking: { ...emptyForm, id: Date.now() } });
+  const openNew = () => setModal({ mode: "new", booking: { ...emptyForm } });
   const openEdit = (b) => setModal({ mode: "edit", booking: { ...b } });
   const closeModal = () => setModal(null);
 

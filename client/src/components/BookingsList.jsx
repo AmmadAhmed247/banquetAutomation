@@ -207,7 +207,7 @@ function BookingsTable({ filteredBookings, onEdit, onDelete }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-green-50/60 border-b border-green-100">
-              {["R. No.", "Date", "Client", "Event Date", "Time Slot", "Guests", "Venue", "Total Amount", "Total Advance", "Advance Paid", "Revenue Picked", "Advance Due", "Payment Note", "Status", "", ""].map((h) => (
+              {["R. No.", "Date", "Event", "Client", "Event Date", "Time Slot", "Guests", "Venue", "Total Amount", "Total Advance", "Advance Paid", "Revenue Picked", "Advance Due", "Payment Note", "Status", "", ""].map((h) => (
                 <th key={h} className="text-left text-[10px] font-semibold text-green-600 uppercase tracking-wider px-4 py-3 whitespace-nowrap">
                   {h}
                 </th>
@@ -232,6 +232,11 @@ function BookingsTable({ filteredBookings, onEdit, onDelete }) {
                     <span className="text-[11px] font-semibold text-green-900">
                       {(booking.createdAt || booking.created_at) ? new Date(booking.createdAt || booking.created_at).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric" }) : "—"}
                     </span>
+                  </td>
+
+                  <td className="px-4 py-3.5">
+                    <p className="font-semibold text-green-900">{booking.event}</p>
+                    
                   </td>
 
                   <td className="px-4 py-3.5">

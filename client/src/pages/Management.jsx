@@ -3,7 +3,8 @@ import {
   TrendingUp, Plus, Trash2, Receipt,
   ChevronDown, BarChart3, DollarSign,
   SlidersHorizontal, X, ArrowUpRight, Inbox, Calendar,
-  PlusCircle, FileText
+  PlusCircle, FileText,
+  Pencil
 } from "lucide-react";
 import {
   ComposedChart, Area, Line, BarChart, Bar, XAxis, YAxis,
@@ -11,7 +12,7 @@ import {
 } from "recharts";
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllExpenses, useCreateExpense, useDeleteExpense } from "../lib/hooks/expense.hook";
-import { getAllAddons, useCreateAddon, useDeleteAddon } from "../lib/hooks/addon.hook";
+import { getAllAddons, useCreateAddon, useDeleteAddon, useMarkAddonReceived, useUpdateAddon } from "../lib/hooks/addon.hook";
 import { 
   getAllMonthlyExpenses, 
   useCreateMonthlyExpense, 
@@ -21,7 +22,7 @@ import {
   getAllDailyExpenses, 
   useCreateDailyExpense, 
   useDeleteDailyExpense 
-} from "../lib/hooks/dailyExpense.hook"; // Added daily expense hooks
+} from "../lib/hooks/dailyExpense.hook"; 
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -31,7 +32,7 @@ const DAILY_EXPENSE_CATEGORIES = ["Kitchen/Tea", "Maintenance", "Petty Cash", "O
 
 const ADDON_CATEGORIES = [
   "Pepsi Co.", "Coca Cola Co.", "Fresh Flower", "Cola Next", "Dance Floor",
-  "Water Bottles", "Ayaz Tissue", "Stage", "Fire Crackers", "Ladies Staff", "Miscellaneous",
+  "Water Bottles", "Ayaz Tissue", "Stage", "Fire Crackers", "Ladies Staff", "Miscellaneous" , "BBQ" , "Sound System", "Entry" , "Decoration"
 ];
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = [CURRENT_YEAR, CURRENT_YEAR + 1];
@@ -66,11 +67,8 @@ function daysUntil(dateStr) {
   d.setHours(0, 0, 0, 0);
   return Math.round((d - today) / 86400000);
 }
+const ADDON_PAYMENT_METHODS = ["Cash", "JazzCash", "EasyPaisa", "Habib Metro Usman", "Meezan Bank Sadar"];
 
-// Revenue rules:
-// - Finished bookings: count full `total_amount`
-// - Confirmed bookings: count only `advance_paid`
-// - Others: count 0
 function getBookingRevenue(b) {
   const status = (b.status || "").toString().toLowerCase();
   const total = Number(b.total_amount ?? b.totalAmount ?? 0) || 0;
@@ -160,29 +158,142 @@ function ExpenseRow({ expense, onDelete }) {
   );
 }
 
-function AddonRow({ addon, onDelete }) {
-  const commission = Number(addon.client_price || 0) - Number(addon.vendor_cost || 0);
+function ReceivedButton({ addon, onMark }) {
+  const [open, setOpen] = useState(false);
+  const [method, setMethod] = useState("Cash");
+
+  if (addon.received) {
+    return (
+      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+        Received
+      </span>
+    );
+  }
+
+  if (open) {
+    return (
+      <div className="flex items-center gap-1 shrink-0">
+        <select
+          value={method}
+          onChange={(e) => setMethod(e.target.value)}
+          className="text-[9px] border border-stone-200 rounded-md px-1 py-0.5 outline-none"
+        >
+          {ADDON_PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}
+        </select>
+        <button
+          onClick={() => {
+            onMark(addon.id, method);
+            setOpen(false);
+          }}
+          className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-violet-600 text-white"
+        >
+          ✓
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-4 py-3 border-b border-stone-100 last:border-0 group">
-      <div className="flex flex-col flex-1 min-w-0">
-        <span className="text-[13px] font-medium text-stone-800 truncate flex items-center gap-1.5">
-          <PlusCircle size={12} className="text-violet-600 flex-shrink-0" />
-          {addon.service}
-        </span>
-        {addon.description && (
-          <p className="text-[11px] text-stone-400 italic mt-0.5">{addon.description}</p>
-        )}
-        <div className="text-[11px] text-stone-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-          <span>Client: {currency(addon.client_price)}</span>
-          <span>Vendor: {currency(addon.vendor_cost)}</span>
-          <span className="text-violet-700 font-semibold">Commission: +{currency(commission)}</span>
+    <button
+      onClick={() => setOpen(true)}
+      className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shrink-0"
+    >
+      Mark Received
+    </button>
+  );
+}
+
+function AddonRow({ addon, onDelete, onUpdate, onMarkReceived }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState({
+    service: addon.service,
+    description: addon.description,
+    client_price: addon.client_price,
+    vendor_cost: addon.vendor_cost,
+  });
+
+  const commission = Number(addon.client_price || 0) - Number(addon.vendor_cost || 0);
+
+  function save() {
+    onUpdate(addon.id, {
+      ...draft,
+      client_price: Number(draft.client_price || 0),
+      vendor_cost: Number(draft.vendor_cost || 0),
+    });
+    setIsEditing(false);
+  }
+
+  function cancel() {
+    setDraft({
+      service: addon.service,
+      description: addon.description,
+      client_price: addon.client_price,
+      vendor_cost: addon.vendor_cost,
+    });
+    setIsEditing(false);
+  }
+
+  if (isEditing) {
+    return (
+      <div className="border border-violet-200 rounded-lg p-2.5 bg-violet-50/40 mb-1.5 space-y-1.5">
+        <select
+          value={draft.service}
+          onChange={(e) => setDraft({ ...draft, service: e.target.value })}
+          className="w-full px-2.5 py-1 border border-stone-200 rounded-md text-[11px] outline-none focus:border-violet-500 bg-white"
+        >
+          {ADDON_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+        </select>
+        <input
+          value={draft.description}
+          onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+          placeholder="Description / Notes"
+          className="w-full px-2.5 py-1 border border-stone-200 rounded-md text-[11px] outline-none focus:border-violet-500"
+        />
+        <div className="grid grid-cols-2 gap-1.5">
+          <input
+            type="number"
+            value={draft.client_price}
+            onChange={(e) => setDraft({ ...draft, client_price: e.target.value })}
+            placeholder="Client Price"
+            className="w-full px-2.5 py-1 border border-stone-200 rounded-md text-[11px]"
+          />
+          <input
+            type="number"
+            value={draft.vendor_cost}
+            onChange={(e) => setDraft({ ...draft, vendor_cost: e.target.value })}
+            placeholder="Vendor Cost"
+            className="w-full px-2.5 py-1 border border-stone-200 rounded-md text-[11px]"
+          />
+        </div>
+        <div className="flex gap-1.5 pt-0.5">
+          <button onClick={save} className="flex-1 py-1 bg-violet-600 text-white text-[11px] font-medium rounded-md">
+            Save
+          </button>
+          <button onClick={cancel} className="px-3 py-1 bg-white text-stone-600 border border-stone-200 text-[11px] rounded-md">
+            Cancel
+          </button>
         </div>
       </div>
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <span className="text-[13px] text-stone-900 font-semibold">{currency(addon.client_price)}</span>
-        <button onClick={() => onDelete(addon.id)}
-          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-stone-300 hover:text-rose-600 rounded">
-          <Trash2 size={14} />
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-stone-50 last:border-0 gap-2">
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-medium text-stone-800 truncate">{addon.service}</p>
+        <p className="text-[10px] text-stone-400 truncate">{addon.description}</p>
+        <p className="text-[10px] text-violet-600 font-medium mt-0.5">
+          Commission: {currency(commission)}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="text-[12px] font-semibold text-stone-700">{currency(addon.client_price)}</span>
+        <ReceivedButton addon={addon} onMark={onMarkReceived} />
+        <button onClick={() => setIsEditing(true)} className="text-stone-300 hover:text-violet-600 p-0.5">
+          <Pencil size={13} />
+        </button>
+        <button onClick={() => onDelete(addon.id)} className="text-stone-300 hover:text-rose-600 p-0.5">
+          <X size={13} />
         </button>
       </div>
     </div>
@@ -230,6 +341,7 @@ export default function Management() {
 
   const { data: rawDailyExpenses } = getAllDailyExpenses() || {};
   const allDailyExpenses = Array.isArray(rawDailyExpenses) ? rawDailyExpenses : (rawDailyExpenses?.data || []);
+  
   const createExpenseMutation = useCreateExpense();
   const deleteExpenseMutation = useDeleteExpense();
   const createAddonMutation = useCreateAddon();
@@ -238,6 +350,9 @@ export default function Management() {
   const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense();
   const createDailyExpenseMutation = useCreateDailyExpense();
   const deleteDailyExpenseMutation = useDeleteDailyExpense();
+  const updateAddonMutation = useUpdateAddon();
+  const markReceived = useMarkAddonReceived();
+
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
@@ -256,9 +371,6 @@ export default function Management() {
   });
 
   const { data: rawBookings = [] } = getAllBookings() || {};
-  // Include all bookings (including pending/cancelled) so ledger/breakdowns
-  // can show them — revenue rules will only count advances for non-finished
-  // statuses.
   const bookings = useMemo(() => {
     return rawBookings.map(normalizeBooking);
   }, [rawBookings]);
@@ -279,7 +391,6 @@ export default function Management() {
     });
   }, [bookings, selectedYear, selectedMonth, hallFilter]);
 
-  // ledger search + pagination
   const ledgerFilteredBookings = useMemo(() => {
     const q = ledgerSearch.trim().toLowerCase();
     if (!q) return filteredBookings;
@@ -319,10 +430,13 @@ export default function Management() {
     return map;
   }, [addons]);
 
+  // Logic: Addons added to revenue ONLY if received
   const totalRevenue = useMemo(() => {
     const bookingRev = filteredBookings.reduce((s, b) => s + b.revenue, 0);
     const addonRev = filteredBookings.reduce((s, b) => {
-      return s + (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.client_price || 0), 0);
+      return s + (addonsByBooking[b.id] || []).reduce((acc, a) => {
+        return acc + (a.received ? Number(a.client_price || 0) : 0);
+      }, 0);
     }, 0);
     return bookingRev + addonRev;
   }, [filteredBookings, addonsByBooking]);
@@ -331,8 +445,12 @@ export default function Management() {
     const stdExp = filteredBookings.reduce((s, b) => {
       return s + (expensesByBooking[b.id] || []).reduce((acc, e) => acc + Number(e.amount || 0), 0);
     }, 0);
+    
+    // Logic: Vendor costs added ONLY if addon marked received
     const vendorExp = filteredBookings.reduce((s, b) => {
-      return s + (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.vendor_cost || 0), 0);
+      return s + (addonsByBooking[b.id] || []).reduce((acc, a) => {
+        return acc + (a.received ? Number(a.vendor_cost || 0) : 0);
+      }, 0);
     }, 0);
 
     const monthlyOverhead = allMonthlyExpenses
@@ -359,6 +477,7 @@ export default function Management() {
   const totalAddonCommission = useMemo(() => {
     return filteredBookings.reduce((s, b) => {
       return s + (addonsByBooking[b.id] || []).reduce((acc, a) => {
+        if (!a.received) return acc;
         return acc + (Number(a.client_price || 0) - Number(a.vendor_cost || 0));
       }, 0);
     }, 0);
@@ -373,13 +492,18 @@ export default function Management() {
       });
 
       const rev = bks.reduce((s, b) => {
-        const bAddonRev = (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.client_price || 0), 0);
+        const bAddonRev = (addonsByBooking[b.id] || []).reduce((acc, a) => {
+          return acc + (a.received ? Number(a.client_price || 0) : 0);
+        }, 0);
         return s + b.revenue + bAddonRev;
       }, 0);
 
       const bookingExp = bks.reduce((s, b) => {
         const bStdExp = (expensesByBooking[b.id] || []).reduce((a, e) => a + Number(e.amount || 0), 0);
-        const bVendorExp = (addonsByBooking[b.id] || []).reduce((a, ad) => a + Number(ad.vendor_cost || 0), 0);
+        // Respect received status for costs in charts
+        const bVendorExp = (addonsByBooking[b.id] || []).reduce((a, ad) => {
+            return a + (ad.received ? Number(ad.vendor_cost || 0) : 0);
+        }, 0);
         return s + bStdExp + bVendorExp;
       }, 0);
 
@@ -408,7 +532,9 @@ export default function Management() {
             return d.getFullYear() === selectedYear && d.getMonth() === idx && b.hall === hall;
           })
           .reduce((s, b) => {
-            const bAddonRev = (addonsByBooking[b.id] || []).reduce((acc, a) => acc + Number(a.client_price || 0), 0);
+            const bAddonRev = (addonsByBooking[b.id] || []).reduce((acc, a) => {
+              return acc + (a.received ? Number(a.client_price || 0) : 0);
+            }, 0);
             return s + b.revenue + bAddonRev;
           }, 0);
       return { month: m, "Hall A": forHall("Hall A"), "Hall B": forHall("Hall B") };
@@ -422,9 +548,12 @@ export default function Management() {
         const val = Number(e.amount || 0);
         map[e.category] = (map[e.category] || 0) + val;
       });
+      // Logic: Only add Vendor Payouts if received
       (addonsByBooking[b.id] || []).forEach((a) => {
-        const val = Number(a.vendor_cost || 0);
-        map["Vendor Payouts"] = (map["Vendor Payouts"] || 0) + val;
+        if (a.received) {
+          const val = Number(a.vendor_cost || 0);
+          map["Vendor Payouts"] = (map["Vendor Payouts"] || 0) + val;
+        }
       });
     });
 
@@ -499,21 +628,40 @@ export default function Management() {
     setAddingTo(null);
   }
 
+  function updateAddon(id, data) {
+    updateAddonMutation.mutate({ id, data });
+  }
+
   function deleteExpense(id) { deleteExpenseMutation.mutate(id); }
   function deleteAddon(id) { deleteAddonMutation.mutate(id); }
+
+  function handleMarkReceived(id, method) {
+    const isBank = method !== "Cash" && method !== "JazzCash" && method !== "EasyPaisa";
+    markReceived.mutate({
+      id,
+      payment_method: isBank ? "Bank Transfer" : method,
+      bank_name: isBank ? method : null,
+    });
+  }
 
   const selectedBooking = bookings.find((b) => b.id === selectedBookingId);
   const selectedBookingExpenses = selectedBookingId ? (expensesByBooking[selectedBookingId] || []) : [];
   const selectedBookingAddons = selectedBookingId ? (addonsByBooking[selectedBookingId] || []) : [];
 
   const selectedBookingBaseRev = selectedBooking?.revenue || 0;
-  const selectedBookingAddonRev = selectedBookingAddons.reduce((s, a) => s + Number(a.client_price || 0), 0);
+  const selectedBookingAddonRev = selectedBookingAddons.reduce((s, a) => s + (a.received ? Number(a.client_price || 0) : 0), 0);
   const selectedBookingGrossRev = selectedBookingBaseRev + selectedBookingAddonRev;
+  
   const selectedBookingStdExp = selectedBookingExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const selectedBookingVendorExp = selectedBookingAddons.reduce((s, a) => s + Number(a.vendor_cost || 0), 0);
+  // Respect received status for vendor costs in inspector
+  const selectedBookingVendorExp = selectedBookingAddons.reduce((s, a) => s + (a.received ? Number(a.vendor_cost || 0) : 0), 0);
   const selectedBookingGrossExp = selectedBookingStdExp + selectedBookingVendorExp;
+  
   const selectedBookingNetProfit = selectedBookingGrossRev - selectedBookingGrossExp;
-  const selectedBookingAddonCommission = selectedBookingAddons.reduce((s, a) => s + (Number(a.client_price || 0) - Number(a.vendor_cost || 0)), 0);
+  const selectedBookingAddonCommission = selectedBookingAddons.reduce((s, a) => {
+    if (!a.received) return s;
+    return s + (Number(a.client_price || 0) - Number(a.vendor_cost || 0));
+  }, 0);
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 p-6 md:p-8 antialiased selection:bg-emerald-100">
@@ -549,43 +697,20 @@ export default function Management() {
 
       {/* ── KPI Grid ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <KpiCard label="Gross Revenue" value={currency(totalRevenue)} sub={`Incl. ${currency(totalRevenue - (filteredBookings.reduce((s, b) => s + b.revenue, 0)))} add-ons`} icon={ArrowUpRight} />
-        <KpiCard label="Total Costs" value={currency(totalExpense)} sub="Std + Vendor + Monthly + Daily" icon={Receipt} />
+        <KpiCard label="Gross Revenue" value={currency(totalRevenue)} sub={`Incl. received add-ons`} icon={ArrowUpRight} />
+        <KpiCard label="Total Costs" value={currency(totalExpense)} sub="Std + Received Vendor + Overhead" icon={Receipt} />
         <KpiCard label="Net Profit" value={currency(totalProfit)} sub={totalProfit >= 0 ? "Total take-home" : "Running at a loss"} icon={DollarSign} trend={margin} />
-        <KpiCard label="Add-on Commission" value={currency(totalAddonCommission)} sub="Pure profit from services" icon={PlusCircle} />
+        <KpiCard label="Add-on Commission" value={currency(totalAddonCommission)} sub="From received services" icon={PlusCircle} />
       </div>
 
       {/* ── Charts ──────────────────────────────────────────────────────────── */}
-      {/* <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
-        <div className="bg-white rounded-xl border border-stone-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div><h2 className="text-[15px] font-semibold text-stone-900">Revenue vs Expenses</h2><p className="text-[11px] text-stone-400 mt-0.5">{currency(totalRevenue)} gross vs {currency(totalExpense)} costs</p></div>
-            <BarChart3 size={16} className="text-emerald-600" />
-          </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart data={monthlyData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
-              <defs><linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#059669" stopOpacity={0.22} /><stop offset="100%" stopColor="#059669" stopOpacity={0} /></linearGradient></defs>
-              <CartesianGrid vertical={false} stroke="#F1F1EF" /><XAxis dataKey="month" tick={{ fontSize: 11, fill: "#A8A29E" }} axisLine={false} tickLine={false} /><YAxis tickFormatter={compactCurrency} tick={{ fontSize: 11, fill: "#A8A29E" }} axisLine={false} tickLine={false} width={48} /><Tooltip content={<ChartTooltip />} /><Legend verticalAlign="top" align="right" height={28} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: "#78716C" }} />
-              <Area type="monotone" dataKey="Revenue" stroke="#059669" strokeWidth={2} fill="url(#revFill)" />
-              <Line type="monotone" dataKey="Expenses" stroke="#A8A29E" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-xl border border-stone-200 p-6 flex flex-col">
-          <h2 className="text-[15px] font-semibold text-stone-900 mb-1">Upcoming Events</h2>
-          <p className="text-[11px] text-stone-400 mb-3">{upcomingEvents.length} scheduled</p>
-          <div className="flex-1">{upcomingEvents.length === 0 ? <div className="text-center py-12"><Inbox size={24} className="text-stone-200 mx-auto mb-2" /><p className="text-stone-400 text-[12px]">No upcoming bookings</p></div> : upcomingEvents.map((b) => <EventRow key={b.id} booking={b} />)}</div>
-        </div>
-      </div> */}
-
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 mb-8">
         <div className="bg-white rounded-xl border border-stone-200 p-6">
           <h2 className="text-[15px] font-semibold text-stone-900 mb-6">Hall Performance</h2>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={hallMonthlyData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }} barGap={4}>
               <CartesianGrid vertical={false} stroke="#F1F1EF" /><XAxis dataKey="month" tick={{ fontSize: 11, fill: "#A8A29E" }} axisLine={false} tickLine={false} /><YAxis tickFormatter={compactCurrency} tick={{ fontSize: 11, fill: "#A8A29E" }} axisLine={false} tickLine={false} width={48} /><Tooltip content={<ChartTooltip />} /><Legend verticalAlign="top" align="right" height={28} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: "#78716C" }} />
-              <Bar dataKey="Hall A" fill="#059669" radius={[3, 3, 0, 0]} /><Bar dataKey="Hall B" fill="#0D9488" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="Hall A" fill="#336bcc" radius={[3, 3, 0, 0]} /><Bar dataKey="Hall B" fill="#c75638" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -618,12 +743,35 @@ export default function Management() {
                 <tr className="bg-stone-50 border-b border-stone-100">{["Client", "Hall", "Event", "Date", "Revenue", "Costs", "Profit", ""].map((h) => (<th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>))}</tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {ledgerFilteredBookings.length === 0 ? <tr><td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">No bookings found.</td></tr> : displayedLedgerBookings.map((b) => { const bAddons = addonsByBooking[b.id] || []; const bExpenses = expensesByBooking[b.id] || []; const bAddonRev = bAddons.reduce((s, a) => s + Number(a.client_price || 0), 0); const bVendorExp = bAddons.reduce((s, a) => s + Number(a.vendor_cost || 0), 0); const bStdExp = bExpenses.reduce((s, e) => s + Number(e.amount || 0), 0); const bTotalRev = b.revenue + bAddonRev; const bTotalExp = bStdExp + bVendorExp; const bPro = bTotalRev - bTotalExp; const isSel = selectedBookingId === b.id; return (<tr key={b.id} onClick={() => setSelectedBookingId(isSel ? null : b.id)} className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-emerald-50/50" : "hover:bg-stone-50"}`}><td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}{bAddons.length > 0 && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded"><PlusCircle size={9} /> {bAddons.length}</span>}</td><td className="px-5 py-3.5"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>{b.hall}</span></td><td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td><td className="px-5 py-3.5 text-[12px] text-stone-400">{new Date(b.date).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "numeric", month: "short" })}</td><td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(bTotalRev)}</td><td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(bTotalExp)}</td><td className={`px-5 py-3.5 text-[13px] font-semibold ${bPro >= 0 ? "text-emerald-700" : "text-rose-600"}`}>{bPro >= 0 ? "+" : ""}{currency(bPro)}</td><td className="px-5 py-3.5 text-right"><button onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }} className="text-[11px] font-medium px-2.5 py-1 bg-stone-50 text-stone-700 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors">+ Add</button></td></tr>); })}
+                {ledgerFilteredBookings.length === 0 ? <tr><td colSpan={8} className="text-center py-12 text-stone-400 text-[12px]">No bookings found.</td></tr> : displayedLedgerBookings.map((b) => { 
+                  const bAddons = addonsByBooking[b.id] || []; 
+                  const bExpenses = expensesByBooking[b.id] || []; 
+                  // Logic: Only add revenue/costs in table if received
+                  const bAddonRev = bAddons.reduce((s, a) => s + (a.received ? Number(a.client_price || 0) : 0), 0); 
+                  const bVendorExp = bAddons.reduce((s, a) => s + (a.received ? Number(a.vendor_cost || 0) : 0), 0); 
+                  const bStdExp = bExpenses.reduce((s, e) => s + Number(e.amount || 0), 0); 
+                  
+                  const bTotalRev = b.revenue + bAddonRev; 
+                  const bTotalExp = bStdExp + bVendorExp; 
+                  const bPro = bTotalRev - bTotalExp; 
+                  const isSel = selectedBookingId === b.id; 
+                  return (
+                    <tr key={b.id} onClick={() => setSelectedBookingId(isSel ? null : b.id)} className={`cursor-pointer transition-colors duration-150 ${isSel ? "bg-emerald-50/50" : "hover:bg-stone-50"}`}>
+                      <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}{bAddons.length > 0 && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded"><PlusCircle size={9} /> {bAddons.length}</span>}</td>
+                      <td className="px-5 py-3.5"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>{b.hall}</span></td>
+                      <td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td>
+                      <td className="px-5 py-3.5 text-[12px] text-stone-400">{new Date(b.date).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "numeric", month: "short" })}</td>
+                      <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(bTotalRev)}</td>
+                      <td className="px-5 py-3.5 text-[13px] text-rose-600">{currency(bTotalExp)}</td>
+                      <td className={`px-5 py-3.5 text-[13px] font-semibold ${bPro >= 0 ? "text-emerald-700" : "text-rose-600"}`}>{bPro >= 0 ? "+" : ""}{currency(bPro)}</td>
+                      <td className="px-5 py-3.5 text-right"><button onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }} className="text-[11px] font-medium px-2.5 py-1 bg-stone-50 text-stone-700 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors">+ Add</button></td>
+                    </tr>
+                  ); 
+                })}
               </tbody>
             </table>
           </div>
 
-          { /* pagination controls */ }
           {!ledgerSearch.trim() && ledgerFilteredBookings.length > 0 && (
             <div className="px-6 py-3 flex items-center justify-end gap-2">
               <button onClick={() => setLedgerPage((p) => Math.max(1, p - 1))} disabled={ledgerPage === 1} className={`px-3 py-1 rounded-lg border text-sm ${ledgerPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}>Prev</button>
@@ -634,7 +782,6 @@ export default function Management() {
         </div>
 
         <div className="flex flex-col gap-3">
-          {/* ── Monthly Overhead ─────────────────────────────────────────── */}
           <div className="bg-white rounded-xl border border-stone-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <div><p className="text-[13px] font-semibold text-stone-900">Monthly Overhead</p><p className="text-[11px] text-stone-400 mt-0.5">Bills and recurring costs</p></div>
@@ -651,7 +798,6 @@ export default function Management() {
             {addingMonthly && <div className="flex flex-col gap-2 pt-2 border-t border-stone-100"><div className="grid grid-cols-2 gap-2"><select value={newMonthly.month} onChange={(e) => setNewMonthly({ ...newMonthly, month: Number(e.target.value) })} className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white">{MONTHS.map((m, idx) => <option key={m} value={idx + 1}>{m}</option>)}</select><select value={newMonthly.year} onChange={(e) => setNewMonthly({ ...newMonthly, year: Number(e.target.value) })} className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white">{YEARS.map((y) => <option key={y}>{y}</option>)}</select></div><select value={newMonthly.category} onChange={(e) => setNewMonthly({ ...newMonthly, category: e.target.value })} className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white">{MONTHLY_EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select><input value={newMonthly.label} onChange={(e) => setNewMonthly({ ...newMonthly, label: e.target.value })} placeholder="Label" className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none" /><input type="number" value={newMonthly.amount} onChange={(e) => setNewMonthly({ ...newMonthly, amount: e.target.value })} placeholder="Amount" className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none" /><div className="flex gap-2"><button onClick={addMonthlyExpense} className="flex-1 py-1.5 bg-amber-600 text-white text-[12px] rounded-lg">Save</button><button onClick={() => setAddingMonthly(false)} className="px-3 py-1.5 bg-white text-stone-500 border border-stone-200 text-[12px] rounded-lg">Cancel</button></div></div>}
           </div>
 
-          {/* ── Daily Expense (SAME UI) ─────────────────────────────────── */}
           <div className="bg-white rounded-xl border border-stone-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <div><p className="text-[13px] font-semibold text-stone-900">Daily Expenses</p><p className="text-[11px] text-stone-400 mt-0.5">Petty cash and small spends</p></div>
@@ -678,14 +824,31 @@ export default function Management() {
                     <div><span className="text-[9px] font-semibold uppercase tracking-wider bg-stone-100 px-2 py-0.5 rounded text-stone-600 border border-stone-200">{selectedBooking?.hall}</span><p className="text-[14px] font-semibold text-stone-900 mt-1.5">{selectedBooking?.client}</p><p className="text-[11px] text-stone-400 mt-0.5">{selectedBooking?.event} · {new Date(selectedBooking?.date).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "numeric", month: "short", year: "numeric" })}</p></div>
                     <button onClick={() => setSelectedBookingId(null)} className="text-stone-400 hover:text-stone-900 p-1"><X size={16} /></button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mt-4">{[{ label: "Gross Revenue", value: currency(selectedBookingGrossRev), cls: "text-stone-800" }, { label: "Total Costs", value: currency(selectedBookingGrossExp), cls: "text-rose-600" }, { label: "Net Profit", value: currency(selectedBookingNetProfit), cls: selectedBookingNetProfit >= 0 ? "text-emerald-700" : "text-rose-600" }, { label: "Commission", value: currency(selectedBookingAddonCommission), cls: "text-violet-700" }].map((k) => (<div key={k.label} className="bg-white rounded-lg p-2.5 border border-stone-100"><p className="text-[9px] text-stone-400 uppercase tracking-tight mb-1">{k.label}</p><p className={`text-[12px] font-semibold ${k.cls}`}>{k.value}</p></div>))}</div>
+                  <div className="grid grid-cols-2 gap-2 mt-4">
+                    {[{ label: "Gross Revenue", value: currency(selectedBookingGrossRev), cls: "text-stone-800" }, 
+                      { label: "Total Costs", value: currency(selectedBookingGrossExp), cls: "text-rose-600" }, 
+                      { label: "Net Profit", value: currency(selectedBookingNetProfit), cls: selectedBookingNetProfit >= 0 ? "text-emerald-700" : "text-rose-600" }, 
+                      { label: "Commission", value: currency(selectedBookingAddonCommission), cls: "text-violet-700" }
+                    ].map((k) => (
+                      <div key={k.label} className="bg-white rounded-lg p-2.5 border border-stone-100">
+                        <p className="text-[9px] text-stone-400 uppercase tracking-tight mb-1">{k.label}</p>
+                        <p className={`text-[12px] font-semibold ${k.cls}`}>{k.value}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 py-2 max-h-72">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 pt-3 pb-1">Standard Expenses</p>
                   {selectedBookingExpenses.length === 0 ? <p className="text-[12px] text-stone-400 text-center py-4">No costs logged.</p> : selectedBookingExpenses.map((e) => <ExpenseRow key={e.id} expense={e} onDelete={deleteExpense} />)}
                   <p className="text-[10px] font-bold uppercase tracking-wider text-violet-500 pt-4 pb-1">Add-on Services</p>
-                  {selectedBookingAddons.length === 0 ? <p className="text-[12px] text-stone-400 text-center py-4">No add-ons logged.</p> : selectedBookingAddons.map((a) => <AddonRow key={a.id} addon={a} onDelete={deleteAddon} />)}
+                  {selectedBookingAddons.length === 0 ? (
+                    <p className="text-[12px] text-stone-400 text-center py-4">No add-ons logged.</p>
+                  ) : (
+                    selectedBookingAddons.map((a) => (
+                      <AddonRow key={a.id} addon={a} onDelete={deleteAddon} onUpdate={updateAddon} onMarkReceived={handleMarkReceived} />
+                    ))
+                  )}
                 </div>
 
                 <div className="border-t border-stone-100 p-4 bg-stone-50/40">
