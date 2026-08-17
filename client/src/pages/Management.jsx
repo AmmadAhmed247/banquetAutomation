@@ -16,7 +16,7 @@ import { ManagementHeader } from "../components/Management/ManagementHeader.jsx"
 import { KpiGrid } from "../components/Management/KpiGrid.jsx";
 import { HallPerformanceChart } from "../components/Management/HallPerformanceChart.jsx";
 import { BookingLedger } from "../components/Management/BookingLedger.jsx";
-import { MonthlyOverheadPanel } from "../components/management/Monthlyoverheadpanel.jsx";
+import { MonthlyOverheadPanel } from "../components/Management/MonthlyOverheadPanel.jsx";
 import { DailyExpensesPanel } from "../components/Management/DailyExpensesPanel.jsx";
 import { BookingInspector } from "../components/Management/BookingInspector.jsx";
 
