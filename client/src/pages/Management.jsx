@@ -8,7 +8,7 @@ import { getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense
 import { getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense } from "../lib/hooks/dailyExpense.hook";
 
 // Utils & data hook
-import { CURRENT_YEAR, STANDARD_EXPENSE_CATEGORIES, MONTHLY_EXPENSE_CATEGORIES, DAILY_EXPENSE_CATEGORIES, ADDON_CATEGORIES, getPKTDateISO } from "../components/management/ManagementUtils";
+import { CURRENT_YEAR, STANDARD_EXPENSE_CATEGORIES, MONTHLY_EXPENSE_CATEGORIES, DAILY_EXPENSE_CATEGORIES, ADDON_CATEGORIES, getPKTDateISO } from "../components/Management/ManagementUtils.js";
 import { useManagementData } from "../components/management/useManagementData";
 
 // Section components
@@ -16,7 +16,7 @@ import { ManagementHeader } from "../components/management/ManagementHeader";
 import { KpiGrid } from "../components/management/KpiGrid";
 import { HallPerformanceChart } from "../components/management/HallPerformanceChart";
 import { BookingLedger } from "../components/management/BookingLedger";
-import { MonthlyOverheadPanel } from "../components/management/MonthlyOverheadPanel";
+import { MonthlyOverheadPanel } from "../components/management/Monthlyoverheadpanel";
 import { DailyExpensesPanel } from "../components/management/DailyExpensesPanel";
 import { BookingInspector } from "../components/management/BookingInspector";
 
