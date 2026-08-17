@@ -14,11 +14,11 @@ import { useManagementData } from "../components/Management/useManagementData.js
 // Section components
 import { ManagementHeader } from "../components/Management/ManagementHeader.jsx";
 import { KpiGrid } from "../components/Management/KpiGrid.jsx";
-import { HallPerformanceChart } from "../components/Management/HallPerformanceChart.jsx";
+import { HallPerformanceChart } from "../components/Management/HallPerformanceChart";
 import { BookingLedger } from "../components/Management/BookingLedger.jsx";
-import { MonthlyOverheadPanel } from "../components/Management/MonthlyOverheadPanel.jsx";
-import { DailyExpensesPanel } from "../components/Management/DailyExpensesPanel.jsx";
-import { BookingInspector } from "../components/Management/BookingInspector.jsx";
+import { MonthlyOverheadPanel } from "../components/Management/MonthlyOverheadPanel";
+import { DailyExpensesPanel } from "../components/Managesment/DailyExpensesPanel";
+import { BookingInspector } from "../components/Management/BookingInspector";
 
 export default function Management() {
   // ── Raw data ──
