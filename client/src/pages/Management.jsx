@@ -9,16 +9,16 @@ import { getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense } fro
 
 // Utils & data hook
 import { CURRENT_YEAR, STANDARD_EXPENSE_CATEGORIES, MONTHLY_EXPENSE_CATEGORIES, DAILY_EXPENSE_CATEGORIES, ADDON_CATEGORIES, getPKTDateISO } from "../components/Management/ManagementUtils.js";
-import { useManagementData } from "../components/management/useManagementData";
+import { useManagementData } from "../components/Management/useManagementData.js";
 
 // Section components
-import { ManagementHeader } from "../components/management/ManagementHeader";
-import { KpiGrid } from "../components/management/KpiGrid";
-import { HallPerformanceChart } from "../components/management/HallPerformanceChart";
-import { BookingLedger } from "../components/management/BookingLedger";
-import { MonthlyOverheadPanel } from "../components/management/Monthlyoverheadpanel";
-import { DailyExpensesPanel } from "../components/management/DailyExpensesPanel";
-import { BookingInspector } from "../components/management/BookingInspector";
+import { ManagementHeader } from "../components/Management/ManagementHeader.jsx";
+import { KpiGrid } from "../components/Management/KpiGrid.jsx";
+import { HallPerformanceChart } from "../components/Management/HallPerformanceChart.jsx";
+import { BookingLedger } from "../components/Management/BookingLedger.jsx";
+import { MonthlyOverheadPanel } from "../components/management/Monthlyoverheadpanel.jsx";
+import { DailyExpensesPanel } from "../components/Management/DailyExpensesPanel.jsx";
+import { BookingInspector } from "../components/Management/BookingInspector.jsx";
 
 export default function Management() {
   // ── Raw data ──
