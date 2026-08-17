@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LayoutGrid, CheckCircle2, Clock, Wallet, ChevronDown } from "lucide-react";
+import { LayoutGrid, CheckCircle2, Clock, Wallet, ChevronDown, ListEndIcon, DollarSign } from "lucide-react";
 import { getAllAddons } from "../lib/hooks/addon.hook";
 
 export default function StatsSection({ bookings = [] }) {
@@ -15,12 +15,8 @@ export default function StatsSection({ bookings = [] }) {
     return 0;
   }
 
-  // Only addons explicitly marked received count toward revenue — unreceived ones stay excluded
-  const receivedAddons = allAddons.filter((a) => a.received);
-  const addonRevenue = receivedAddons.reduce((a, x) => a + Number(x.client_price || 0), 0);
-
-  const bookingRevenue = bookings.reduce((a, b) => a + countedAmount(b), 0);
-  const revenue = bookingRevenue + addonRevenue;
+  // Strictly booking-related total revenue (Add-ons completely excluded)
+  const revenue = bookings.reduce((a, b) => a + countedAmount(b), 0);
   const revenueLabel =
     revenue >= 1000000 ? `PKR ${(revenue / 1000000).toFixed(1)}M` : `PKR ${(revenue / 1000).toFixed(0)}K`;
 
@@ -36,15 +32,11 @@ export default function StatsSection({ bookings = [] }) {
     return "Cash";
   }
 
-  const bookingBucketRevenue = bookings
+  // Strictly booking-related revenue for the selected payment method
+  const filteredPaymentRevenue = bookings
     .filter((b) => resolvePaymentBucket(b.paymentMethod || b.payment_method, b.bankName || b.bank_name) === selectedPaymentMethod)
     .reduce((a, b) => a + countedAmount(b), 0);
 
-  const addonBucketRevenue = receivedAddons
-    .filter((a) => resolvePaymentBucket(a.payment_method, a.bank_name) === selectedPaymentMethod)
-    .reduce((a, x) => a + Number(x.client_price || 0), 0);
-
-  const filteredPaymentRevenue = bookingBucketRevenue + addonBucketRevenue;
   const filteredPaymentLabel =
     filteredPaymentRevenue >= 1000000
       ? `PKR ${(filteredPaymentRevenue / 1000000).toFixed(1)}M`
@@ -52,6 +44,7 @@ export default function StatsSection({ bookings = [] }) {
 
   const stats = [
     { label: "Total Bookings", value: bookings.length, icon: LayoutGrid, color: "text-green-600", bg: "bg-green-50" },
+    { label: "Finished", value: bookings.filter((b) => (b.status || "").toLowerCase() === "finished").length, icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
     { label: "Confirmed", value: bookings.filter((b) => (b.status || "").toLowerCase() === "confirmed").length, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
     { label: "Pending", value: bookings.filter((b) => (b.status || "").toLowerCase() === "pending").length, icon: Clock, color: "text-amber-500", bg: "bg-amber-50" },
     { label: "Total Revenue", value: revenueLabel, icon: Wallet, color: "text-green-600", bg: "bg-green-50" },
@@ -71,7 +64,7 @@ export default function StatsSection({ bookings = [] }) {
         </div>
       ))}
 
-      <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-green-100 shadow-sm flex items-center gap-3 min-w-0">
+      {/* <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-green-100 shadow-sm flex items-center gap-3 min-w-0">
         <div className="bg-green-50 p-2.5 rounded-xl shrink-0">
           <Wallet size={18} className="text-green-600" />
         </div>
@@ -93,7 +86,7 @@ export default function StatsSection({ bookings = [] }) {
             <ChevronDown size={12} className="text-green-500 absolute right-1 pointer-events-none" />
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

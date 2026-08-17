@@ -35,7 +35,9 @@ const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
     });
 
     // Hall-specific booked color
-    const bookedColor = hall === "Hall B" ? "#3b82f6" : "#ef4444"; 
+
+
+    const bookedColor = hall === "Hall B" ? "#e51a28" : "#3b82f6"; 
     const headerColor = "#10b981";
 
     const canvas = createCanvas(600, 500);

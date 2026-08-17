@@ -59,7 +59,9 @@ function BookingChip({ booking ,addons=[] }) {
       </div>
 
       <p className="text-xs font-semibold text-gray-900 mb-0.5">{booking.client}</p>
-     
+      {booking.rNo && (
+        <div className="text-[11px] text-slate-600 mb-1">R.No: <span className="font-medium text-gray-800">{booking.rNo}</span></div>
+      )}
       
       {/* Additional details */}
       <div className="space-y-1.5 text-[10px] mb-2 pb-2 border-b border-opacity-20" style={{ borderColor }}>
@@ -167,6 +169,7 @@ export default function CalendarView() {
         hall:           hallChar,
         date:           `${year}-${month}-${day}`,
         client:         b.client,
+        rNo:            b.r_no || b.rNo || "",
         event:          b.event,
         package:        b.package_name || b.package,
         status:         b.status,
