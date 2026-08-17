@@ -33,8 +33,8 @@ async function getPackagesMessage() {
 }
 
 async function getReceiptMessage(phone, data) {
-  const { fileName, url } = await generateReceipt(data); 
-  const mediaUrl = url;  
+  const { fileName, url } = await generateReceipt(data);
+  const mediaUrl = url;
 
   const u = await getUserByPhone(phone);
   const withinWindow = isWithinWindow(u?.last_inbound_at);
@@ -64,8 +64,8 @@ async function getCalendarMessage(phone, hall, year, month) {
     const { url } = await generateCalendarImage(year, month, hall);
     await sendMediaMessage(
       phone,
-      `Here is ${hall}'s availability!\n\n${hall === "Hall B" ? "🔵 Blue" : "🔴 Red"} = Booked\n⚪ White = Available`,
-      url 
+      `Here is ${hall}'s availability!\n\n${hall === "Hall B" ? "🔴 Red" : "🔵 Blue"} = Booked \n⚪ White = Available`,     
+      url
     );
     await sleep(1500);
     return await sendMessage(phone, `Type *HELP* to show the menu or *SWITCH* to change halls.`);
