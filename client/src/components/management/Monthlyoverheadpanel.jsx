@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react";
-import { MONTHS, YEARS, MONTHLY_EXPENSE_CATEGORIES, currency } from "./ManagementUtils";
+import { MONTHS, YEARS, MONTHLY_EXPENSE_CATEGORIES, currency } from "./ManagementUtils.js";
 
 export function MonthlyOverheadPanel({
   allMonthlyExpenses,

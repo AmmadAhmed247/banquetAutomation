@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TrendingUp, Trash2, Pencil, X, Calendar } from "lucide-react";
-import { currency, daysUntil, ADDON_PAYMENT_METHODS, ADDON_CATEGORIES } from "./ManagementUtils.js";
+import { currency, daysUntil, ADDON_PAYMENT_METHODS, ADDON_CATEGORIES } from "./ManagementUtils";
 
 export function KpiCard({ label, value, sub, icon: Icon, trend }) {
   return (

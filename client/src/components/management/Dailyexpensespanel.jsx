@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react";
-import { DAILY_EXPENSE_CATEGORIES, currency } from "./ManagementUtils";
+import { DAILY_EXPENSE_CATEGORIES, currency } from "./ManagementUtils.js";
 
 export function DailyExpensesPanel({
   allDailyExpenses,
