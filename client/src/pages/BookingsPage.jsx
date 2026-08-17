@@ -46,6 +46,7 @@ export default function Bookings({ showToast }) {
   const perPage = 10;
   const [saveLoading, setSaveLoading] = useState(false);
   const queryClient = useQueryClient();
+  
 
 
   const { data: rawBookings = [], isLoading , error } = useQuery({
@@ -69,7 +70,7 @@ export default function Bookings({ showToast }) {
     };
   }) || [];
 
-  const openNew = () => setModal({ mode: "new", booking: { ...emptyForm, id: Date.now() } });
+  const openNew = () => setModal({ mode: "new", booking: { ...emptyForm } });
   const openEdit = (b) => setModal({ mode: "edit", booking: { ...b } });
   const closeModal = () => setModal(null);
 

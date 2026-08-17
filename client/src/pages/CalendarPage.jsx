@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getAllBookings } from "../lib/hooks/booking.hook";
+import { getAllAddons } from "../lib/hooks/addon.hook";
 
 const MONTH_NAMES = [
   "January","February","March","April","May","June",
@@ -25,9 +26,10 @@ const getTodayIslamicDate = () => {
   const monthName = HIJRI_MONTHS[parseInt(parts.month, 10) - 1];
   return `${parts.day} ${monthName} ${parts.year} AH`;
 };
-function BookingChip({ booking }) {
+function BookingChip({ booking ,addons=[] }) {
   const isA = booking.hall === "a";
   const isPending = booking.status?.toLowerCase() === "pending";
+
 
   const themeClasses = isPending
     ? "bg-amber-50 border-amber-200 text-amber-800"
@@ -57,7 +59,9 @@ function BookingChip({ booking }) {
       </div>
 
       <p className="text-xs font-semibold text-gray-900 mb-0.5">{booking.client}</p>
-      <p className="text-[11px] text-slate-500 mb-2">{booking.event} • {booking.package}</p>
+      {booking.rNo && (
+        <div className="text-[11px] text-slate-600 mb-1">R.No: <span className="font-medium text-gray-800">{booking.rNo}</span></div>
+      )}
       
       {/* Additional details */}
       <div className="space-y-1.5 text-[10px] mb-2 pb-2 border-b border-opacity-20" style={{ borderColor }}>
@@ -110,10 +114,25 @@ function BookingChip({ booking }) {
           </div>
         )}
       </div>
+      {addons.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-opacity-20" style={{ borderColor }}>
+          <p className={`text-[9px] font-bold uppercase tracking-wider mb-1 ${accentColorClass}`}>
+            Add-ons
+          </p>
+          <div className="space-y-1">
+            {addons.map((a) => (
+              <div key={a.id} className="flex justify-between text-[10px]">
+                <span className="text-slate-600 truncate pr-2">{a.service}</span>
+                <span className="font-medium text-gray-800 shrink-0">
+                  PKR {Number(a.client_price).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-      <p className={`text-[10px] font-semibold ${accentColorClass}`}>
-        {booking.status}
-      </p>
+      
     </div>
   );
 }
@@ -128,7 +147,13 @@ export default function CalendarView() {
   const [showPanel, setShowPanel] = useState(false); // mobile side panel toggle
 
   const { data: fetchedBookings = [], isLoading, error } = getAllBookings();
-
+  const { data: fetchedAddons = [] } = getAllAddons();
+  const addonsByBooking = fetchedAddons.reduce((acc, a) => {
+  const key = a.bookingId ?? a.booking_id; // depends on what your service returns (camel vs snake)
+  if (!acc[key]) acc[key] = [];
+  acc[key].push(a);
+  return acc;
+}, {});
   const BOOKINGS = fetchedBookings
     .filter((b) => b.status?.toLowerCase() !== "cancelled") // Filter out cancelled bookings
     .map((b) => {
@@ -144,6 +169,7 @@ export default function CalendarView() {
         hall:           hallChar,
         date:           `${year}-${month}-${day}`,
         client:         b.client,
+        rNo:            b.r_no || b.rNo || "",
         event:          b.event,
         package:        b.package_name || b.package,
         status:         b.status,
@@ -409,8 +435,8 @@ export default function CalendarView() {
 
           <div className="overflow-y-auto max-h-[400px] xl:max-h-[520px]">
             {selectedBookings.map((b) => (
-              <BookingChip key={b.id} booking={b} />
-            ))}
+  <BookingChip key={b.id} booking={b} addons={addonsByBooking[b.id] || []} />
+))}
           </div>
         </div>
 

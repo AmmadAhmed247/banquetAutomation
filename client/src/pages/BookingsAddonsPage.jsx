@@ -316,54 +316,54 @@ export default function BookingsAddonsPage() {
       </div>
 
       {/* ── Tab Switcher ──────────────────────────────────────────────────────── */}
-      <div className="flex gap-1 mb-6 bg-stone-100 p-1 rounded-lg border border-stone-200 w-max">
-        <button
-          onClick={() => setActiveTab("service")}
-          className={`px-4 py-2 rounded-md text-[13px] font-semibold transition-all flex items-center gap-2
-            ${activeTab === "service"
-              ? "bg-white text-stone-900 shadow-sm"
-              : "text-stone-500 hover:text-stone-800"}`}
-        >
-          <Layers size={14} className={activeTab === "service" ? "text-green-600" : "text-stone-400"} />
-          Service Performance
-        </button>
-        <button
-          onClick={() => setActiveTab("bookings")}
-          className={`px-4 py-2 rounded-md text-[13px] font-semibold transition-all flex items-center gap-2
-            ${activeTab === "bookings"
-              ? "bg-white text-stone-900 shadow-sm"
-              : "text-stone-500 hover:text-stone-800"}`}
-        >
-          <PlusCircle size={14} className={activeTab === "bookings" ? "text-green-600" : "text-stone-400"} />
-          Bookings with Add-ons
-        </button>
-        <button
-          onClick={() => setActiveTab("monthly")}
-          className={`px-4 py-2 rounded-md text-[13px] font-semibold transition-all flex items-center gap-2
-            ${activeTab === "monthly"
-              ? "bg-white text-stone-900 shadow-sm"
-              : "text-stone-500 hover:text-stone-800"}`}
-        >
-          <Zap size={14} className={activeTab === "monthly" ? "text-amber-600" : "text-stone-400"} />
-          Monthly Expenses
-        </button>
-        <button
-          onClick={() => setActiveTab("standard")}
-          className={`px-4 py-2 rounded-md text-[13px] font-semibold transition-all flex items-center gap-2 whitespace-nowrap
+     <div className="flex gap-1 mb-6 bg-stone-100 p-1 rounded-lg border border-stone-200 overflow-x-auto max-w-full scrollbar-hide">
+  <button
+    onClick={() => setActiveTab("service")}
+    className={`px-3 sm:px-4 py-2 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0
+      ${activeTab === "service"
+        ? "bg-white text-stone-900 shadow-sm"
+        : "text-stone-500 hover:text-stone-800"}`}
+  >
+    <Layers size={14} className={activeTab === "service" ? "text-green-600" : "text-stone-400"} />
+    Service Performance
+  </button>
+  <button
+    onClick={() => setActiveTab("bookings")}
+    className={`px-3 sm:px-4 py-2 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0
+      ${activeTab === "bookings"
+        ? "bg-white text-stone-900 shadow-sm"
+        : "text-stone-500 hover:text-stone-800"}`}
+  >
+    <PlusCircle size={14} className={activeTab === "bookings" ? "text-green-600" : "text-stone-400"} />
+    Bookings with Add-ons
+  </button>
+  <button
+    onClick={() => setActiveTab("monthly")}
+    className={`px-3 sm:px-4 py-2 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0
+      ${activeTab === "monthly"
+        ? "bg-white text-stone-900 shadow-sm"
+        : "text-stone-500 hover:text-stone-800"}`}
+  >
+    <Zap size={14} className={activeTab === "monthly" ? "text-amber-600" : "text-stone-400"} />
+    Monthly Expenses
+  </button>
+  <button
+    onClick={() => setActiveTab("standard")}
+    className={`px-3 sm:px-4 py-2 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0
       ${activeTab === "standard" ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"}`}
-        >
-          <ClipboardList size={14} className={activeTab === "standard" ? "text-blue-600" : "text-stone-400"} />
-          Standard Expenses
-        </button>
-        <button
-          onClick={() => setActiveTab("daily")}
-          className={`px-4 py-2 rounded-md text-[13px] font-semibold transition-all flex items-center gap-2 whitespace-nowrap
+  >
+    <ClipboardList size={14} className={activeTab === "standard" ? "text-blue-600" : "text-stone-400"} />
+    Standard Expenses
+  </button>
+  <button
+    onClick={() => setActiveTab("daily")}
+    className={`px-3 sm:px-4 py-2 rounded-md text-[12px] sm:text-[13px] font-semibold transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0
       ${activeTab === "daily" ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"}`}
-        >
-          <Receipt size={14} className={activeTab === "daily" ? "text-indigo-600" : "text-stone-400"} />
-          Daily Expenses
-        </button>
-      </div>
+  >
+    <Receipt size={14} className={activeTab === "daily" ? "text-indigo-600" : "text-stone-400"} />
+    Daily Expenses
+  </button>
+</div>
 
       {/* ── Service Performance ──────────────────────────────────────────────── */}
       {activeTab === "service" && (

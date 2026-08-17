@@ -47,7 +47,7 @@ const cleanPhone = (phone = "") => {
 
 async function generateReceipt(data = {}) {
   const W = 794;
-  const H = 890;
+  const H = 920;
 
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext("2d");
@@ -104,7 +104,7 @@ async function generateReceipt(data = {}) {
   if (data.date) centeredText(data.date, 82, 260, 220, { size: 14 });
 
   // Received from
-  text('RECEIVED with thanks from Mr.', 42, 258, { size: 14, weight: 'bold' });
+  text('Received with thanks from Mr.', 42, 258, { size: 14, weight: 'bold' });
   line(292, 262, W - 42, 262);
   if (data.clientName) centeredText(data.clientName, 292, W - 42, 258, { size: 14 });
 
@@ -116,15 +116,15 @@ async function generateReceipt(data = {}) {
   // WhatsApp & Phone
   text('WhatsApp.', 42, 328, { size: 14, weight: 'bold' });
   line(128, 332, 370, 332);
-  const whatsappNum = data.whatsapp || "03002319171";
+  const whatsappNum = data.whatsapp || "03008207221";
   centeredText(cleanPhone(whatsappNum), 128, 370, 328, { size: 14 });
   
   text('Phone.', 390, 328, { size: 14, weight: 'bold' });
   line(448, 332, W - 42, 332);
-  const phoneNum = data.phone || "03008928058";
+  const phoneNum = data.phone || "03002319171 / 03008928058";
   centeredText(cleanPhone(phoneNum), 448, W - 42, 328, { size: 14 });
 
-  // Reserved for Date / Day (Mapping fallback for both reservedFor and reservationDate)
+  // Reserved for Date / Day
   text('has been reserved for', 42, 372, { size: 14, weight: 'bold' });
   line(200, 376, 435, 376);
   const reservationDate = data.reservationDate || data.reservedFor;
@@ -141,7 +141,7 @@ async function generateReceipt(data = {}) {
   line(494, 416, W - 42, 416);
   if (data.noOfGuests) centeredText(data.noOfGuests, 494, W - 42, 412, { size: 14 });
 
-  // Standardized Payment Lines Layout (Lump Sum, Advance, Balance)
+  // Standardized Payment Lines Layout
   const payStartX = 120;
   const payEndX = 350;
 
@@ -230,21 +230,27 @@ async function generateReceipt(data = {}) {
   text('I have read & agreed to the above terms & conditions.', 62, tcLineY + 14, { size: 12, color: '#111' });
   line(28, tcLineY + 24, W - 28, tcLineY + 24, '#c0392b', 1.5);
 
-  // Footer (Split layout with vertical dividing line in the middle)
-  const footY = tcLineY + 40;
+  // ==========================================
+  // FOOTER WITH POWERED BY VANEXTA & WEBSITE
+  // ==========================================
+  const footY = tcLineY + 38;
   const midX = W / 2;
 
-  // Vertical Divider Line in the middle of the footer
-  line(midX, footY - 12, midX, footY + 36, '#c0392b', 1.5);
+  // Vertical Divider Line in the middle
+  line(midX, footY + 2, midX, footY + 46, '#e2d9d2', 1);
 
-  // Left Side: Address
-  text('D-16, Block "N" Near Sakhi Hassan,', 45, footY, { size: 12, weight: 'bold', color: '#111', align: 'left' });
-  text('North Nazimabad, Karachi.', 45, footY + 18, { size: 12, weight: 'bold', color: '#111', align: 'left'	});
+  // Left Side: Address Info
+  text('📍 LOCATION', 45, footY + 14, { size: 9.5, weight: 'bold', color: '#c0392b', align: 'left' });
+  text('D-16, Block "N" Near Sakhi Hassan,', 45, footY + 31, { size: 11, weight: 'bold', color: '#1a237e', align: 'left' });
+  text('North Nazimabad, Karachi.', 45, footY + 46, { size: 11, weight: 'bold', color: '#1a237e', align: 'left' });
 
-  // Right Side: Contact Numbers with Heading
-  text('Contact Numbers:', midX + 25, footY - 2, { size: 12, weight: 'bold', color: '#c0392b', align: 'left' });
-  text(`WhatsApp: 03002319171`, midX + 25, footY + 16, { size: 11, weight: 'bold', color: '#111', align: 'left' });
-  text(`Phone: 03008928058`, midX + 25, footY + 31, { size: 11, weight: 'bold', color: '#111', align: 'left' });
+  // Right Side: Contact Numbers
+  text('📞 CONTACT US', midX + 25, footY + 14, { size: 9.5, weight: 'bold', color: '#c0392b', align: 'left' });
+  text(`WhatsApp: 0300 8207221  |  Ph: 0300 2319171`, midX + 25, footY + 31, { size: 10, weight: 'bold', color: '#1a237e', align: 'left' });
+  text(`Alternate Phone: 0300 8928058`, midX + 25, footY + 46, { size: 10, weight: 'bold', color: '#1a237e', align: 'left' });
+
+  // Powered by Vanexta / Raabta website at bottom right
+  text('Powered by Vanexta', W - 42, H - 28, { size: 9, weight: 'normal', color: '#777777', align: 'right' });
 
   // Save to public folder
   const fileName = `receipt-${Date.now()}.png`;

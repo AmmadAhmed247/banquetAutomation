@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { Printer, RotateCcw, User, Phone, MessageCircle, MapPin, CalendarDays, Users, Building2, Wallet, CreditCard, PiggyBank } from "lucide-react";
 import receiptService from "../services/receipt.service";
+import bookingService from "../services/booking.service"; // Added booking service import
 import toast from "react-hot-toast";
 
 const formatDate = (dateStr) => {
@@ -18,7 +19,7 @@ const formatDate = (dateStr) => {
 
 const defaultForm = {
   rNo: "",
-  date: "",
+  date: new Date().toISOString().slice(0, 10),
   clientName: "",
   resident: "",
   whatsapp: "",
@@ -30,25 +31,26 @@ const defaultForm = {
   lumpSum: "",
   advance: "",
   balance: "",
+  venue: "Hall A", // Default option for matching booking venue field
+  package: "",     // Optional field for package name
 };
+
 const isValidPhoneLength = (number) => {
-  if (!number) return true; // let `required` handle emptiness separately
-  const digits = number.replace(/\D/g, ""); // strip spaces, dashes, +, etc.
+  if (!number) return true; 
+  const digits = number.replace(/\D/g, ""); 
 
   if (digits.startsWith("92")) {
-    // +923001234567 / 923001234567 -> 92 + 10 digits = 12 digits total
     return digits.length === 12;
   }
   if (digits.startsWith("0")) {
-    // 03001234567 -> 11 digits total
     return digits.length === 11;
   }
-  return false; // doesn't start with 0 or 92 at all — reject
+  return false; 
 };
 
 const HALLS = ["Hall A", "Hall B", "Hall A & B"];
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const FUNCS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate"];
+const FUNCS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate" , "Barat and Valima" , "Nikah"];
 
 function Field({ label, icon: Icon, children }) {
   return (
@@ -288,54 +290,98 @@ export default function DarbarReceiptForm() {
   };
   
   const onError = (errors) => {
-  const firstKey = Object.keys(errors)[0];
-  const message = errors[firstKey]?.message;
-  if (message) {
-    toast.error(message);
-  } else if (firstKey) {
-    toast.error(`Please fill out the required field: ${firstKey}`);
-  } else {
-    toast.error("Please fill out all required fields.");
-  }
-};
-
-  const onSubmit = async (data) => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      const fixedData = {
-        rNo: data.rNo,
-        date: formatDate(data.date),
-        clientName: data.clientName,
-        resident: data.resident,
-        whatsapp: data.whatsapp,
-        phone: !data.phone || data.phone === "-" ? "" : data.phone,
-        reservationDate: formatDate(data.reservationDate),
-        day: data.day,
-        functionName: data.functionName,
-        noOfGuests: data.noOfGuests,
-        lumpSum: data.lumpSum,
-        advance: data.advance,
-        balance: data.balance
-      };
-
-      const formattedData = {
-        ...fixedData,
-        whatsapp: formatWhatsAppNumber(fixedData.whatsapp)
-      };
-
-      const result = await receiptService.sendReceipt(formattedData);
-
-      if (result?.success === true) {
-        toast.success("Receipt Sent!");
-      }
-    } catch (error) {
-      console.log("An Error Occured: ", error);
-      toast.error("Failed to send receipt. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    const firstKey = Object.keys(errors)[0];
+    const message = errors[firstKey]?.message;
+    if (message) {
+      toast.error(message);
+    } else if (firstKey) {
+      toast.error(`Please fill out the required field: ${firstKey}`);
+    } else {
+      toast.error("Please fill out all required fields.");
     }
   };
+
+  const onSubmit = async (data) => {
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+  try {
+    const fixedData = {
+      rNo: data.rNo,
+      date: formatDate(data.date),
+      clientName: data.clientName,
+      resident: data.resident,
+      whatsapp: data.whatsapp,
+      phone: !data.phone || data.phone === "-" ? "" : data.phone,
+      reservationDate: formatDate(data.reservationDate),
+      day: data.day,
+      functionName: data.functionName,
+      noOfGuests: data.noOfGuests,
+      lumpSum: data.lumpSum,
+      advance: data.advance,
+      balance: data.balance,
+    };
+
+    const formattedData = {
+      ...fixedData,
+      whatsapp: formatWhatsAppNumber(fixedData.whatsapp),
+    };
+
+    const bookingPayload = {
+      rNo: data.rNo || "1",
+      client: data.clientName || "Walk-in Client",
+      phone: data.phone || data.whatsapp || "03000000000",
+      event: data.functionName || "Wedding",
+      package: data.package || "Standard",
+      venue: data.venue || "Hall A",
+      date: data.reservationDate ? new Date(data.reservationDate).toISOString() : new Date().toISOString(),
+      totalAmount: Number(data.lumpSum) || 0,
+      advanceAmount: Number(data.advance) || 0,
+      // `advance_paid` in DB is numeric (amount). Send numeric paid amount here.
+      advancePaid: Number(data.advance) || 0,
+      paymentMethod: "Cash",
+      timeSlot: "Night",
+      status: "Confirmed",
+      guests: Number(data.noOfGuests) || 0,
+    };
+
+    // 1. Create the booking FIRST — the receipt should only go out once this succeeds.
+    const bookingResult = await bookingService.createBooking(bookingPayload);
+
+    if (bookingResult?.success === false) {
+      // Backend responded but flagged failure explicitly — show its actual reason.
+      toast.error(bookingResult.message || "Failed to create booking");
+      return; // stop here — do not send the receipt for a booking that wasn't created
+    }
+
+    // 2. Booking confirmed — now send the receipt.
+    let receiptResult;
+    try {
+      receiptResult = await receiptService.sendReceipt(formattedData);
+    } catch (receiptError) {
+      // Booking succeeded but the receipt failed — say so specifically, don't call it a booking failure.
+      const receiptMessage = receiptError?.response?.data?.message || receiptError?.message || "Receipt failed to send";
+      toast.error(`Booking created, but receipt failed: ${receiptMessage}`);
+      return;
+    }
+
+    if (receiptResult?.success === true) {
+      toast.success("Receipt Sent & Booking Created!");
+    } else {
+      toast.success("Booking created! Receipt processed.");
+    }
+  } catch (error) {
+    // Covers createBooking throwing (network error, validation error, DB constraint, etc.)
+    // Surface whatever the backend actually said instead of a generic message.
+    console.error("An error occurred: ", error);
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Failed to create booking. Please try again.";
+    toast.error(message);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-zinc-50 p-4 sm:p-6">
@@ -385,25 +431,25 @@ export default function DarbarReceiptForm() {
                   <input className={inp} placeholder="North Nazimabad, Karachi" {...register("resident", { required: true })} />
                 </Field>
                 <Field label="WhatsApp Number" icon={MessageCircle}>
-  <input
-    className={inp}
-    placeholder="0300-1234567"
-    {...register("whatsapp", {
-      required: true,
-      validate: (v) => isValidPhoneLength(v) || "Enter a valid 11-digit number",
-    })}
-  />
-</Field>
+                  <input
+                    className={inp}
+                    placeholder="0300-1234567"
+                    {...register("whatsapp", {
+                      required: true,
+                      validate: (v) => isValidPhoneLength(v) || "Enter a valid 11-digit number",
+                    })}
+                  />
+                </Field>
 
-<Field label="Phone Number" icon={Phone}>
-  <input
-    className={inp}
-    placeholder="021-1234567"
-    {...register("phone", {
-      validate: (v) => isValidPhoneLength(v) || "Enter a valid 11-digit number",
-    })}
-  />
-</Field>
+                <Field label="Phone Number" icon={Phone}>
+                  <input
+                    className={inp}
+                    placeholder="021-1234567"
+                    {...register("phone", {
+                      validate: (v) => isValidPhoneLength(v) || "Enter a valid 11-digit number",
+                    })}
+                  />
+                </Field>
               </div>
             </div>
 
@@ -432,6 +478,11 @@ export default function DarbarReceiptForm() {
                 </Field>
                 <Field label="No. of Guests" icon={Users}>
                   <input type="number" className={inp} placeholder="350" {...register("noOfGuests", { required: true })} />
+                </Field>
+                <Field label="Venue" icon={Building2}>
+                  <select className={sel} {...register("venue", { required: true })}>
+                    {HALLS.map(h => <option key={h}>{h}</option>)}
+                  </select>
                 </Field>
               </div>
             </div>

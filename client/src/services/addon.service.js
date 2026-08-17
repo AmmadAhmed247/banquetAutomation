@@ -3,8 +3,6 @@ import api from "../api/api";
 const addonService = {
   getAll: async () => {
     const res = await api.get("api/addon/getAddons");
-    console.log(res.data);
-    
     return res.data;
   },
   create: async (data) => {
@@ -15,6 +13,15 @@ const addonService = {
     const res = await api.delete(`api/addon/deleteAddon/${id}`);
     return res.data;
   },
+  markReceived: async (id, payload = {}) => {
+  const res = await api.patch(`api/addon/markReceived/${id}`, payload);
+  return res.data;
+},
+  update: async (id, data) => {
+    const res = await api.put(`api/addon/updateAddon/${id}`, data);
+    return res.data;
+  },
 };
 
 export default addonService;
+
