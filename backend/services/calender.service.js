@@ -31,7 +31,7 @@ async function generateCalendarImage(year, month, hall) {
         if (!b?.date) return;
         const dateObj = typeof b.date === "string" ? new Date(b.date) : b.date;
         const day = dateObj.getUTCDate();
-        const slot = b.time_slot === "Day" ? "Day" : "Night";
+        const slot = b.time_slot === "afternoon" ? "Day" : "Night";
  
         if (!bookedSlots[day]) bookedSlots[day] = { Day: false, Night: false };
         bookedSlots[day][slot] = true;
