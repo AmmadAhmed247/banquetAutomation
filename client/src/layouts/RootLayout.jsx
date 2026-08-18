@@ -32,6 +32,7 @@ export default function RootLayout() {
     { name: "Management System", path: "management", icon: FolderKanban },
     { name: "Add-ons", path: "addons", icon: BanknoteArrowDown },
     { name: "Cash Flow", path: "cash-flow", icon: DollarSign },
+    // { name: "Alerts", path: "Alerts", icon: BanknoteArrowUp },
   ];
 
   // UPDATED: Check if they are on the main dashboard page

@@ -242,7 +242,11 @@ function Footer() {
   return (
     <footer className="border-t border-zinc-200 px-6 py-10">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 font-mono text-sm text-zinc-500 md:flex-row">
-        <p>Vanexta — Karachi, Pakistan</p>
+        <div className="flex items-center flex-row gap-2">
+
+        <img className="w-12" src="./main-removebg-preview.png" alt="" />
+        <p > Vanexta ~ Karachi, Pakistan</p>
+        </div>
         <p>© {new Date().getFullYear()} Vanexta. All rights reserved.</p>
       </div>
     </footer>
