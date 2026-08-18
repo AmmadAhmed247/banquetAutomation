@@ -32,8 +32,9 @@ async function generateCalendarImage(year, month, hall) {
         const dateObj = typeof b.date === "string" ? new Date(b.date) : b.date;
         const day = dateObj.getUTCDate();
         
-        // Map "afternoon" to Afternoon, otherwise Night
-        const slot = b.time_slot === "Afternoon" ? "Afternoon" : "Night";
+        // Ensure robust comparison for afternoon (handles both lowercase/capitalized database entries)
+        const timeSlotLower = (b.time_slot || "").toLowerCase();
+        const slot = timeSlotLower === "afternoon" ? "Afternoon" : "Night";
 
         if (!bookedSlots[day]) bookedSlots[day] = { Afternoon: false, Night: false };
         bookedSlots[day][slot] = true;
