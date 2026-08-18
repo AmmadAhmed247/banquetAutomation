@@ -15,6 +15,17 @@ export function BookingLedger({
   setSelectedBookingId,
   setAddingTo,
 }) {
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Filter out past bookings (keep only today onwards)
+  const upcomingBookings = displayedLedgerBookings.filter(b => {
+    const bookingDate = new Date(b.date);
+    bookingDate.setHours(0, 0, 0, 0);
+    return bookingDate >= today;
+  });
+
   return (
     <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center">
@@ -31,7 +42,7 @@ export function BookingLedger({
             placeholder="Search bookings..."
             className="px-3.5 py-2 border border-stone-200 rounded-xl text-[13px] outline-none w-64 focus:border-stone-400 transition-colors"
           />
-          <div className="text-[12px] text-stone-400 font-medium">{ledgerFilteredBookings.length} results</div>
+          <div className="text-[12px] text-stone-400 font-medium">{upcomingBookings.length} results</div>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -44,7 +55,7 @@ export function BookingLedger({
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {displayedLedgerBookings.map(b => {
+            {upcomingBookings.map(b => {
               const bA = addonsByBooking[b.id] || []; const bE = expensesByBooking[b.id] || [];
               const aR = bA.reduce((s, a) => s + (a.received ? Number(a.client_price) : 0), 0);
               const vE = bA.reduce((s, a) => s + (a.received ? Number(a.vendor_cost) : 0), 0);

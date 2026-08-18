@@ -98,10 +98,27 @@ export default function Management() {
     selectedBookingId,
   });
 
-  const handleMarkReceived = (id, method) => {
-    const isBank = method !== "Cash" && method !== "JazzCash" && method !== "EasyPaisa";
-    markReceived.mutate({ id, payment_method: isBank ? "Bank Transfer" : method, bank_name: isBank ? method : null });
+const handleMarkReceived = (id, payloadOrMethod) => {
+  console.log("handleMarkReceived called with ID:", id, "Payload/Method:", payloadOrMethod);
+
+  if (typeof payloadOrMethod === 'object' && payloadOrMethod !== null) {
+    console.log("Mutating with object payload:", { id, ...payloadOrMethod });
+    markReceived.mutate({ id, ...payloadOrMethod });
+    return;
+  }
+
+  const method = payloadOrMethod;
+  const isBank = method !== "Cash" && method !== "JazzCash" && method !== "EasyPaisa";
+  const payload = { 
+    id, 
+    payment_method: isBank ? "Bank Transfer" : method, 
+    bank_name: isBank ? method : null,
+    received: true 
   };
+  
+  console.log("Mutating with payment payload:", payload);
+  markReceived.mutate(payload);
+};
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 p-5 md:p-8 antialiased selection:bg-emerald-100 font-['Inter']">

@@ -36,13 +36,39 @@ export function useDeleteAddon() {
 
 export function useMarkAddonReceived() {
   const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: ({ id, payment_method, bank_name }) => addonService.markReceived(id, { payment_method, bank_name }),
-    onSuccess: () => {
+    mutationFn: ({ id, ...payload }) => addonService.markReceived(id, payload),
+    
+    // When mutation is triggered, update the UI cache instantly before the server even responds
+    onMutate: async ({ id, received }) => {
+      await queryClient.cancelQueries({ queryKey: ["addons"] });
+
+      const previousAddons = queryClient.getQueryData(["addons"]);
+
+      queryClient.setQueryData(["addons"], (old = []) =>
+        old.map((addon) =>
+          addon.id === id ? { ...addon, received: received ?? true } : addon
+        )
+      );
+
+      return { previousAddons };
+    },
+    
+    // If it fails, roll back
+    onError: (err, variables, context) => {
+      if (context?.previousAddons) {
+        queryClient.setQueryData(["addons"], context.previousAddons);
+      }
+    },
+    
+    // Always refetch after error or success to ensure sync
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["addons"] });
     },
   });
 }
+
 export function useUpdateAddon() {
   const queryClient = useQueryClient();
   return useMutation({
