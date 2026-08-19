@@ -173,40 +173,39 @@ export default function Cashflow() {
 
     // 2. Add-ons Activity
     addons.forEach((a) => {
-      if (!a.received) return;
+  if (!a.received) return;
+  const recordDate = a.received_at || a.receivedAt || a.created_at || a.createdAt || a.date;
+  if (!isWithinRange(recordDate)) return;
 
-      const recordDate = a.created_at || a.createdAt || a.date;
-      if (!isWithinRange(recordDate)) return;
+  const clientVal = Number(a.client_price || a.price || 0);
+  const vendorVal = Number(a.vendor_cost || 0);
 
-      const clientVal = Number(a.client_price || a.price || 0);
-      const vendorVal = Number(a.vendor_cost || 0);
-
-      if (clientVal > 0) {
-        items.push({
-          id: `addon-in-${a._id || a.id}`,
-          flow: "IN",
-          category: "Add-on Service",
-          note: a.service || a.title || "Addon Service",
-          who: a.client_name || "—",
-          method: a.payment_method || "Cash",
-          amount: clientVal,
-          date: recordDate,
-        });
-      }
-
-      if (vendorVal > 0) {
-        items.push({
-          id: `addon-out-${a._id || a.id}`,
-          flow: "OUT",
-          category: "Vendor Payment",
-          note: `Vendor Payout (${a.service || "Addon"})`,
-          who: a.vendor_name || "Vendor",
-          method: "Cash",
-          amount: vendorVal,
-          date: recordDate,
-        });
-      }
+  if (clientVal > 0) {
+    items.push({
+      id: `addon-in-${a._id || a.id}`,
+      flow: "IN",
+      category: "Add-on Service",
+      note: a.service || a.title || "Addon Service",
+      who: a.client_name || "—",
+      method: a.payment_method || "Cash",
+      amount: clientVal,
+      date: recordDate,
     });
+  }
+
+  if (vendorVal > 0) {
+    items.push({
+      id: `addon-out-${a._id || a.id}`,
+      flow: "OUT",
+      category: "Vendor Payment",
+      note: `Vendor Payout (${a.service || "Addon"})`,
+      who: a.vendor_name || "Vendor",
+      method: "Cash",
+      amount: vendorVal,
+      date: recordDate,
+    });
+  }
+});
 
     // 3. Standard Expenses (booking-tied)
     expenses.forEach((e) => {
