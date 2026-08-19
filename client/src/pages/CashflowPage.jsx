@@ -9,7 +9,6 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 
-import { useGetCashflow } from "../lib/hooks/cashflow.hook";
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllExpenses } from "../lib/hooks/expense.hook";
 import { getAllAddons } from "../lib/hooks/addon.hook";
@@ -45,7 +44,6 @@ export default function Cashflow() {
 
   const [startDate, setStartDate] = useState(todayPKT);
   const [endDate, setEndDate] = useState(todayPKT);
-  
 
   const { queryStart, queryEnd } = useMemo(() => {
     if (range === "today") {
@@ -74,13 +72,10 @@ export default function Cashflow() {
     return { queryStart: "", queryEnd: "" };
   }, [range, startDate, endDate, todayPKT]);
 
-  const { data: cashflowData, isLoading } = useGetCashflow({
-    start: queryStart,
-    end: queryEnd,
-    range,
-  });
-  // isLoading is kept only in case you want a loading state elsewhere; it no longer
-  // gates the summary numbers below, since those come from mergedActivity now.
+  // Note: previously also called useGetCashflow(...) here for a backend-computed
+  // totalIn/totalOut, but that value was never used — totals below are computed
+  // entirely from mergedActivity so the cards and the ledger table can never
+  // contradict each other. Removed the call since it was a wasted network request.
 
   const bookingsQuery = getAllBookings();
   const expensesQuery = getAllExpenses();
@@ -131,7 +126,11 @@ export default function Cashflow() {
     // 1. Bookings Activity
     bookings.forEach((b) => {
       const st = (b?.status || "").toLowerCase();
-      if (st === "cancelled") return;
+      // Cancelled bookings are NOT excluded here. Advances are non-refundable in
+      // this business, so cash already collected on a booking that later gets
+      // cancelled still counts as real revenue and must stay in the ledger.
+      // (Cancelled bookings ARE still excluded from outstandingReceivables above,
+      // since there's no future balance to expect from a dead booking.)
 
       const createdDate = b.created_at || b.createdAt || b.date;
       const updatedDate = b.updated_at || b.updatedAt || b.date || createdDate;
@@ -173,41 +172,41 @@ export default function Cashflow() {
     });
 
     // 2. Add-ons Activity
-  addons.forEach((a) => {
-    if (!a.received) return;
+    addons.forEach((a) => {
+      if (!a.received) return;
 
-    const recordDate = a.created_at || a.createdAt || a.date;
-    if (!isWithinRange(recordDate)) return;
+      const recordDate = a.created_at || a.createdAt || a.date;
+      if (!isWithinRange(recordDate)) return;
 
-    const clientVal = Number(a.client_price || a.price || 0);
-    const vendorVal = Number(a.vendor_cost || 0);
+      const clientVal = Number(a.client_price || a.price || 0);
+      const vendorVal = Number(a.vendor_cost || 0);
 
-    if (clientVal > 0) {
-      items.push({
-        id: `addon-in-${a._id || a.id}`,
-        flow: "IN",
-        category: "Add-on Service",
-        note: a.service || a.title || "Addon Service",
-        who: a.client_name || "—",
-        method: a.payment_method || "Cash",
-        amount: clientVal,
-        date: recordDate,
-      });
-    }
+      if (clientVal > 0) {
+        items.push({
+          id: `addon-in-${a._id || a.id}`,
+          flow: "IN",
+          category: "Add-on Service",
+          note: a.service || a.title || "Addon Service",
+          who: a.client_name || "—",
+          method: a.payment_method || "Cash",
+          amount: clientVal,
+          date: recordDate,
+        });
+      }
 
-    if (vendorVal > 0) {
-      items.push({
-        id: `addon-out-${a._id || a.id}`,
-        flow: "OUT",
-        category: "Vendor Payment",
-        note: `Vendor Payout (${a.service || "Addon"})`,
-        who: a.vendor_name || "Vendor",
-        method: "Cash",
-        amount: vendorVal,
-        date: recordDate,
-      });
-    }
-  });
+      if (vendorVal > 0) {
+        items.push({
+          id: `addon-out-${a._id || a.id}`,
+          flow: "OUT",
+          category: "Vendor Payment",
+          note: `Vendor Payout (${a.service || "Addon"})`,
+          who: a.vendor_name || "Vendor",
+          method: "Cash",
+          amount: vendorVal,
+          date: recordDate,
+        });
+      }
+    });
 
     // 3. Standard Expenses (booking-tied)
     expenses.forEach((e) => {
@@ -220,7 +219,6 @@ export default function Cashflow() {
       const label = (e.label || e.title || e.name || e.description || "").toLowerCase();
 
       const isCommission = cat.includes("commission") || label.includes("commission");
-      const isCommissionInflow = e.flow === "IN" || e.type === "inflow";
 
       const amt = Number(
         e.amount ?? e.bill_amount ?? e.cost ?? e.total ?? e.expense_amount ?? 0
@@ -232,7 +230,7 @@ export default function Cashflow() {
 
       items.push({
         id: `expense-${e._id || e.id}`,
-        flow: isCommissionInflow ? "IN" : "OUT",
+        flow: "OUT",
         category: isCommission ? "Agent Commission" : e.category || "Standard Expense",
         note: noteText,
         who: e.payee || e.vendor || e.agent_name || "—",
@@ -261,8 +259,7 @@ export default function Cashflow() {
       });
     });
 
-    // 5. Monthly Overhead / Recurring Bills — previously missing entirely from this ledger,
-    // which is why it counted toward Total Money Out (via the API) but never appeared here.
+    // 5. Monthly Overhead / Recurring Bills
     monthlyExpenses.forEach((m) => {
       const recordDate = m.created_at || m.createdAt;
       if (!isWithinRange(recordDate)) return;
@@ -291,24 +288,16 @@ export default function Cashflow() {
     return items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   }, [bookings, addons, expenses, dailyExpenses, monthlyExpenses, queryStart, queryEnd, range]);
 
-  const computedTotalIn = useMemo(
+  const totalIn = useMemo(
     () => mergedActivity.filter((i) => i.flow === "IN").reduce((acc, curr) => acc + curr.amount, 0),
     [mergedActivity]
   );
 
-  const computedTotalOut = useMemo(
+  const totalOut = useMemo(
     () => mergedActivity.filter((i) => i.flow === "OUT").reduce((acc, curr) => acc + curr.amount, 0),
     [mergedActivity]
   );
 
-  // The backend cashflow API's totalIn/totalOut appears to omit addon revenue for
-  // date-scoped queries (confirmed: "Today" card was short by exactly the addon amount
-  // that already appears correctly in the ledger below). Rather than trust two different
-  // sources of truth that can silently disagree, always use the totals computed from the
-  // same mergedActivity data that drives the visible ledger — guarantees the cards and
-  // the table can never contradict each other.
-  const totalIn = computedTotalIn;
-  const totalOut = computedTotalOut;
   const net = totalIn - totalOut;
 
   const rangeLabel =
@@ -519,6 +508,8 @@ export default function Cashflow() {
                               (item.status || "").toLowerCase() === "finished" ||
                               (item.status || "").toLowerCase() === "completed"
                                 ? "bg-emerald-100 text-emerald-800"
+                                : (item.status || "").toLowerCase() === "cancelled"
+                                ? "bg-rose-100 text-rose-700"
                                 : "bg-stone-100 text-stone-600"
                             }`}
                           >

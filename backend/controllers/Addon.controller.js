@@ -24,6 +24,8 @@ async function AddAddon(req, res) {
     }
 }
 
+
+
 async function DeleteAddon(req, res) {
     try {
         await deleteAddon(req.params.id);
