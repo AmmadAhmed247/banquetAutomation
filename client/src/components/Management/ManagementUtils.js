@@ -37,5 +37,14 @@ export function getBookingRevenue(b) {
 }
 
 export function normalizeBooking(b) {
-  return { id: b.id, hall: b.venue, client: b.client, event: b.event, date: b.date, status: b.status, revenue: getBookingRevenue(b) };
+  return { 
+    id: b.id, 
+    r_no: b.r_no, 
+    hall: b.venue, 
+    client: b.client, 
+    event: b.event, 
+    date: b.date, 
+    status: b.status, 
+    revenue: getBookingRevenue(b) 
+  };
 }

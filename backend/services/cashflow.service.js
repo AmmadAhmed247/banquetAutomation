@@ -65,10 +65,10 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
     addInflow(
       `payment-${p.id}`,
       p.created_at,
-      p.type || "Payment",
-      p.note || `${p.type || "Booking"} Payment Received`,
-      null,
-      p.payment_method,
+      p.category || "Payment",
+      p.note || `Payment Received (${p.category || "Booking"})`,
+      p.who || null,
+      p.payment_method || "Cash",
       Number(p.amount || 0)
     );
   });
@@ -112,7 +112,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
   });
 
   rangeAddons.forEach((a) => {
-    addOutflow(`addon-vendor-${a.id}`, a.created_at, "Vendor Payout", `${a.service} (Vendor)`, null, "Cash/Bank", Number(a.vendor_cost || 0));
+    addOutflow(`addon-vendor-${a.id}`, a.created_at, "Vendor Payout", `${a.service} (Vendor)`, null, a.payment_method || "Cash", Number(a.vendor_cost || 0));
   });
 
   rangeExpenses.forEach((e) => {
@@ -134,7 +134,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
         "Monthly Overhead",
         m.label || m.category,
         null,
-        "Bank/Cash",
+        "Cash",
         Number(m.amount || 0)
       );
     }

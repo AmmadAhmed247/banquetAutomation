@@ -148,12 +148,17 @@ export default function CalendarView() {
 
   const { data: fetchedBookings = [], isLoading, error } = getAllBookings();
   const { data: fetchedAddons = [] } = getAllAddons();
-  const addonsByBooking = fetchedAddons.reduce((acc, a) => {
-  const key = a.bookingId ?? a.booking_id; // depends on what your service returns (camel vs snake)
-  if (!acc[key]) acc[key] = [];
-  acc[key].push(a);
-  return acc;
-}, {});
+
+  const addonsArray = Array.isArray(fetchedAddons)
+    ? fetchedAddons
+    : fetchedAddons?.data || fetchedAddons?.addons || [];
+
+  const addonsByBooking = addonsArray.reduce((acc, a) => {
+    const key = a.bookingId ?? a.booking_id; 
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(a);
+    return acc;
+  }, {});
   const BOOKINGS = fetchedBookings
     .filter((b) => b.status?.toLowerCase() !== "cancelled") // Filter out cancelled bookings
     .map((b) => {

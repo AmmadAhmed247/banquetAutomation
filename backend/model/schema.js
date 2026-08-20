@@ -116,14 +116,15 @@ const monthlyExpenses = pgTable("monthly_expenses", {
 
 const payments = pgTable("payments", {
   id: serial("id").primaryKey().notNull(),
-  bookingId: integer("booking_id")
-    .notNull()
-    .references(() => booking.id, { onDelete: "cascade" }),
+  flow: varchar("flow", { length: 10 }).notNull().default("IN"),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  type: varchar("type", { length: 50 }).notNull().default("Advance"), // 'Advance', 'Settlement', 'Partial'
+  category: varchar("category", { length: 100 }).notNull(),
   payment_method: varchar("payment_method", { length: 50 }).notNull().default("Cash"),
   bank_name: varchar("bank_name", { length: 50 }),
+  who: varchar("who", { length: 150 }), 
   note: varchar("note", { length: 255 }),
+  bookingId: integer("booking_id")
+    .references(() => booking.id, { onDelete: "cascade" }), 
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 

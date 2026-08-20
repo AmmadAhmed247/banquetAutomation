@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader, Pencil, CalendarDays, Phone, Users, MapPin, Tag, CreditCard, Delete, Clock, Landmark } from "lucide-react";
+import { Loader, Pencil, CalendarDays, Users, MapPin, Tag, CreditCard, Delete, Clock, Landmark } from "lucide-react";
 
 const statusConfig = {
   Confirmed: { bg: "bg-green-100", text: "text-green-700", border: "border-green-200", bar: "bg-green-500" },
@@ -119,13 +119,13 @@ function BookingCard({ booking, onEdit, onDelete }) {
             </span>
             <button
               onClick={() => onEdit(booking)}
-              className="p-2 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 rounded-xl transition-all shrink-0"
+              className="p-2 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 rounded-xl transition-all shrink-0 cursor-pointer"
             >
               <Pencil size={13} />
             </button>
             <button
               onClick={() => onDelete(booking)}
-              className="p-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-xl transition-all shrink-0"
+              className="p-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-xl transition-all shrink-0 cursor-pointer"
             >
               <Delete size={13} />
             </button>
@@ -137,12 +137,12 @@ function BookingCard({ booking, onEdit, onDelete }) {
         {/* Grid fields */}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { icon: Tag,          label: "Event",       value: booking.event },
-            { icon: CalendarDays, label: "Date",        value: booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
-            { icon: Clock,        label: "Time Slot",   value: getTimeSlot(booking) },
-            { icon: CalendarDays, label: "Advance Due", value: booking.advanceDueDate ? new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
-            { icon: Users,        label: "Guests",      value: booking.guests },
-            { icon: MapPin,       label: "Venue",       value: booking.venue },
+            { icon: Tag,          label: "Event",        value: booking.event },
+            { icon: CalendarDays, label: "Date",         value: booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
+            { icon: Clock,        label: "Time Slot",    value: getTimeSlot(booking) },
+            { icon: CalendarDays, label: "Advance Due",  value: booking.advanceDueDate ? new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
+            { icon: Users,        label: "Guests",       value: booking.guests },
+            { icon: MapPin,       label: "Venue",        value: booking.venue },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="bg-zinc-100 rounded-xl p-2.5 min-w-0">
               <div className="flex items-center gap-1 mb-0.5">
@@ -201,14 +201,34 @@ function BookingCard({ booking, onEdit, onDelete }) {
 
 // ── TABLE (xl and above) ─────────────────────────────────────────────────────
 function BookingsTable({ filteredBookings, onEdit, onDelete }) {
+  const headers = [
+    "R. No.", 
+    "Date", 
+    "Event", 
+    "Client", 
+    "Event Date", 
+    "Time Slot", 
+    "Guests", 
+    "Venue", 
+    "Total Amount", 
+    "Total Advance", 
+    "Advance Paid", 
+    "Revenue Picked", 
+    "Advance Due", 
+    "Payment Note", 
+    "Status", 
+    "", 
+    ""
+  ];
+
   return (
     <div className="bg-white border border-green-100 rounded-2xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-green-50/60 border-b border-green-100">
-              {["R. No.", "Date", "Event", "Client", "Event Date", "Time Slot", "Guests", "Venue", "Total Amount", "Total Advance", "Advance Paid", "Revenue Picked", "Advance Due", "Payment Note", "Status", "", ""].map((h) => (
-                <th key={h} className="text-left text-[10px] font-semibold text-green-600 uppercase tracking-wider px-4 py-3 whitespace-nowrap">
+              {headers.map((h, i) => (
+                <th key={i} className="text-left text-[10px] font-semibold text-green-600 uppercase tracking-wider px-4 py-3 whitespace-nowrap">
                   {h}
                 </th>
               ))}
@@ -222,54 +242,65 @@ function BookingsTable({ filteredBookings, onEdit, onDelete }) {
               return (
                 <tr key={booking.id} className="hover:bg-green-50/40 transition-colors">
                   
+                  {/* R. No. */}
                   <td className="px-4 py-3.5 whitespace-nowrap">
                     <span className="text-[11px] font-semibold text-green-700">
                       {getRNo(booking) ? `#${getRNo(booking)}` : "—"}
                     </span>
                   </td>
 
+                  {/* Date Created */}
                   <td className="px-4 py-3.5 whitespace-nowrap">
                     <span className="text-[11px] font-semibold text-green-900">
                       {(booking.createdAt || booking.created_at) ? new Date(booking.createdAt || booking.created_at).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric" }) : "—"}
                     </span>
                   </td>
 
-                  <td className="px-4 py-3.5">
+                  {/* Event */}
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <p className="font-semibold text-green-900">{booking.event}</p>
-                    
                   </td>
 
-                  <td className="px-4 py-3.5">
+                  {/* Client */}
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <p className="font-semibold text-green-900">{booking.client}</p>
                     <p className="text-[11px] text-green-500 mt-0.5">{booking.phone}</p>
                   </td>
 
+                  {/* Event Date */}
                   <td className="px-4 py-3.5 whitespace-nowrap font-semibold text-green-900">
                     {booking.date ? new Date(booking.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                   </td>
 
+                  {/* Time Slot */}
                   <td className="px-4 py-3.5 whitespace-nowrap">
                     <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full border bg-blue-50 border-blue-100 text-blue-600">
                       {getTimeSlot(booking)}
                     </span>
                   </td>
 
-                  <td className="px-4 py-3.5 text-green-800">{booking.guests}</td>
+                  {/* Guests */}
+                  <td className="px-4 py-3.5 whitespace-nowrap text-green-800">{booking.guests}</td>
 
-                  <td className="px-4 py-3.5 text-green-800">{booking.venue}</td>
+                  {/* Venue */}
+                  <td className="px-4 py-3.5 whitespace-nowrap text-green-800">{booking.venue}</td>
 
+                  {/* Total Amount */}
                   <td className="px-4 py-3.5 font-semibold text-green-900 whitespace-nowrap">
                     {formatPKR(getTotalAmount(booking))}
                   </td>
 
+                  {/* Total Advance */}
                   <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
                     {formatPKR(getAdvanceAmount(booking))}
                   </td>
 
+                  {/* Advance Paid */}
                   <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
                     {formatPKR(getAdvancePaid(booking))}
                   </td>
 
+                  {/* Revenue Picked & Payment breakdown */}
                   <td className="px-4 py-3.5 min-w-[170px]">
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -289,35 +320,40 @@ function BookingsTable({ filteredBookings, onEdit, onDelete }) {
                     </div>
                   </td>
 
+                  {/* Advance Due Date */}
                   <td className="px-4 py-3.5 whitespace-nowrap text-green-800">
                     {booking.advanceDueDate ? new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                   </td>
 
-                  <td className="px-4 py-3.5">
+                  {/* Payment Note */}
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <span className="inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full border bg-green-50 border-green-100 text-green-600">
                       {booking.payment_note || "—"}
                     </span>
                   </td>
 
-                  <td className="px-4 py-3.5">
+                  {/* Status */}
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <span className={`inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full border ${sc.bg} ${sc.text} ${sc.border}`}>
                       {booking.status}
                     </span>
                   </td>
 
-                  <td className="px-4 py-3.5">
+                  {/* Edit Action */}
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <button
                       onClick={() => onEdit(booking)}
-                      className="flex items-center gap-1.5 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all"
+                      className="flex items-center gap-1.5 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
                     >
                       <Pencil size={11} /> Edit
                     </button>
                   </td>
 
-                  <td className="px-4 py-3.5">
+                  {/* Delete Action */}
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <button
                       onClick={() => onDelete(booking)}
-                      className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all"
+                      className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
                     >
                       <Delete size={11} /> Delete
                     </button>
@@ -333,6 +369,7 @@ function BookingsTable({ filteredBookings, onEdit, onDelete }) {
   );
 }
 
+// MAIN EXPORT
 // MAIN EXPORT
 export default function BookingsList({ filteredBookings, isLoading, onEdit, onDelete }) {
   if (isLoading && filteredBookings.length === 0) {
@@ -351,18 +388,35 @@ export default function BookingsList({ filteredBookings, isLoading, onEdit, onDe
     );
   }
 
+  // Sort bookings so creations from today float to the top
+  const sortedBookings = [...filteredBookings].sort((a, b) => {
+    const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD format in local timezone
+    
+    const dateA = (a.createdAt || a.created_at) ? new Date(a.createdAt || a.created_at).toLocaleDateString("en-CA") : "";
+    const dateB = (b.createdAt || b.created_at) ? new Date(b.createdAt || b.created_at).toLocaleDateString("en-CA") : "";
+
+    const isTodayA = dateA === todayStr;
+    const isTodayB = dateB === todayStr;
+
+    if (isTodayA && !isTodayB) return -1; // A comes first
+    if (!isTodayA && isTodayB) return 1;  // B comes first
+
+    // Secondary sort: newest date/time first for the rest
+    return new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0);
+  });
+
   return (
     <>
       {/* Card grid — below xl */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:hidden">
-        {filteredBookings.map((booking) => (
+        {sortedBookings.map((booking) => (
           <BookingCard key={booking.id} booking={booking} onEdit={onEdit} onDelete={onDelete} />
         ))}
       </div>
 
       {/* Table — xl and above */}
       <div className="hidden xl:block">
-        <BookingsTable filteredBookings={filteredBookings} onEdit={onEdit} onDelete={onDelete} />
+        <BookingsTable filteredBookings={sortedBookings} onEdit={onEdit} onDelete={onDelete} />
       </div>
     </>
   );

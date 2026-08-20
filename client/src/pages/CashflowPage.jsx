@@ -14,15 +14,14 @@ import { getAllExpenses } from "../lib/hooks/expense.hook";
 import { getAllAddons } from "../lib/hooks/addon.hook";
 import { getAllDailyExpenses } from "../lib/hooks/dailyExpense.hook";
 import { getAllMonthlyExpenses } from "../lib/hooks/monthlyExpense.hook";
+import { getAllPayments } from "../lib/hooks/payment.hook";
 
 const currency = (n) => `Rs ${Number(n || 0).toLocaleString("en-PK")}`;
 
-// Formats YYYY-MM-DD directly in Asia/Karachi time zone
 const getPKTDateISO = (dateInput = new Date()) => {
   if (!dateInput) return "";
   let d = dateInput;
 
-  // YYYY-MM format support (e.g. "2026-08" -> "2026-08-01")
   if (typeof dateInput === "string" && dateInput.trim().length === 7) {
     d = `${dateInput.trim()}-01`;
   }
@@ -37,6 +36,17 @@ const getPKTDateISO = (dateInput = new Date()) => {
     day: "2-digit",
   }).format(parsedDate);
 };
+
+function formatMethod(method, bank) {
+  const m = (method || "Cash").trim();
+  const b = (bank || "").trim();
+
+  if (!b && !m.includes("(")) return m;
+  if (b && !m.toLowerCase().includes(b.toLowerCase())) {
+    return `${m} (${b})`;
+  }
+  return m;
+}
 
 export default function Cashflow() {
   const [range, setRange] = useState("today");
@@ -72,16 +82,12 @@ export default function Cashflow() {
     return { queryStart: "", queryEnd: "" };
   }, [range, startDate, endDate, todayPKT]);
 
-  // Note: previously also called useGetCashflow(...) here for a backend-computed
-  // totalIn/totalOut, but that value was never used — totals below are computed
-  // entirely from mergedActivity so the cards and the ledger table can never
-  // contradict each other. Removed the call since it was a wasted network request.
-
   const bookingsQuery = getAllBookings();
   const expensesQuery = getAllExpenses();
   const addonsQuery = getAllAddons();
   const dailyQuery = getAllDailyExpenses();
   const monthlyQuery = getAllMonthlyExpenses();
+  const paymentsQuery = getAllPayments();
 
   const extractArray = (raw) => {
     if (Array.isArray(raw)) return raw;
@@ -90,6 +96,7 @@ export default function Cashflow() {
     if (Array.isArray(raw?.dailyExpenses)) return raw.dailyExpenses;
     if (Array.isArray(raw?.monthlyExpenses)) return raw.monthlyExpenses;
     if (Array.isArray(raw?.addons)) return raw.addons;
+    if (Array.isArray(raw?.payments)) return raw.payments;
     return [];
   };
 
@@ -98,11 +105,21 @@ export default function Cashflow() {
   const addons = useMemo(() => extractArray(addonsQuery?.data), [addonsQuery?.data]);
   const dailyExpenses = useMemo(() => extractArray(dailyQuery?.data), [dailyQuery?.data]);
   const monthlyExpenses = useMemo(() => extractArray(monthlyQuery?.data), [monthlyQuery?.data]);
+  const payments = useMemo(() => {
+    const raw = paymentsQuery?.data;
+    if (Array.isArray(raw)) return raw;
+    if (Array.isArray(raw?.data)) return raw.data;
+    if (Array.isArray(raw?.payments)) return raw.payments;
+    if (Array.isArray(raw?.data?.data)) return raw.data.data;
+    return [];
+  }, [paymentsQuery?.data]);
 
   const isWithinRange = (dateStr) => {
     if (!dateStr || range === "all") return true;
+
     const recordPKTDate = getPKTDateISO(dateStr);
-    if (!recordPKTDate) return false;
+    if (!recordPKTDate) return true;
+
     if (queryStart && recordPKTDate < queryStart) return false;
     if (queryEnd && recordPKTDate > queryEnd) return false;
     return true;
@@ -115,7 +132,7 @@ export default function Cashflow() {
         return st !== "cancelled" && st !== "finished" && st !== "completed";
       })
       .reduce((s, b) => {
-        const due = Number(b.total_amount || 0) - Number(b.advance_paid || 0);
+        const due = Number(b.total_amount || b.totalAmount || 0) - Number(b.advance_paid || b.advancePaid || 0);
         return s + (due > 0 ? due : 0);
       }, 0);
   }, [bookings]);
@@ -123,117 +140,103 @@ export default function Cashflow() {
   const mergedActivity = useMemo(() => {
     const items = [];
 
-    // 1. Bookings Activity
-    bookings.forEach((b) => {
-      const st = (b?.status || "").toLowerCase();
-      // Cancelled bookings are NOT excluded here. Advances are non-refundable in
-      // this business, so cash already collected on a booking that later gets
-      // cancelled still counts as real revenue and must stay in the ledger.
-      // (Cancelled bookings ARE still excluded from outstandingReceivables above,
-      // since there's no future balance to expect from a dead booking.)
+    // Create a set of add-on IDs and service names to cross-reference and skip in payments
+    const addonIds = new Set(addons.map((a) => String(a.id)));
+    const addonServices = new Set(addons.map((a) => (a.service || "").toLowerCase().trim()));
 
-      const createdDate = b.created_at || b.createdAt || b.date;
-      const updatedDate = b.updated_at || b.updatedAt || b.date || createdDate;
+    // 1. REAL PAYMENTS (Skip any payment tied to an add-on so it only shows from the addons hook)
+    payments.forEach((p) => {
+      const recordDate = p.created_at || p.createdAt || p.date;
+      if (!isWithinRange(recordDate)) return;
 
-      const totalAmount = Number(b.total_amount || 0);
-      const advancePaid = Number(b.advance_paid || 0);
-      const isFinished = st === "finished" || st === "completed";
+      const pCat = (p.category || "").toLowerCase();
+      const pNote = (p.note || "").toLowerCase();
+      
+      // Check if this payment record belongs to an add-on
+      const isAddonPayment =
+        (p.addon_id && addonIds.has(String(p.addon_id))) ||
+        pCat.includes("add-on") ||
+        pCat.includes("addon") ||
+        Array.from(addonServices).some((svc) => svc && pNote.includes(svc));
 
-      if (advancePaid > 0 && isWithinRange(createdDate)) {
+      if (isAddonPayment) {
+        return; // Skip! Do not show from payments table; handled by addons hook below.
+      }
+
+      items.push({
+        id: `payment-${p.id}`,
+        flow: (p.flow || "IN").toUpperCase(),
+        category: p.category || "Payment",
+        note: p.note || "—",
+        who: p.who || "—",
+        method: p.payment_method || p.method || "Cash",
+        bankName: p.bank_name || p.bankName || "",
+        amount: Number(p.amount || 0),
+        status: p.status || "",
+        date: recordDate,
+      });
+    });
+
+    // 2. Add-ons (DISPLAY EXCLUSIVELY FROM ADDONS HOOK)
+    addons.forEach((a) => {
+      if (!a.received) return;
+      const recordDate = a.received_at || a.receivedAt || a.created_at || a.createdAt || a.date;
+      if (!isWithinRange(recordDate)) return;
+
+      const clientVal = Number(a.client_price || a.price || 0);
+      const vendorVal = Number(a.vendor_cost || 0);
+      const rawMethod = a.payment_method || "Cash";
+
+      if (clientVal > 0) {
         items.push({
-          id: `booking-adv-${b._id || b.id}`,
+          id: `addon-in-${a.id}`,
           flow: "IN",
-          category: "Booking Advance",
-          note: `${b.event || "Booking"} (Advance Payment)`,
-          who: b.client_name || b.client || "—",
-          method: b.payment_method || "Cash",
-          amount: advancePaid,
-          status: b.status,
-          date: createdDate,
+          category: `Add-on: ${a.service || "Service"}`,
+          note: a.description || `Client payment for ${a.service || "Addon"}`,
+          who: a.client_name || "—",
+          method: rawMethod,
+          bankName: a.bank_name || "",
+          amount: clientVal,
+          date: recordDate,
         });
       }
 
-      if (isFinished) {
-        const remainingBalance = Math.max(0, totalAmount - advancePaid);
-        if (remainingBalance > 0 && isWithinRange(updatedDate)) {
-          items.push({
-            id: `booking-final-${b._id || b.id}`,
-            flow: "IN",
-            category: "Event Final Settlement",
-            note: `${b.event || "Booking"} (Remaining Balance Cleared)`,
-            who: b.client_name || b.client || "—",
-            method: b.payment_method || "Cash",
-            amount: remainingBalance,
-            status: b.status,
-            date: updatedDate,
-          });
-        }
+      if (vendorVal > 0) {
+        items.push({
+          id: `addon-out-${a.id}`,
+          flow: "OUT",
+          category: "Vendor Payment",
+          note: `Vendor Payout (${a.service || "Addon"})`,
+          who: a.vendor_name || "Vendor",
+          method: "Cash",
+          bankName: "",
+          amount: vendorVal,
+          date: recordDate,
+        });
       }
     });
 
-    // 2. Add-ons Activity
-    addons.forEach((a) => {
-  if (!a.received) return;
-  const recordDate = a.received_at || a.receivedAt || a.created_at || a.createdAt || a.date;
-  if (!isWithinRange(recordDate)) return;
-
-  const clientVal = Number(a.client_price || a.price || 0);
-  const vendorVal = Number(a.vendor_cost || 0);
-
-  if (clientVal > 0) {
-    items.push({
-      id: `addon-in-${a._id || a.id}`,
-      flow: "IN",
-      category: "Add-on Service",
-      note: a.service || a.title || "Addon Service",
-      who: a.client_name || "—",
-      method: a.payment_method || "Cash",
-      amount: clientVal,
-      date: recordDate,
-    });
-  }
-
-  if (vendorVal > 0) {
-    items.push({
-      id: `addon-out-${a._id || a.id}`,
-      flow: "OUT",
-      category: "Vendor Payment",
-      note: `Vendor Payout (${a.service || "Addon"})`,
-      who: a.vendor_name || "Vendor",
-      method: "Cash",
-      amount: vendorVal,
-      date: recordDate,
-    });
-  }
-});
-
-    // 3. Standard Expenses (booking-tied)
+    // 3. Standard Expenses
     expenses.forEach((e) => {
-      const recordDate =
-        e.bill_date || e.month || e.created_at || e.createdAt || e.date || e.entry_date;
-
+      const recordDate = e.bill_date || e.month || e.created_at || e.createdAt || e.date || e.entry_date;
       if (!isWithinRange(recordDate)) return;
 
       const cat = (e.category || e.type || e.bill_type || "").toLowerCase();
       const label = (e.label || e.title || e.name || e.description || "").toLowerCase();
-
       const isCommission = cat.includes("commission") || label.includes("commission");
 
-      const amt = Number(
-        e.amount ?? e.bill_amount ?? e.cost ?? e.total ?? e.expense_amount ?? 0
-      );
-
+      const amt = Number(e.amount ?? e.bill_amount ?? e.cost ?? e.total ?? e.expense_amount ?? 0);
       const unitsText = e.units ? ` (${e.units} units)` : "";
       const baseNote = e.label || e.title || e.name || e.description || "Expense Outflow";
-      const noteText = `${baseNote}${unitsText}`;
 
       items.push({
-        id: `expense-${e._id || e.id}`,
+        id: `expense-${e.id}`,
         flow: "OUT",
         category: isCommission ? "Agent Commission" : e.category || "Standard Expense",
-        note: noteText,
+        note: `${baseNote}${unitsText}`,
         who: e.payee || e.vendor || e.agent_name || "—",
         method: e.payment_method || "Cash",
+        bankName: e.bank_name || "",
         amount: amt,
         date: recordDate,
       });
@@ -244,26 +247,24 @@ export default function Cashflow() {
       const recordDate = d.created_at || d.createdAt || d.date;
       if (!isWithinRange(recordDate)) return;
 
-      const amt = Number(d.amount ?? d.cost ?? d.expense_amount ?? 0);
-
       items.push({
-        id: `daily-${d._id || d.id}`,
+        id: `daily-${d.id}`,
         flow: "OUT",
         category: "Petty Cash",
         note: d.label || d.title || d.category || "Daily Expense",
         who: d.recorded_by || "—",
         method: "Cash",
-        amount: amt,
+        bankName: "",
+        amount: Number(d.amount ?? d.cost ?? d.expense_amount ?? 0),
         date: recordDate,
       });
     });
 
-    // 5. Monthly Overhead / Recurring Bills
+    // 5. Monthly Overhead
     monthlyExpenses.forEach((m) => {
       const recordDate = m.created_at || m.createdAt;
       if (!isWithinRange(recordDate)) return;
 
-      const amt = Number(m.amount ?? 0);
       const billingPeriod =
         m.month && m.year
           ? new Date(Number(m.year), Number(m.month) - 1, 1).toLocaleDateString("en-PK", {
@@ -273,20 +274,20 @@ export default function Cashflow() {
           : null;
 
       items.push({
-        id: `monthly-${m._id || m.id}`,
+        id: `monthly-${m.id}`,
         flow: "OUT",
         category: "Monthly Overhead",
         note: `${m.label || m.category || "Recurring Expense"}${billingPeriod ? ` · ${billingPeriod}` : ""}`,
         who: "—",
         method: "Cash",
-        amount: amt,
+        bankName: "",
+        amount: Number(m.amount ?? 0),
         date: recordDate,
       });
     });
 
     return items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  }, [bookings, addons, expenses, dailyExpenses, monthlyExpenses, queryStart, queryEnd, range]);
-
+  }, [payments, addons, expenses, dailyExpenses, monthlyExpenses, queryStart, queryEnd, range]);
   const totalIn = useMemo(
     () => mergedActivity.filter((i) => i.flow === "IN").reduce((acc, curr) => acc + curr.amount, 0),
     [mergedActivity]
@@ -453,7 +454,7 @@ export default function Cashflow() {
           <div>
             <h3 className="text-sm font-semibold text-stone-900">Cash Flow Activity Ledger</h3>
             <p className="text-[11px] text-stone-400 mt-0.5">
-              Audit log of payments, overheads & expenses ({rangeLabel})
+              Sourced from payments table + expenses ({rangeLabel})
             </p>
           </div>
           <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-3 py-1 rounded-lg">
@@ -504,8 +505,7 @@ export default function Cashflow() {
                         {item.status && (
                           <span
                             className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase ${
-                              (item.status || "").toLowerCase() === "finished" ||
-                              (item.status || "").toLowerCase() === "completed"
+                              ["finished", "completed"].includes((item.status || "").toLowerCase())
                                 ? "bg-emerald-100 text-emerald-800"
                                 : (item.status || "").toLowerCase() === "cancelled"
                                 ? "bg-rose-100 text-rose-700"
@@ -519,7 +519,9 @@ export default function Cashflow() {
                       <p className="text-[10px] text-stone-400 mt-0.5">{item.note}</p>
                     </td>
                     <td className="px-6 py-3.5 text-stone-600">{item.who}</td>
-                    <td className="px-6 py-3.5 text-stone-500">{item.method}</td>
+                    <td className="px-6 py-3.5 text-stone-500">
+                      {formatMethod(item.method, item.bankName)}
+                    </td>
                     <td
                       className={`px-6 py-3.5 text-right text-sm font-semibold ${
                         item.flow === "IN" ? "text-stone-900" : "text-rose-600"

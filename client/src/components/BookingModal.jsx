@@ -29,6 +29,8 @@ function normalizeBooking(booking) {
     timeSlot: booking.timeSlot ?? booking.time_slot ?? "Night",
     bankName: booking.bankName ?? booking.bank_name ?? "",
     rNo: booking.rNo ?? booking.r_no ?? "",
+    settlementPaymentMethod: booking.settlementPaymentMethod ?? booking.payment_method ?? "Cash",
+    settlementBankName: booking.settlementBankName ?? booking.bank_name ?? "",
   };
 }
 
@@ -46,7 +48,8 @@ const selectCls = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm
 
 const EVENTS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate", "Barat and Valima", "Nikah"];
 const VENUES = ["Hall A", "Hall B"];
-const PAYMENT_METHODS = ["Cash", "Bank Transfer", "Online", "Cheque"];
+const PAYMENT_METHODS = ["Cash", "JazzCash", "EasyPaisa", "Habib Metro Usman", "Meezan Bank Sadar"];
+
 const STATUSES = ["Pending", "Confirmed", "Cancelled", "Finished"];
 const TIME_SLOTS = ["Afternoon", "Night"];
 const BANKS = ["Habib Metro Usman", "Meezan Bank Sadar", "JazzCash", "Easypaisa", "Other"];
@@ -89,7 +92,8 @@ function BankPopup({ selected, onSelect, onClose }) {
     </div>
   );
 }
-// ── New popup component — place near BankPopup, above BookingModal ──
+
+// ── Addon Popup Component ───────────────────────────────────────────────────
 function AddonPopup({ draft, setDraft, onSubmit, onClose, isLoading }) {
   return (
     <div className="fixed inset-0 bg-green-950/50 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
@@ -178,36 +182,69 @@ function AddonPopup({ draft, setDraft, onSubmit, onClose, isLoading }) {
     </div>
   );
 }
+
 export default function BookingModal({ booking, onClose, onSave, isNew, isLoading }) {
   const [form, setForm] = useState(() => normalizeBooking(booking));
   const [showBankPopup, setShowBankPopup] = useState(false);
+  const [showSettlementBankPopup, setShowSettlementBankPopup] = useState(false);
   const [addonDraft, setAddonDraft] = useState(emptyAddon);
   const [showAddonPopup, setShowAddonPopup] = useState(false);
 
-  const { data: allAddons = [] } = getAllAddons();
+  const addonQueryResult = getAllAddons();
+  const rawAddons = addonQueryResult?.data?.addons ?? addonQueryResult?.data ?? addonQueryResult ?? [];
+  const allAddonsList = Array.isArray(rawAddons) ? rawAddons : [];
+
   const createAddon = useCreateAddon();
   const deleteAddon = useDeleteAddon();
+  const updateAddon = useUpdateAddon();
+
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState(emptyAddon);
 
   const addonRows = (!isNew && booking?.id)
-  ? allAddons.filter(a => (a.bookingId ?? a.booking_id) === booking.id)
-  : [];
+    ? allAddonsList.filter(a => (a.bookingId ?? a.booking_id) === booking.id)
+    : [];
 
-function submitAddon() {
-  if (!addonDraft.service || isNew || !booking?.id) return;
-  createAddon.mutate(
-    {
-      bookingId: booking.id,
-      ...addonDraft,
-      client_price: Number(addonDraft.client_price || 0),
-      vendor_cost: Number(addonDraft.vendor_cost || 0),
-    },
-    { onSuccess: () => setShowAddonPopup(false) }
-  );
-  setAddonDraft(emptyAddon);
-}
+  function submitAddon() {
+    if (!addonDraft.service || isNew || !booking?.id) return;
+    createAddon.mutate(
+      {
+        bookingId: booking.id,
+        ...addonDraft,
+        client_price: Number(addonDraft.client_price || 0),
+        vendor_cost: Number(addonDraft.vendor_cost || 0),
+      },
+      { onSuccess: () => setShowAddonPopup(false) }
+    );
+    setAddonDraft(emptyAddon);
+  }
 
   function removeAddonRow(row) {
     deleteAddon.mutate(row.id);
+  }
+
+  function startEdit(row) {
+    setEditingId(row.id);
+    setEditDraft({
+      service: row.service,
+      description: row.description,
+      client_price: row.client_price,
+      vendor_cost: row.vendor_cost,
+    });
+  }
+
+  function saveEdit() {
+    updateAddon.mutate(
+      {
+        id: editingId,
+        data: {
+          ...editDraft,
+          client_price: Number(editDraft.client_price || 0),
+          vendor_cost: Number(editDraft.vendor_cost || 0),
+        },
+      },
+      { onSuccess: () => setEditingId(null) }
+    );
   }
 
   useEffect(() => {
@@ -218,47 +255,26 @@ function submitAddon() {
   const remaining = Number(form.totalAmount || 0) - Number(form.advancePaid || 0);
   const pct = form.totalAmount ? Math.min(100, Math.round((Number(form.advancePaid || 0) / Number(form.totalAmount)) * 100)) : 0;
 
+  const isBankMethod = (method) => method && method !== "Cash";
+
   function handlePaymentMethodChange(value) {
     f("paymentMethod", value);
-    if (value === "Bank Transfer") {
+    if (isBankMethod(value)) {
       setShowBankPopup(true);
     } else {
-      // Clear a stale bank selection if they switch away from Bank Transfer
       f("bankName", "");
     }
   }
 
   function handleBankSelect(bank) {
-    f("bankName", bank);
-    setShowBankPopup(false);
+    if (showSettlementBankPopup) {
+      f("settlementBankName", bank);
+      setShowSettlementBankPopup(false);
+    } else {
+      f("bankName", bank);
+      setShowBankPopup(false);
+    }
   }
-const updateAddon = useUpdateAddon();
-const [editingId, setEditingId] = useState(null);
-const [editDraft, setEditDraft] = useState(emptyAddon);
-
-function startEdit(row) {
-  setEditingId(row.id);
-  setEditDraft({
-    service: row.service,
-    description: row.description,
-    client_price: row.client_price,
-    vendor_cost: row.vendor_cost,
-  });
-}
-
-function saveEdit() {
-  updateAddon.mutate(
-    {
-      id: editingId,
-      data: {
-        ...editDraft,
-        client_price: Number(editDraft.client_price || 0),
-        vendor_cost: Number(editDraft.vendor_cost || 0),
-      },
-    },
-    { onSuccess: () => setEditingId(null) }
-  );
-}
 
   return (
     <div className="fixed inset-0 bg-green-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-6">
@@ -363,7 +379,7 @@ function saveEdit() {
               <Field label="Advance Due Date">
                 <input type="date" value={form.advanceDueDate || ""} onChange={e => f("advanceDueDate", e.target.value)} className={inputCls} disabled={isLoading} />
               </Field>
-              <Field label="Payment Method">
+              <Field label="Advance Payment Method">
                 <div className="relative">
                   <select value={form.paymentMethod} onChange={e => handlePaymentMethodChange(e.target.value)} className={selectCls} disabled={isLoading}>
                     {PAYMENT_METHODS.map(o => <option key={o}>{o}</option>)}
@@ -375,23 +391,71 @@ function saveEdit() {
                 <input type="text" placeholder="e.g. Token received" value={form.paymentNote || ""} onChange={e => f("paymentNote", e.target.value)} className={inputCls} disabled={isLoading} />
               </Field>
 
-              {/* Bank badge — only shown once Bank Transfer is selected, with a way to reopen the popup */}
-              {form.paymentMethod === "Bank Transfer" && (
+              {isBankMethod(form.paymentMethod) && (
                 <div className="col-span-2">
-                  <Field label="Bank">
-                    <button
-                      type="button"
-                      onClick={() => setShowBankPopup(true)}
-                      disabled={isLoading}
-                      className="w-full flex items-center justify-between border border-green-200 rounded-xl px-4 py-2.5 text-sm bg-green-50 hover:bg-green-100 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <span className={form.bankName ? "text-green-900 font-medium" : "text-green-400"}>
-                        {form.bankName || "Select bank..."}
-                      </span>
-                      <Landmark size={14} className="text-green-400" />
-                    </button>
+                  <Field label="Bank/Wallet Details (Optional)">
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Account holder name or reference" 
+                      value={form.bankName || ""} 
+                      onChange={e => f("bankName", e.target.value)} 
+                      className={inputCls} 
+                      disabled={isLoading} 
+                    />
                   </Field>
                 </div>
+              )}
+
+              {/* Settlement Payment Method (shown when status is Finished) */}
+              {form.status === "Finished" && (
+                <>
+                  <div className="col-span-2 border-t border-green-100 pt-4 mt-2">
+                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <CreditCard size={12} /> Final Settlement Payment
+                    </p>
+                  </div>
+                  <Field label="Settlement Payment Method">
+                    <div className="relative">
+                      <select 
+                        value={form.settlementPaymentMethod || form.paymentMethod || "Cash"} 
+                        onChange={e => {
+                          f("settlementPaymentMethod", e.target.value);
+                          if (!isBankMethod(e.target.value)) {
+                            f("settlementBankName", "");
+                          }
+                        }} 
+                        className={selectCls} 
+                        disabled={isLoading}
+                      >
+                        {PAYMENT_METHODS.map(o => <option key={o}>{o}</option>)}
+                      </select>
+                      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none" />
+                    </div>
+                  </Field>
+                  <Field label="Remaining Amount">
+                    <input 
+                      type="text" 
+                      value={formatPKR(remaining > 0 ? remaining : 0)} 
+                      disabled 
+                      className={inputCls + " opacity-60"} 
+                    />
+                  </Field>
+
+                  {isBankMethod(form.settlementPaymentMethod || form.paymentMethod || "Cash") && (
+                    <div className="col-span-2">
+                      <Field label="Bank/Wallet Details (Optional)">
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Account holder name or reference" 
+                          value={form.settlementBankName || ""} 
+                          onChange={e => f("settlementBankName", e.target.value)} 
+                          className={inputCls} 
+                          disabled={isLoading} 
+                        />
+                      </Field>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -413,110 +477,109 @@ function saveEdit() {
             ) : null}
           </section>
 
-          {/* Add-ons */}
-        
-<section>
-  <div className="flex items-center justify-between mb-3">
-    <p className="text-xs font-bold text-green-600 uppercase tracking-widest flex items-center gap-2">
-      <CreditCard size={12} /> Add-ons
-    </p>
-    <button
-    
-      type="button"
-  onClick={() => setShowAddonPopup(true)}
-  disabled={isNew || !booking?.id || isLoading}
-      className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 rounded-lg px-3 py-1.5 hover:bg-green-50 cursor-pointer bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
-    >
-      <PlusCircle size={13} /> Add
-    </button>
-  </div>
+          {/* Add-ons Section */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-green-600 uppercase tracking-widest flex items-center gap-2">
+                <CreditCard size={12} /> Add-ons
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowAddonPopup(true)}
+                disabled={isNew || !booking?.id || isLoading}
+                className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 rounded-lg px-3 py-1.5 hover:bg-green-50 cursor-pointer bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <PlusCircle size={13} /> Add
+              </button>
+            </div>
 
-  {!booking?.id ? (
-    <div className="text-xs text-green-500 bg-green-50 border border-green-100 rounded-xl p-4 text-center">
-      Save this booking first — add-ons are linked to a specific booking and can be added once it's created.
-    </div>
-  ) : addonRows.length > 0 ? (
-    <div className="space-y-2">
-      {addonRows.map((row) => {
-  const isEditing = editingId === row.id;
-  const commission = Number(row.client_price || 0) - Number(row.vendor_cost || 0);
+            {!booking?.id ? (
+              <div className="text-xs text-green-500 bg-green-50 border border-green-100 rounded-xl p-4 text-center">
+                Save this booking first — add-ons are linked to a specific booking and can be added once it's created.
+              </div>
+            ) : addonRows.length > 0 ? (
+              <div className="space-y-2">
+                {addonRows.map((row) => {
+                  const isEditing = editingId === row.id;
+                  const commission = Number(row.client_price || 0) - Number(row.vendor_cost || 0);
 
-  if (isEditing) {
-    return (
-      <div key={row.id} className="border border-green-200 rounded-xl p-3 bg-green-50 space-y-2">
-        <select
-          value={editDraft.service}
-          onChange={e => setEditDraft(d => ({ ...d, service: e.target.value }))}
-          className={selectCls}
-        >
-          {ADDON_SERVICES.map(s => <option key={s}>{s}</option>)}
-        </select>
-        <input
-          type="text"
-          placeholder="Description"
-          value={editDraft.description}
-          onChange={e => setEditDraft(d => ({ ...d, description: e.target.value }))}
-          className={inputCls}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="number"
-            placeholder="Client Price"
-            value={editDraft.client_price}
-            onChange={e => setEditDraft(d => ({ ...d, client_price: e.target.value }))}
-            className={inputCls}
-          />
-          <input
-            type="number"
-            placeholder="Vendor Cost"
-            value={editDraft.vendor_cost}
-            onChange={e => setEditDraft(d => ({ ...d, vendor_cost: e.target.value }))}
-            className={inputCls}
-          />
-        </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={saveEdit} className="flex-1 bg-green-600 text-white text-xs font-semibold py-2 rounded-lg border-none cursor-pointer">
-            Save
-          </button>
-          <button type="button" onClick={() => setEditingId(null)} className="px-4 border border-green-200 text-green-600 text-xs font-semibold py-2 rounded-lg bg-transparent cursor-pointer">
-            Cancel
-          </button>
-        </div>
-      </div>
-    );
-  }
+                  if (isEditing) {
+                    return (
+                      <div key={row.id} className="border border-green-200 rounded-xl p-3 bg-green-50 space-y-2">
+                        <select
+                          value={editDraft.service}
+                          onChange={e => setEditDraft(d => ({ ...d, service: e.target.value }))}
+                          className={selectCls}
+                        >
+                          {ADDON_SERVICES.map(s => <option key={s}>{s}</option>)}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Description"
+                          value={editDraft.description}
+                          onChange={e => setEditDraft(d => ({ ...d, description: e.target.value }))}
+                          className={inputCls}
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="number"
+                            placeholder="Client Price"
+                            value={editDraft.client_price}
+                            onChange={e => setEditDraft(d => ({ ...d, client_price: e.target.value }))}
+                            className={inputCls}
+                          />
+                          <input
+                            type="number"
+                            placeholder="Vendor Cost"
+                            value={editDraft.vendor_cost}
+                            onChange={e => setEditDraft(d => ({ ...d, vendor_cost: e.target.value }))}
+                            className={inputCls}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={saveEdit} className="flex-1 bg-green-600 text-white text-xs font-semibold py-2 rounded-lg border-none cursor-pointer">
+                            Save
+                          </button>
+                          <button type="button" onClick={() => setEditingId(null)} className="px-4 border border-green-200 text-green-600 text-xs font-semibold py-2 rounded-lg bg-transparent cursor-pointer">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
 
-  return (
-    <div key={row.id} className="flex items-center justify-between border border-green-100 rounded-xl px-3 py-2 bg-green-50/50">
-      <div>
-        <p className="text-sm font-semibold text-green-900">{row.service}</p>
-        <p className="text-[11px] text-green-500">{formatPKR(row.client_price)} · Commission {formatPKR(commission)}</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <button type="button" onClick={() => startEdit(row)} className="text-green-400 hover:text-green-600 cursor-pointer bg-transparent border-none">
-          <Pencil size={14} />
-        </button>
-        <button type="button" onClick={() => removeAddonRow(row)} className="text-green-300 hover:text-red-500 cursor-pointer bg-transparent border-none">
-          <X size={16} />
-        </button>
-      </div>
-    </div>
-  );
-})}
-    </div>
-  ) : (
-    <p className="text-xs text-green-400 text-center py-3">No add-ons yet</p>
-  )}
-</section>
-{showAddonPopup && (
-  <AddonPopup
-    draft={addonDraft}
-    setDraft={setAddonDraft}
-    onSubmit={submitAddon}
-    onClose={() => setShowAddonPopup(false)}
-    isLoading={isLoading}
-  />
-)}
+                  return (
+                    <div key={row.id} className="flex items-center justify-between border border-green-100 rounded-xl px-3 py-2 bg-green-50/50">
+                      <div>
+                        <p className="text-sm font-semibold text-green-900">{row.service}</p>
+                        <p className="text-[11px] text-green-500">{formatPKR(row.client_price)} · Commission {formatPKR(commission)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => startEdit(row)} className="text-green-400 hover:text-green-600 cursor-pointer bg-transparent border-none">
+                          <Pencil size={14} />
+                        </button>
+                        <button type="button" onClick={() => removeAddonRow(row)} className="text-green-300 hover:text-red-500 cursor-pointer bg-transparent border-none">
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-green-400 text-center py-3">No add-ons yet</p>
+            )}
+          </section>
+
+          {showAddonPopup && (
+            <AddonPopup
+              draft={addonDraft}
+              setDraft={setAddonDraft}
+              onSubmit={submitAddon}
+              onClose={() => setShowAddonPopup(false)}
+              isLoading={isLoading}
+            />
+          )}
         </div>
 
         {/* Footer */}
@@ -540,6 +603,14 @@ function saveEdit() {
           selected={form.bankName}
           onSelect={handleBankSelect}
           onClose={() => setShowBankPopup(false)}
+        />
+      )}
+
+      {showSettlementBankPopup && (
+        <BankPopup
+          selected={form.settlementBankName || form.bankName}
+          onSelect={handleBankSelect}
+          onClose={() => setShowSettlementBankPopup(false)}
         />
       )}
     </div>

@@ -26,7 +26,7 @@ const fetchPaymentsByBookingId = async (bookingId) => {
 /**
  * Record a new payment and update the parent booking record atomically
  */
-const recordPayment = async ({ bookingId, amount, type, payment_method, bank_name, note, isFinished }) => {
+const recordPayment = async ({ bookingId, amount, category, payment_method, bank_name, note, isFinished, client }) => {
   const numericAmount = parseFloat(amount);
 
   return await db.transaction(async (tx) => {
@@ -40,15 +40,17 @@ const recordPayment = async ({ bookingId, amount, type, payment_method, bank_nam
       throw new Error("BOOKING_NOT_FOUND");
     }
 
-    // 2. Insert new transaction into payments table
+    // 2. Insert new transaction into payments table with correct schema fields
     const [newPayment] = await tx
       .insert(payments)
       .values({
+        flow: "IN",
         bookingId: parseInt(bookingId),
         amount: numericAmount.toString(),
-        type: type || (isFinished ? "Settlement" : "Advance"),
+        category: category || (isFinished ? "Event Final Settlement" : "Booking Advance"),
         payment_method: payment_method || "Cash",
         bank_name: bank_name || null,
+        who: client || existingBooking.client,
         note: note || null,
       })
       .returning();
@@ -61,9 +63,16 @@ const recordPayment = async ({ bookingId, amount, type, payment_method, bank_nam
       updated_at: new Date(),
     };
 
-    // Auto-complete status if explicitly requested or fully paid
-    if (isFinished || updatedAdvancePaid >= parseFloat(existingBooking.total_amount)) {
+    // If marking as finished, update status and track settlement method
+    if (isFinished) {
       updateData.status = "Finished";
+      updateData.payment_method = payment_method || existingBooking.payment_method;
+      updateData.bank_name = bank_name || null;
+    } else if (updatedAdvancePaid >= parseFloat(existingBooking.total_amount)) {
+      // Auto-complete status if fully paid
+      updateData.status = "Finished";
+      updateData.payment_method = payment_method || existingBooking.payment_method;
+      updateData.bank_name = bank_name || null;
     }
 
     await tx

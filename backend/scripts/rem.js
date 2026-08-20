@@ -1,7 +1,9 @@
-const { Client } = require("pg");
-require("dotenv").config();
+import { Client } from "pg";
+import dotenv from "dotenv";
 
-async function runAddonsReceivedMigration() {
+dotenv.config();
+
+async function runPaymentsTableMigration() {
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_URL?.includes("localhost")
@@ -9,21 +11,43 @@ async function runAddonsReceivedMigration() {
       : { rejectUnauthorized: false },
   });
 
-  await client.connect();
-  console.log("Connected to database successfully.");
+  try {
+    await client.connect();
+    console.log("Connected to database successfully.");
 
-  // Add received tracking columns to addons if missing
-  await client.query(`
-    ALTER TABLE addons ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash';
-    ALTER TABLE addons ADD COLUMN IF NOT EXISTS bank_name VARCHAR(50);
-  `);
-  console.log("Columns 'payment_method' and 'bank_name' verified on 'addons'.");
+    // 1. Create the payments table if it doesn't exist
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id SERIAL PRIMARY KEY,
+        flow VARCHAR(10) NOT NULL DEFAULT 'IN',
+        amount NUMERIC(12, 2) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash',
+        bank_name VARCHAR(50),
+        who VARCHAR(150),
+        note VARCHAR(255),
+        booking_id INTEGER REFERENCES booking(id) ON DELETE CASCADE,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    console.log("Verified / Created 'payments' table.");
 
-  await client.end();
-  console.log("Addons received migration completed and connection closed.");
+    // 2. If the table already existed with the old schema, ensure new columns are added safely
+    await client.query(`
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS flow VARCHAR(10) NOT NULL DEFAULT 'IN';
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS category VARCHAR(100) NOT NULL DEFAULT 'Booking Advance';
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS who VARCHAR(150);
+      ALTER TABLE payments ALTER COLUMN booking_id DROP NOT NULL;
+    `);
+    console.log("Updated 'payments' table columns successfully.");
+
+  } catch (err) {
+    console.error("Migration failed:", err);
+    process.exit(1);
+  } finally {
+    await client.end();
+    console.log("Database connection closed.");
+  }
 }
 
-runAddonsReceivedMigration().catch((err) => {
-  console.error("Migration failed:", err);
-  process.exit(1);
-});
+runPaymentsTableMigration();

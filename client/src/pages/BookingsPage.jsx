@@ -7,6 +7,8 @@ import StatsSection from "../components/StatsSection";
 import FiltersSection from "../components/FiltersSection";
 import BookingsList from "../components/BookingsList";
 import bookingService from "../services/booking.service";
+import paymentService from "../services/payment.service";
+import addonService from "../services/addon.service";
 
 function formatDateInput(value) {
   if (!value) return "";
@@ -17,8 +19,6 @@ function formatDateInput(value) {
   const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
-
-
 
 const emptyForm = {
   client: "",
@@ -46,13 +46,19 @@ export default function Bookings({ showToast }) {
   const perPage = 10;
   const [saveLoading, setSaveLoading] = useState(false);
   const queryClient = useQueryClient();
+
+  const { data: rawBookings = [], isLoading, error } = useQuery({
+    queryKey: ["bookings"],
+    queryFn: bookingService.getAllBookings,
+  });
+
+  // Fetch payments for all bookings to pass to StatsSection
+  const { data: paymentRes } = useQuery({
+    queryKey: ["payments"],
+    queryFn: paymentService.getAll,
+  });
   
-
-
-  const { data: rawBookings = [], isLoading , error } = useQuery({
-  queryKey: ["bookings"],
-  queryFn:  bookingService.getAllBookings,
-});
+  const allPayments = paymentRes?.data || (Array.isArray(paymentRes) ? paymentRes : []);
 
   const bookings = rawBookings?.map(b => {
     const formattedDate = formatDateInput(b.date);
@@ -70,71 +76,80 @@ export default function Bookings({ showToast }) {
     };
   }) || [];
 
+
+
+const { data: addonRes } = useQuery({
+  queryKey: ["addons"],
+  queryFn: addonService.getAll,
+});
+const addons = addonRes?.addons || (Array.isArray(addonRes) ? addonRes : []);
+
   const openNew = () => setModal({ mode: "new", booking: { ...emptyForm } });
   const openEdit = (b) => setModal({ mode: "edit", booking: { ...b } });
   const closeModal = () => setModal(null);
 
-const handleSave = async (form) => {
-  if (!form.client || !form.date || !form.phone || !form.event || !form.package) {
-    toast.error("Please fill in all required fields");
-    return;
-  }
-  try {
-    setSaveLoading(true);
-
-    const result = modal.mode === "new"
-      ? await bookingService.createBooking(form)
-      : await bookingService.updateBooking(form);
-
-
-    if (result?.success === false) {
-      toast.error(result.message || "Failed to save booking");
-      return; 
+  const handleSave = async (form) => {
+    if (!form.client || !form.date || !form.phone || !form.event || !form.package) {
+      toast.error("Please fill in all required fields");
+      return;
     }
+    try {
+      setSaveLoading(true);
 
-    toast.success(modal.mode === "new" ? "Booking created successfully!" : "Booking updated successfully!");
-    closeModal();
-    queryClient.invalidateQueries({ queryKey: ["bookings"] });
-  } catch (error) {
+      const result = modal.mode === "new"
+        ? await bookingService.createBooking(form)
+        : await bookingService.updateBooking(form);
 
-    const message = error?.response?.data?.message || "Failed to save booking";
-    toast.error(message);
-  } finally {
-    setSaveLoading(false);
-  }
-};
-const handleDelete = (booking) => {
-  toast((t) => (
-    <div className="flex items-center gap-3">
-      <p className="text-sm text-gray-700">
-        Delete booking for <span className="font-semibold text-gray-900">{booking.client}</span>?
-      </p>
-      <div className="flex gap-2">
-        <button
-          onClick={async () => {
-            toast.dismiss(t.id);
-            try {
-              await bookingService.deleteBooking(booking.id);
-              toast.success("Booking deleted successfully!");
-              queryClient.invalidateQueries({ queryKey: ["bookings"] });
-            } catch {
-              toast.error("Failed to delete booking");
-            }
-          }}
-          className="text-xs font-semibold bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-3 py-1.5 rounded-lg"
-        >
-          Delete
-        </button>
-        <button
-          onClick={() => toast.dismiss(t.id)}
-          className="text-xs font-semibold bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg"
-        >
-          Cancel
-        </button>
+      if (result?.success === false) {
+        toast.error(result.message || "Failed to save booking");
+        return; 
+      }
+
+      toast.success(modal.mode === "new" ? "Booking created successfully!" : "Booking updated successfully!");
+      closeModal();
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+    } catch (error) {
+      const message = error?.response?.data?.message || "Failed to save booking";
+      toast.error(message);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleDelete = (booking) => {
+    toast((t) => (
+      <div className="flex items-center gap-3">
+        <p className="text-sm text-gray-700">
+          Delete booking for <span className="font-semibold text-gray-900">{booking.client}</span>?
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                await bookingService.deleteBooking(booking.id);
+                toast.success("Booking deleted successfully!");
+                queryClient.invalidateQueries({ queryKey: ["bookings"] });
+                queryClient.invalidateQueries({ queryKey: ["payments"] });
+              } catch {
+                toast.error("Failed to delete booking");
+              }
+            }}
+            className="text-xs font-semibold bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-3 py-1.5 rounded-lg"
+          >
+            Delete
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="text-xs font-semibold bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
-    </div>
-  ), { duration: Infinity });
-};
+    ), { duration: Infinity });
+  };
 
   const filtered = bookings
     .filter(b => filter === "All" || b.status === filter)
@@ -146,7 +161,6 @@ const handleDelete = (booking) => {
       b.phone?.includes(search)
     );
 
-  // If there's an active search, show all results. Otherwise paginate.
   const totalPages = search.trim() ? 1 : Math.max(1, Math.ceil(filtered.length / perPage));
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -183,8 +197,8 @@ const handleDelete = (booking) => {
         </div>
       )}
 
-      {/* Stats Section */}
-      <StatsSection bookings={bookings} />
+      {/* Stats Section - Passed filtered bookings and payments */}
+      <StatsSection bookings={filtered} addons={addons} />
 
       {/* Filters Section */}
       <FiltersSection

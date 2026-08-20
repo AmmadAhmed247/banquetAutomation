@@ -31,8 +31,8 @@ export function BookingLedger({
       <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center">
         <h2 className="text-[15px] font-bold text-stone-900">Booking Ledger</h2>
         <div className="bg-stone-50 p-1.5 rounded-lg">
-            <SlidersHorizontal size={13} className="text-stone-400" />
-            </div>
+          <SlidersHorizontal size={13} className="text-stone-400" />
+        </div>
       </div>
       <div className="px-6 py-3.5 border-b border-stone-100">
         <div className="flex items-center gap-3">
@@ -49,7 +49,8 @@ export function BookingLedger({
         <table className="w-full text-left">
           <thead>
             <tr className="bg-stone-50/70 border-b border-stone-100">
-              {["Client", "Hall", "Event", "Date", "Revenue", "Costs", "Profit", ""].map(h => (
+              {/* Added "R.No" into the header array index 0 */}
+              {["R.No", "Client", "Hall", "Event", "Date", "Revenue", "Costs", "Profit", ""].map(h => (
                 <th key={h} className="px-5 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
@@ -66,6 +67,10 @@ export function BookingLedger({
                   onClick={() => setSelectedBookingId(b.id)}
                   className={`cursor-pointer transition-colors ${selectedBookingId === b.id ? "bg-emerald-50/60" : "hover:bg-stone-50"}`}
                 >
+                  {/* R.No Data Cell */}
+                  <td className="px-5 py-3.5 text-[12px] font-mono font-medium text-stone-600">
+                    {b.r_no ? `#${b.r_no}` : `#${b.id}`}
+                  </td>
                   <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{b.client}</td>
                   <td className="px-5 py-3.5">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${b.hall === "Hall A" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-teal-50 text-teal-700 border-teal-100"}`}>
