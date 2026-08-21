@@ -44,6 +44,7 @@ async function UpdateAddon(req, res) {
         return res.status(200).json({ success: true, addon: updated });
     } catch (error) {
         console.error(error);
+        console.log(error);
         return res.status(error.status || 500).json({ success: false, message: error.message || "Server Error" });
     }
 }
@@ -51,9 +52,12 @@ async function MarkReceived(req, res) {
     try {
         const { payment_method, bank_name } = req.body;
         const updated = await markAddonReceived(req.params.id, { payment_method, bank_name });
+        console.log('updated:',updated);
+        
         return res.status(200).json({ success: true, addon: updated });
     } catch (error) {
         console.error(error);
+        console.log(error);
         return res.status(error.status || 500).json({ success: false, message: error.message || "Server Error" });
     }
 }
