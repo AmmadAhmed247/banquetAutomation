@@ -27,16 +27,16 @@ export default function StatsSection({ bookings = [] }) {
   }
 
   function resolvePaymentBucket(method, bank) {
-    method = (method || "").trim().toLowerCase();
-    bank = (bank || "").trim().toLowerCase();
-    if (method === "cash") return "Cash";
-    if (method === "jazzcash") return "JazzCash";
-    if (method === "easypaisa") return "EasyPaisa";
-    if (method === "habib metro usman") return "Habib Metro Usman";
-    if (method === "meezan bank sadar") return "Meezan Bank Sadar";
-    if (!method && !bank) return "Cash";
-    return method;
-  }
+  method = (method || "").trim().toLowerCase();
+  bank = (bank || "").trim().toLowerCase();
+  if (bank === "habib metro usman") return "Habib Metro Usman";
+  if (bank === "meezan bank sadar") return "Meezan Bank Sadar";
+  if (method === "cash") return "Cash";
+  if (method === "jazzcash") return "JazzCash";
+  if (method === "easypaisa") return "EasyPaisa";
+  if (!method && !bank) return "Cash";
+  return method;
+}
 
   // Calculate filtered revenue using the payments table if available, falling back to bookings
   const filteredPaymentRevenue = useMemo(() => {
