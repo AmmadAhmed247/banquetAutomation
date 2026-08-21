@@ -87,55 +87,58 @@ async function markAddonReceived(addonId, payload = {}) {
     throw err;
   }
 
-
   if (received === false) {
-    const [updated] = await db.update(addons)
-      .set({ 
-        received: false, 
-        received_at: null,
-        payment_method: "",
-        bank_name: null 
-      })
-      .where(eq(addons.id, id))
-      .returning();
-    
-    // Remove the corresponding payment entry from the cash flow log
-    await db.delete(payments)
-      .where(
-        and(
-          eq(payments.bookingId, addon.bookingId),
-          eq(payments.note, `Add-on #${addon.id}: ${addon.service}`)
-        )
-      );
+    return await db.transaction(async (tx) => {
+      const [updated] = await tx.update(addons)
+        .set({
+          received: false,
+          received_at: null,
+          payment_method: "",
+          bank_name: null
+        })
+        .where(eq(addons.id, id))
+        .returning();
 
-    return updated;
+      await tx.delete(payments)
+        .where(
+          and(
+            eq(payments.bookingId, addon.bookingId),
+            eq(payments.note, `Add-on #${addon.id}: ${addon.service}`)
+          )
+        );
+
+      return updated;
+    });
   }
 
   if (addon.received) return addon;
 
   const paymentDate = new Date();
 
-  const [updated] = await db.update(addons)
-    .set({ 
-      received: true, 
-      received_at: paymentDate,
+  return await db.transaction(async (tx) => {
+    const [updated] = await tx.update(addons)
+      .set({
+        received: true,
+        received_at: paymentDate,
+        payment_method,
+        bank_name
+      })
+      .where(eq(addons.id, id))
+      .returning();
+
+    await tx.insert(payments).values({
+      bookingId: addon.bookingId,
+      amount: addon.client_price,
+      flow: "IN",
+      category: "Addon",
       payment_method,
-      bank_name 
-    })
-    .where(eq(addons.id, id))
-    .returning();
+      bank_name,
+      note: `Add-on #${addon.id}: ${addon.service}`,
+      created_at: paymentDate
+    });
 
-  await db.insert(payments).values({
-    bookingId: addon.bookingId,
-    amount: addon.client_price,
-    type: "Addon",
-    payment_method,
-    bank_name,
-    note: `Add-on #${addon.id}: ${addon.service}`,
-    created_at: paymentDate 
+    return updated;
   });
-
-  return updated;
 }
 
 module.exports = { addAddon, deleteAddon, GetAllAddons, markAddonReceived, updateAddon };
