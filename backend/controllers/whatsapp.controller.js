@@ -1,4 +1,4 @@
-const { parseIncoming, sendMessage } = require("../services/meta.service.")
+const { parseIncoming, sendMessage, sendVoiceCallFollowup } = require("../services/meta.service.")
 const { getSession, setSession, clearSession, getActiveHandoffCustomer, setActiveHandoffCustomer, updateLastInbound } = require("../services/session.service")
 const { getOrCreateUser } = require("../services/user.service")
 const { parseWhatsAppMessage, CreateBooking } = require("../services/booking.service")
@@ -12,34 +12,34 @@ async function handleWhatsappWebhook(req, res) {
         console.log("[WA Status]", JSON.stringify({
             messageId: statusEntry.id,
             recipient: statusEntry.recipient_id,
-            status: statusEntry.status,       
+            status: statusEntry.status,
             timestamp: statusEntry.timestamp,
-            errors: statusEntry.errors || null 
+            errors: statusEntry.errors || null
         }, null, 2));
-        return; 
+        return;
     }
 
     const parsed = parseIncoming(req);
     if (!parsed) return; // acknowledge Meta immediately
 
- 
+
 
     const { phone, body } = parsed;
     const cleanBody = body.trim();
     const keyword = cleanBody.toUpperCase();
     await updateLastInbound(phone);
-    
+
     try {
         let session = getSession(phone);
 
         // 1. Handle Brand New Users or Missing Sessions
         if (!session) {
             const result = await getOrCreateUser(phone, null);
-            
+
             setSession(phone, { step: "selecting_hall", name: result?.user?.name || null });
-            
+
             return sendMessage(
-                phone, 
+                phone,
                 `Welcome to Darbar Banquet! \n\nPlease choose your preferred hall:\n\n*1* : Banquet A (Capacity: 650)\n*2* : Banquet B (Capacity: 200)`
             );
         }
@@ -61,7 +61,7 @@ async function handleWhatsappWebhook(req, res) {
             }
 
             setSession(phone, { ...session, step: "ready", active_hall: hall });
-            
+
             return sendMessage(
                 phone,
                 `You have selected *${hall}*!\n\nHere are your available options:\n\n` +
@@ -74,7 +74,7 @@ async function handleWhatsappWebhook(req, res) {
         }
 
         // 3. Global commands
-        if (keyword === "HELP" || keyword === "4") {
+        if (keyword === "HELP" || keyword === "4" || keyword === "MENU") {
             return sendMessage(
                 phone,
                 `Darbar Banquet Assistant Menu\n\n` +
@@ -89,14 +89,14 @@ async function handleWhatsappWebhook(req, res) {
 
         if (keyword === "GALLERY" || keyword === "2") {
             const msg = await getGalleryMessage();
-            
+
             sendMessage(phone, msg);
             return sendMessage(phone, `Type *HELP* to show the menu or *SWITCH* to change halls.`);
         }
 
-        if (keyword === "CALENDAR" || keyword === "1") {
-            setSession(phone, { ...session, step: "awaiting_month" });
-            return sendMessage(phone, `Which month would you like to see for *${session.active_hall || "Hall A"}*? (e.g. *July* or *7*)`);
+        if ((keyword === "CALENDAR" || keyword === "1") && session?.step !== "awaiting_year" && session?.step !== "awaiting_month") {
+            setSession(phone, { ...session, step: "awaiting_year" });
+            return sendMessage(phone, `Which year would you like to see for *${session.hall || session.active_hall || "Hall A"}*? (e.g. *2026* or *2027*)`);
         }
 
         if (keyword === "SUPPORT" || keyword === "3") {
@@ -141,6 +141,23 @@ async function handleWhatsappWebhook(req, res) {
             return;
         }
 
+        if (session?.step === "awaiting_year") {
+            const yearNum = parseInt(cleanBody, 10);
+            const currentYear = new Date().getFullYear();
+
+            if (isNaN(yearNum) || yearNum < currentYear) {
+                return sendMessage(phone, `Please reply with a valid year, ${currentYear} or later.`);
+            }
+
+            if (isNaN(yearNum) || yearNum < currentYear || yearNum > currentYear + 10) {
+                return sendMessage(phone, `Please reply with a valid year, ${currentYear} or later.`);
+            }
+
+            setSession(phone, { ...session, step: "awaiting_month", year: yearNum });
+            return sendMessage(phone, `Got it — ${yearNum}. Which month would you like to see for *${session.hall || session.active_hall || "Hall A"}*? (e.g. *July* or *7*)`);
+        }
+
+
         // 5. Handle Calendar Month Step
         if (session?.step === "awaiting_month") {
             const monthNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
@@ -158,16 +175,13 @@ async function handleWhatsappWebhook(req, res) {
                 return sendMessage(phone, "Please reply with a valid month, like *July* or *7*.");
             }
 
-            const year = new Date().getFullYear();
+            const year = session.year || new Date().getFullYear();
             const hallToQuery = session.hall || session.active_hall || "Hall A";
-            
-            // Pass monthNum directly (1-12). Ensure your calendar image generator handles (month - 1)
+
             await getCalendarMessage(phone, hallToQuery, year, monthNum);
 
-            setSession(phone, { ...session, step: "ready" }); 
-            
+            setSession(phone, { ...session, step: "ready" });
         }
-
         // 6. Ready State / Fallback for unrecognized keywords
         if (session.step === "ready") {
             const data = parseWhatsAppMessage(body, phone);
@@ -176,7 +190,7 @@ async function handleWhatsappWebhook(req, res) {
                 await CreateBooking({ ...data, client: session.name || "Customer", phone });
                 return sendMessage(phone, `Booking confirmed for ${session.name || "Customer"}!\n\nEvent: ${data.event}\nDate: ${data.date}\nPackage: ${data.package}\n\nWe'll be in touch soon.`);
             }
-            
+
             // Clean vertical format for incorrect main menu inputs
             return sendMessage(
                 phone,
@@ -186,7 +200,7 @@ async function handleWhatsappWebhook(req, res) {
                 `*3* — SUPPORT (Talk to a human)\n` +
                 `*4* — HELP (Show this menu)\n\n` +
                 `(Type *SWITCH* or *HALL* anytime to change halls) \n\n `
-                
+
             );
         }
 
@@ -200,6 +214,39 @@ async function handleWhatsappWebhook(req, res) {
     }
 }
 
+
+async function SendMenuFromVoiceAgent(req, res) {
+    console.log("Voice webhook hit. Headers:", req.headers);
+    console.log("Voice webhook body:", req.body);
+    try {
+        if (req.headers["x-voice-agent-secret"] !== process.env.VOICE_AGENT_SECRET) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
+        console.log("WORKING")
+
+        const { phone } = req.body;
+        if (!phone) {
+            return res.status(400).json({ success: false, message: "phone is required" });
+        }
+
+        const cleanPhone = phone.replace(/\D/g, "").replace(/^0/, "92");
+
+        const result = await sendVoiceCallFollowup(phone, "en");
+
+        if (!result.success) {
+            console.error("Failed to send voice call followup template:", result.message);
+            return res.status(500).json({ success: false, message: "Failed to send WhatsApp message" });
+        }
+
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        console.error("Error sending menu from voice agent:", error);
+        return res.status(500).json({ success: false, message: "Failed to send WhatsApp menu" });
+    }
+}
+
 module.exports = {
-    handleWhatsappWebhook
+    handleWhatsappWebhook,
+    SendMenuFromVoiceAgent
 };

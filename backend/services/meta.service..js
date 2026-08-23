@@ -177,6 +177,30 @@ async function sendAdvanceReminder(to, languageCode, clientName, eventName, rema
     }
 }
 
+async function sendVoiceCallFollowup(to, languageCode = "en") {
+    to = normalizePakistaniNumber(to);
+    try {
+        const res = await axios.post(
+            `https://graph.facebook.com/v20.0/${process.env.phoneID}/messages`,
+            {
+                messaging_product: "whatsapp",
+                to,
+                type: "template",
+                template: {
+                    name: "voice_call_followup_v1",
+                    language: { code: languageCode },
+                    components: []
+                }
+            },
+            { headers: { Authorization: `Bearer ${process.env.ACCESS_TOKEN}` } }
+        );
+        return { success: true, data: res.data };
+    } catch (error) {
+        console.error("Voice Call Followup Error:", JSON.stringify(error.response?.data, null, 2));
+        return { success: false, error: error.response?.data || error.message };
+    }
+}
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -189,5 +213,6 @@ module.exports = {
     sendMessage,
     sendMediaMessage,
     sendReceiptTemplate,
-    sleep
+    sendVoiceCallFollowup,
+    sleep,
 };

@@ -1,6 +1,6 @@
 const express = require("express")
 const router = express.Router()
-const { handleWhatsappWebhook } = require("../controllers/whatsapp.controller")
+const { handleWhatsappWebhook, SendMenuFromVoiceAgent } = require("../controllers/whatsapp.controller")
 const dotenv = require("dotenv")
 
 dotenv.config()
@@ -19,5 +19,7 @@ router.get("/handleWebhook", (req, res) => {
 });
 
 router.post("/handleWebhook", handleWhatsappWebhook)
+
+router.post("/voice/sendMenu", SendMenuFromVoiceAgent);
 
 module.exports = router
