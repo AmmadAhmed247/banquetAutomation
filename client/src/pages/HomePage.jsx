@@ -3,6 +3,7 @@ import {
   Bot, MessageCircle, Database, Globe, Smartphone, Wallet,
   ArrowRight, ArrowUpRight, Menu, X
 } from "lucide-react";
+import { ReviewCard, REVIEWS } from "../components/clientReviews.jsx";
 
 const WA_IMG = "https://d8j0ntlcm91z4.cloudfront.net/user_3HrL189N3SZfcJ1cBXy3Vk0GNFp/hf_20260818_112201_250fe9f2-6466-43e2-a17c-66cf9f37c7c7.png";
 const CRYPTO_IMG = "https://d8j0ntlcm91z4.cloudfront.net/user_3HrL189N3SZfcJ1cBXy3Vk0GNFp/hf_20260818_112205_bbdaa6f7-ca47-496d-940d-cf0de5c27703.png";
@@ -15,8 +16,8 @@ const FONTS = `
 .font-mono { font-family: 'JetBrains Mono', monospace; }
 @keyframes marquee-l { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes marquee-r { from { transform: translateX(-50%); } to { transform: translateX(0); } }
-.marquee-l { animation: marquee-l 32s linear infinite; }
-.marquee-r { animation: marquee-r 32s linear infinite; }
+.marquee-l { animation: marquee-l 38s linear infinite; }
+.marquee-r { animation: marquee-r 38s linear infinite; }
 .marquee-wrap:hover .marquee-l, .marquee-wrap:hover .marquee-r { animation-play-state: paused; }
 @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 .pulse { animation: pulse-dot 1.8s ease-in-out infinite; }
@@ -37,40 +38,39 @@ const SERVICES = [
   { icon: Wallet, n: "06", title: "Crypto Payment Gateways", desc: "Gateways that settle straight into your existing checkout." },
 ];
 
-const REVIEWS = [
-  { name: "Darbar Banquet", location: "Pakistan", tag: "Venue Automation", text: "They automated our full booking flow — WhatsApp bot, receipts, onboarding. It just works." },
-  { name: "Aaron", location: "United States", tag: "Product Build", text: "Professional, solution-focused, and calm under pressure. Communication was excellent throughout." },
-  { name: "teamstack", location: "Thailand", tag: "Web3 / Payments", text: "Matched our pace on a tight deadline. Already started a second project with them." },
-  { name: "Richard", location: "United States", tag: "Web Platform", text: "Clear updates, solid delivery, and a product that landed better than expected." },
-];
-
-function ReviewCard({ r }) {
-  return (
-    <div className="w-[340px] shrink-0 rounded-2xl border border-zinc-200 bg-white p-6">
-      <p className="font-body text-[15px] leading-relaxed text-zinc-800">"{r.text}"</p>
-      <div className="mt-5 flex items-center justify-between border-t border-zinc-100 pt-4">
-        <div>
-          <p className="font-display text-sm font-semibold text-zinc-900">{r.name}</p>
-          <p className="font-mono text-xs text-zinc-500">{r.location}</p>
-        </div>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-emerald-700">{r.tag}</span>
-      </div>
-    </div>
-  );
-}
-
+// Two rows, counter-scrolling, each duplicated for a seamless loop.
+// Row B is reversed so the two rows don't feel like mirrors of each other.
 function Marquee() {
-  const row = [...REVIEWS, ...REVIEWS, ...REVIEWS, ...REVIEWS];
+  const rowA = [...REVIEWS, ...REVIEWS];
+  const reversed = [...REVIEWS].reverse();
+  const rowB = [...reversed, ...reversed];
+
   return (
-    <section className="border-y border-zinc-200 bg-zinc-50 py-16">
-      <div className="mx-auto mb-10 max-w-6xl px-6">
+    <section id="reviews" className="border-y border-zinc-200 bg-zinc-50 py-20">
+      <div className="mx-auto mb-12 max-w-6xl px-6">
         <p className="font-mono text-xs uppercase tracking-widest text-emerald-600">Client feedback</p>
-        <h2 className="mt-3 font-display text-3xl font-semibold text-zinc-900 md:text-4xl">What clients say after we ship.</h2>
+        <h2 className="mt-3 font-display text-3xl font-semibold text-zinc-900 md:text-4xl">
+          What clients say after we ship.
+        </h2>
       </div>
-      <div className="marquee-wrap overflow-hidden">
-        <div className="flex w-max gap-4 marquee-l">
-          {row.map((r, i) => <ReviewCard key={i} r={r} />)}
+
+      <div
+        className="marquee-wrap flex flex-col gap-5 overflow-hidden"
+        style={{
+          maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+          WebkitMaskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+        }}
+      >
+        <div className="flex w-max gap-5 marquee-l">
+          {rowA.map((r, i) => (
+            <ReviewCard key={`a-${i}`} r={r} index={i} />
+          ))}
         </div>
+        {/* <div className="flex w-max gap-5 marquee-r">
+          {rowB.map((r, i) => (
+            <ReviewCard key={`b-${i}`} r={r} index={i} />
+          ))}
+        </div> */}
       </div>
     </section>
   );
@@ -78,39 +78,76 @@ function Marquee() {
 
 function Logo() {
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white-900">
-     <img src="./main-removebg-preview.png" alt="" />
+    <div className="flex h-8 w-8 items-center justify-center">
+      <img src="./symbol.svg" alt="Vanexta" className="h-full w-full object-contain" />
     </div>
   );
 }
 
 function NavBar() {
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("home");
+
+  const navItems = [
+    { id: "home", label: "Home", href: "#" },
+    { id: "services", label: "Services", href: "#services" },
+    { id: "reviews", label: "Reviews", href: "#reviews" },
+  ];
+
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-        <a href="/" className="flex items-center gap-2.5">
+        <a href="#" onClick={() => setActiveTab("home")} className="flex items-center gap-2.5">
           <Logo />
           <span className="font-display text-lg font-semibold tracking-tight text-zinc-900">Vanexta</span>
         </a>
+
         <nav className="hidden items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 p-1 md:flex">
-          <a href="/" className="rounded-full px-4 py-1.5 font-body text-sm bg-white text-zinc-900 shadow-sm transition-colors">Home</a>
-          <a href="#services" className="rounded-full px-4 py-1.5 font-body text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Services</a>
-          <a href="#reviews" className="rounded-full px-4 py-1.5 font-body text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Reviews</a>
+          {navItems.map((item) => (
+            <a
+              key={item.id}
+              href={item.href}
+              onClick={() => setActiveTab(item.id)}
+              className={`rounded-full px-4 py-1.5 font-body text-sm transition-all duration-200 ${
+                activeTab === item.id
+                  ? "bg-white text-zinc-900 shadow-sm font-medium"
+                  : "text-zinc-500 hover:text-zinc-900"
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
         </nav>
+
         <a href="/book" className="hidden items-center gap-1.5 rounded-full bg-zinc-900 px-4 py-2 font-body text-sm font-medium text-white hover:bg-zinc-800 transition-colors md:flex">
           Book a call <ArrowRight size={14} />
         </a>
+
         <button className="text-zinc-700 md:hidden" onClick={() => setOpen(!open)}>
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
+
       {open && (
         <div className="border-t border-zinc-200 px-6 py-4 md:hidden">
-          <a href="/" onClick={() => setOpen(false)} className="block w-full py-2 text-left font-body text-zinc-700">Home</a>
-          <a href="#services" onClick={() => setOpen(false)} className="block w-full py-2 text-left font-body text-zinc-700">Services</a>
-          <a href="#reviews" onClick={() => setOpen(false)} className="block w-full py-2 text-left font-body text-zinc-700">Reviews</a>
-          <a href="/book" onClick={() => setOpen(false)} className="mt-2 block w-full rounded-full bg-zinc-900 px-4 py-2 text-center font-body text-sm font-medium text-white">Book a call</a>
+          {navItems.map((item) => (
+            <a
+              key={item.id}
+              href={item.href}
+              onClick={() => {
+                setActiveTab(item.id);
+                setOpen(false);
+              }}
+              className={`block w-full py-2 text-left font-body text-sm ${
+                activeTab === item.id ? "font-semibold text-zinc-900" : "text-zinc-700"
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
+          <a href="/book" onClick={() => setOpen(false)} className="mt-2 block w-full rounded-full bg-zinc-900 px-4 py-2 text-center font-body text-sm font-medium text-white">
+            Book a call
+          </a>
         </div>
       )}
     </header>
@@ -133,8 +170,7 @@ function Hero() {
       </div>
 
       <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-between px-6 pb-10 pt-8">
-        <div className="flex items-center justify-between">
-        </div>
+        <div className="flex items-center justify-between" />
 
         <div className="py-16 md:py-24">
           <p className="font-display text-xl font-light text-zinc-400 md:text-2xl">We build the</p>
@@ -205,7 +241,6 @@ function Showcase() {
       <div className="mx-auto grid max-w-6xl gap-16 px-6 py-24">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-emerald-600">WhatsApp-native</p>
             <h3 className="mt-3 font-display text-2xl font-semibold text-zinc-900 md:text-3xl">Your customers already live on WhatsApp.</h3>
             <p className="mt-4 font-body text-zinc-600">Booking confirmations, payment reminders, and support — automated on the official Meta Cloud API, no third-party middleman costs.</p>
           </div>
@@ -243,13 +278,30 @@ function Footer() {
     <footer className="border-t border-zinc-200 px-6 py-10">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 font-mono text-sm text-zinc-500 md:flex-row">
         <div className="flex items-center flex-row gap-2">
-
-        <img className="w-12" src="./main-removebg-preview.png" alt="" />
-        <p > Vanexta ~ Karachi, Pakistan</p>
+          <img className="w-12" src="./symbol.svg" alt="" />
+          <p> Vanexta ~ Karachi, Pakistan</p>
         </div>
         <p>© {new Date().getFullYear()} Vanexta. All rights reserved.</p>
       </div>
     </footer>
+  );
+}
+
+function WhatsAppButton() {
+  return (
+    <a
+      href="https://wa.me/923402368339"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group fixed bottom-6 right-6 z-50 flex items-center rounded-full bg-emerald-500 p-3.5 text-white shadow-lg shadow-emerald-500/30 transition-all duration-300 ease-out hover:bg-emerald-600 hover:pr-5"
+      aria-label="Chat on WhatsApp"
+    >
+      <span className="absolute inset-0 -z-10 rounded-full bg-emerald-400/50" style={{ animation: "ping 2.4s cubic-bezier(0,0,0.2,1) infinite" }} />
+      <MessageCircle size={22} className="shrink-0" />
+      <span className="max-w-0 overflow-hidden whitespace-nowrap font-body text-sm font-medium transition-all duration-300 ease-out group-hover:max-w-[150px] group-hover:pl-2">
+        Chat on WhatsApp
+      </span>
+    </a>
   );
 }
 
@@ -261,11 +313,10 @@ export default function VanextaLanding() {
       <Hero />
       <Services />
       <Showcase />
-      <div id="reviews">
-        <Marquee />
-      </div>
+      <Marquee />
       <CTA />
       <Footer />
+      <WhatsAppButton />
     </div>
   );
 }
