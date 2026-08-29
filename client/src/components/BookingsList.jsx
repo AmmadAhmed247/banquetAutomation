@@ -370,7 +370,7 @@ function BookingsTable({ filteredBookings, onEdit, onDelete }) {
 }
 
 // MAIN EXPORT
-// MAIN EXPORT
+
 export default function BookingsList({ filteredBookings, isLoading, onEdit, onDelete }) {
   if (isLoading && filteredBookings.length === 0) {
     return (
@@ -389,22 +389,26 @@ export default function BookingsList({ filteredBookings, isLoading, onEdit, onDe
   }
 
   // Sort bookings so creations from today float to the top
+  // Sort bookings so creations from today float to the top
+  // Sort bookings so events happening today float to the top
   const sortedBookings = [...filteredBookings].sort((a, b) => {
-    const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD format in local timezone
-    
-    const dateA = (a.createdAt || a.created_at) ? new Date(a.createdAt || a.created_at).toLocaleDateString("en-CA") : "";
-    const dateB = (b.createdAt || b.created_at) ? new Date(b.createdAt || b.created_at).toLocaleDateString("en-CA") : "";
+  const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD local date
 
-    const isTodayA = dateA === todayStr;
-    const isTodayB = dateB === todayStr;
+  const createdA = a.createdAt || a.created_at;
+  const createdB = b.createdAt || b.created_at;
 
-    if (isTodayA && !isTodayB) return -1; // A comes first
-    if (!isTodayA && isTodayB) return 1;  // B comes first
+  const createdDateA = createdA ? new Date(createdA).toLocaleDateString("en-CA") : "";
+  const createdDateB = createdB ? new Date(createdB).toLocaleDateString("en-CA") : "";
 
-    // Secondary sort: newest date/time first for the rest
-    return new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0);
-  });
+  const isCreatedTodayA = createdDateA === todayStr;
+  const isCreatedTodayB = createdDateB === todayStr;
 
+  if (isCreatedTodayA && !isCreatedTodayB) return -1;
+  if (!isCreatedTodayA && isCreatedTodayB) return 1;
+
+  // Secondary sort: newest created first
+  return new Date(createdB || 0) - new Date(createdA || 0);
+});
   return (
     <>
       {/* Card grid — below xl */}

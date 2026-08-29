@@ -35,7 +35,7 @@ export function MonthlyOverheadPanel({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[12px] font-bold text-stone-800">{currency(me.amount)}</span>
-              <button onClick={() => deleteMonthlyExpenseMutation.mutate(me.id)} className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-rose-600 transition-all">
+              <button onClick={() => deleteMonthlyExpenseMutation.mutate(me.id)} className=" text-rose-500 hover:text-rose-800 transition-all">
                 <Trash2 size={12} />
               </button>
             </div>

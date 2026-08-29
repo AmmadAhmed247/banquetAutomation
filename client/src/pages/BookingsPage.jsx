@@ -152,14 +152,19 @@ const addons = addonRes?.addons || (Array.isArray(addonRes) ? addonRes : []);
   };
 
   const filtered = bookings
-    .filter(b => filter === "All" || b.status === filter)
-    .filter(b =>
-      b.client?.toLowerCase().includes(search.toLowerCase()) ||
-      b.event?.toLowerCase().includes(search.toLowerCase()) ||
-      b.r_no?.includes(search) ||
-      b.venue?.toLowerCase().includes(search.toLowerCase()) ||
-      b.phone?.includes(search)
-    );
+  .filter(b => filter === "All" || b.status === filter)
+  .filter(b =>
+    b.client?.toLowerCase().includes(search.toLowerCase()) ||
+    b.event?.toLowerCase().includes(search.toLowerCase()) ||
+    b.r_no?.includes(search) ||
+    b.venue?.toLowerCase().includes(search.toLowerCase()) ||
+    b.phone?.includes(search)
+  )
+  .sort((a, b) => {
+    const createdA = a.createdAt || a.created_at || 0;
+    const createdB = b.createdAt || b.created_at || 0;
+    return new Date(createdB) - new Date(createdA); // newest created first
+  });
 
   const totalPages = search.trim() ? 1 : Math.max(1, Math.ceil(filtered.length / perPage));
   useEffect(() => {

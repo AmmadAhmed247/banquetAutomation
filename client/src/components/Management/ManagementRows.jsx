@@ -33,7 +33,7 @@ export function ExpenseRow({ expense, onDelete }) {
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-[13px] text-stone-900 font-medium">{currency(expense.amount)}</span>
-        <button onClick={() => onDelete(expense.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-stone-400 hover:text-green-700 rounded-md hover:bg-green-50">
+        <button onClick={() => onDelete(expense.id)} className="opacity-100 group-hover:opacity-100 transition-opacity p-1.5 text-stone-400 hover:text-green-700 rounded-md hover:bg-green-50">
           <Trash2 size={13} />
         </button>
       </div>

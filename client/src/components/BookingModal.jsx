@@ -47,7 +47,7 @@ const inputCls = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm 
 const selectCls = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm text-green-900 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 appearance-none cursor-pointer";
 
 const EVENTS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate", "Barat and Valima", "Nikah"];
-const VENUES = ["Hall A", "Hall B"];
+const VENUES = ["Hall A", "Hall B", "Hall A & B"];
 const PAYMENT_METHODS = ["Cash", "JazzCash", "EasyPaisa", "Habib Metro Usman", "Meezan Bank Sadar"];
 
 const STATUSES = ["Pending", "Confirmed", "Cancelled", "Finished"];
