@@ -96,9 +96,10 @@ async function handleWhatsappWebhook(req, res) {
             return sendMessage(phone, `Type *HELP* to show the menu or *SWITCH* to change halls.`);
         }
 
-        if ((keyword === "CALENDAR" || keyword === "1") && session?.step !== "awaiting_year" && session?.step !== "awaiting_month") {
-            setSession(phone, { ...session, step: "awaiting_year" });
-            return sendMessage(phone, `Which year would you like to see for *${session.hall || session.active_hall || "Hall A"}*? (e.g. *2026* or *2027*)`);
+        if ((keyword === "CALENDAR" || keyword === "1") && session?.step !== "awaiting_month") {
+            setSession(phone, { ...session, step: "awaiting_month" });
+            const currentHall = session.hall || session.active_hall || "Hall A";
+            return sendMessage(phone, `Which month would you like to see for *${currentHall}*? (e.g. *July* or *7*)`);
         }
 
         if (keyword === "SUPPORT" || keyword === "3") {
@@ -143,22 +144,6 @@ async function handleWhatsappWebhook(req, res) {
             return;
         }
 
-        if (session?.step === "awaiting_year") {
-            const yearNum = parseInt(cleanBody, 10);
-            const currentYear = new Date().getFullYear();
-
-            if (isNaN(yearNum) || yearNum < currentYear) {
-                return sendMessage(phone, `Please reply with a valid year, ${currentYear} or later.`);
-            }
-
-            if (isNaN(yearNum) || yearNum < currentYear || yearNum > currentYear + 10) {
-                return sendMessage(phone, `Please reply with a valid year, ${currentYear} or later.`);
-            }
-
-            setSession(phone, { ...session, step: "awaiting_month", year: yearNum });
-            return sendMessage(phone, `Got it — ${yearNum}. Which month would you like to see for *${session.hall || session.active_hall || "Hall A"}*? (e.g. *July* or *7*)`);
-        }
-
 
         // 5. Handle Calendar Month Step
         if (session?.step === "awaiting_month") {
@@ -177,13 +162,21 @@ async function handleWhatsappWebhook(req, res) {
                 return sendMessage(phone, "Please reply with a valid month, like *July* or *7*.");
             }
 
-            const year = session.year || new Date().getFullYear();
+            // Determine the year dynamically based on the current date
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1; // 1-indexed (1 to 12)
+
+            // If requested month has already passed this year, assign next year
+            const targetYear = monthNum < currentMonth ? currentYear + 1 : currentYear;
+
             const hallToQuery = session.hall || session.active_hall || "Hall A";
 
-            await getCalendarMessage(phone, hallToQuery, year, monthNum);
+            await getCalendarMessage(phone, hallToQuery, targetYear, monthNum);
 
             setSession(phone, { ...session, step: "ready" });
         }
+
         // 6. Ready State / Fallback for unrecognized keywords
         if (session.step === "ready") {
             const data = parseWhatsAppMessage(body, phone);

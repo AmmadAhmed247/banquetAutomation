@@ -307,6 +307,49 @@ async function sendZeappPromoTemplate(phone) {
     return { success: false, message: error.response?.data || error.message };
   }
 }
+async function sendCashflowSummaryTemplate(to, imageUrl, languageCode = "en") {
+    to = typeof normalizePakistaniNumber === "function" ? normalizePakistaniNumber(to) : to.replace(/\D/g, "");
+
+    try {
+        const res = await axios.post(
+            `https://graph.facebook.com/v20.0/${process.env.phoneID}/messages`,
+            {
+                messaging_product: "whatsapp",
+                to,
+                type: "template",
+                template: {
+                    name: "cashflow",
+                    language: { code: languageCode },
+                    components: [
+                        {
+                            type: "header",
+                            parameters: [
+                                {
+                                    type: "image",
+                                    image: {
+                                        link: imageUrl
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            { 
+                headers: { 
+                    Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
+                    "Content-Type": "application/json"
+                } 
+            }
+        );
+
+        return { success: true, data: res.data };
+    } catch (error) {
+        console.error("Cashflow Summary Template Error:", JSON.stringify(error.response?.data, null, 2));
+        return { success: false, error: error.response?.data || error.message };
+    }
+}
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -321,5 +364,6 @@ module.exports = {
     sendReceiptTemplate,
     sendVoiceCallFollowup,
     sleep,
-    sendZeappPromoTemplate
+    sendZeappPromoTemplate,
+    sendCashflowSummaryTemplate
 };
