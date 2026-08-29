@@ -74,7 +74,7 @@ function ReceiptPreview({ data }) {
   })();
 
   const FanLogo = () => (
-    <svg width="48" height="38" viewBox="0 0 72 52" className="mx-auto mb-1">
+    <svg width="38" height="38" viewBox="0 0 72 52" className="mx-auto mb-1">
       <g transform="translate(36,46)">
         {[[-72, "#c0392b"], [-48, "#c0392b"], [-24, "#c0392b"], [0, "#9e9e9e"], [24, "#1a237e"], [48, "#1a237e"], [72, "#1a237e"]].map(([r, c]) => (
           <ellipse key={r} transform={`rotate(${r})`} rx="5" ry="22" fill={c} />
@@ -84,9 +84,9 @@ function ReceiptPreview({ data }) {
   );
 
   return (
-    <div className="border-[2.5px] border-[#1a237e] p-5 bg-white font-sans text-zinc-900 relative overflow-hidden w-full max-w-[420px] mx-auto text-[13px]" style={{ fontFamily: "Arial, sans-serif" }}>
+    <div className="border-[2.5px] border-[#1a237e] p-6 bg-white font-sans text-zinc-900 relative overflow-hidden w-full max-w-[440px] mx-auto text-[13px]" style={{ fontFamily: "Arial, sans-serif" }}>
       {/* Watermark Fan */}
-      <svg className="absolute opacity-[0.06] pointer-events-none" style={{ top: "38%", left: "50%", transform: "translate(-50%, -50%)" }} width="260" height="260" viewBox="0 0 260 260">
+      <svg className="absolute opacity-[0.06] pointer-events-none" style={{ top: "45%", left: "50%", transform: "translate(-50%, -50%)" }} width="260" height="260" viewBox="0 0 260 260">
         <g transform="translate(130,130)">
           {[-90, -60, -30, 0, 30, 60, 90].map((r, i) => (
             <ellipse key={r} transform={`rotate(${r})`} rx="17" ry="68" fill={["#c0392b", "#1a237e", "#e8c9b8", "#1a237e", "#c0392b", "#e8c9b8", "#1a237e"][i]} />
@@ -96,36 +96,36 @@ function ReceiptPreview({ data }) {
 
       <FanLogo />
       
-      <div className="text-center mb-3">
-        <div className="text-[22px] font-black text-[#c0392b] tracking-wide leading-none">DARBAR BANQUET</div>
+      <div className="text-center mb-4">
+        <div className="text-[34px] font-bold text-[#c0392b] tracking-wide leading-none" style={{ fontFamily: "Arial, sans-serif" }}>DARBAR BANQUET</div>
       </div>
 
       {/* R.No */}
-      <div className="flex items-end gap-1.5 mb-2.5">
+      <div className="flex items-end gap-1.5 mb-2">
         <span className="text-[13px] font-bold">R.No.</span>
-        <div className="border-b border-[#1a237e] text-center px-2 min-w-[70px]" style={{ minHeight: 18 }}>
-          {data.rNo && <span className="text-[13px] font-bold">{data.rNo}</span>}
+        <div className="border-b border-[#1a237e] text-center px-2 min-w-[90px]" style={{ minHeight: 18 }}>
+          {data.rNo && <span className="text-[14px] font-bold">{data.rNo}</span>}
         </div>
       </div>
 
       {/* Date */}
-      <div className="flex items-end gap-1.5 mb-2.5">
+      <div className="flex items-end gap-1.5 mb-2">
         <span className="text-[13px] font-bold whitespace-nowrap">Date :</span>
-        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+        <div className="w-48 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
           {data.date && <span className="text-[13px]">{formatDate(data.date)}</span>}
         </div>
       </div>
 
       {/* Received From */}
-      <div className="flex items-end gap-1.5 mb-2.5">
-        <span className="text-[13px] font-bold whitespace-nowrap">RECEIVED with thanks from Mr.</span>
+      <div className="flex items-end gap-1.5 mb-2">
+        <span className="text-[13px] font-bold whitespace-nowrap">Received with thanks from Mr.</span>
         <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
           {data.clientName && <span className="text-[13px]">{data.clientName}</span>}
         </div>
       </div>
 
       {/* Resident of */}
-      <div className="flex items-end gap-1.5 mb-2.5">
+      <div className="flex items-end gap-1.5 mb-2">
         <span className="text-[13px] font-bold whitespace-nowrap">Resident of</span>
         <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
           {data.resident && <span className="text-[13px]">{data.resident}</span>}
@@ -133,9 +133,9 @@ function ReceiptPreview({ data }) {
       </div>
 
       {/* WhatsApp & Phone */}
-      <div className="flex items-end gap-2 mb-2.5">
+      <div className="flex items-end gap-2 mb-2">
         <span className="text-[13px] font-bold whitespace-nowrap">WhatsApp.</span>
-        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+        <div className="w-40 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
           {data.whatsapp && <span className="text-[13px]">{data.whatsapp}</span>}
         </div>
         <span className="text-[13px] font-bold whitespace-nowrap">Phone.</span>
@@ -145,57 +145,57 @@ function ReceiptPreview({ data }) {
       </div>
 
       {/* Reserved For Date & Day */}
-      <div className="flex items-end gap-2 mb-2.5">
+      <div className="flex items-end gap-2 mb-2">
         <span className="text-[13px] font-bold whitespace-nowrap">has been reserved for</span>
-        <div className="flex-[2] border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
           {data.reservationDate && <span className="text-[13px]">{formatDate(data.reservationDate)}</span>}
         </div>
         <span className="text-[13px] font-bold whitespace-nowrap">Day</span>
-        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+        <div className="w-28 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
           {data.day && <span className="text-[13px]">{data.day}</span>}
         </div>
       </div>
 
       {/* Function & No. Of Guest */}
-      <div className="flex items-end gap-2 mb-2.5">
+      <div className="flex items-end gap-2 mb-2">
         <span className="text-[13px] font-bold whitespace-nowrap">Function</span>
-        <div className="flex-[2] border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
           {data.functionName && <span className="text-[13px]">{data.functionName}</span>}
         </div>
         <span className="text-[13px] font-bold whitespace-nowrap">No. Of Guest</span>
-        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+        <div className="w-24 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
           {data.noOfGuests && <span className="text-[13px]">{data.noOfGuests}</span>}
         </div>
       </div>
 
       {/* Lump Sum */}
-      <div className="flex items-end gap-2 mb-2.5">
+      <div className="flex items-end gap-2 mb-2">
         <span className="text-[13px] font-bold whitespace-nowrap">Lump Sum</span>
-        <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+        <div className="w-56 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
           {data.lumpSum && <span className="text-[13px]">{data.lumpSum}</span>}
         </div>
       </div>
 
-      {/* Advance & Signature Layout */}
-      <div className="flex items-end justify-between gap-4 mb-1">
-        <div className="flex-1">
-          <div className="flex items-end gap-2 mb-2.5">
-            <span className="text-[13px] font-bold whitespace-nowrap">Advance</span>
-            <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
-              {data.advance && <span className="text-[13px]">{data.advance}</span>}
-            </div>
-          </div>
-          <div className="flex items-end gap-2">
-            <span className="text-[13px] font-bold whitespace-nowrap">Balance</span>
-            <div className="flex-1 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
-              {balance && <span className="text-[13px]">{balance}</span>}
-            </div>
+      {/* Advance */}
+      <div className="flex items-end gap-2 mb-2">
+        <span className="text-[13px] font-bold whitespace-nowrap">Advance</span>
+        <div className="w-56 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.advance && <span className="text-[13px]">{data.advance}</span>}
+        </div>
+      </div>
+
+      {/* Balance & Signature Layout */}
+      <div className="flex items-end justify-between gap-4 mb-3">
+        <div className="flex items-end gap-2 flex-1">
+          <span className="text-[13px] font-bold whitespace-nowrap">Balance</span>
+          <div className="w-56 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+            {balance && <span className="text-[13px]">{balance}</span>}
           </div>
         </div>
 
-        <div className="flex flex-col items-center min-w-[120px]">
-          <div className="relative h-10 w-28 flex items-end justify-center">
-            <img className="absolute bottom-1 w-28 object-contain z-10 pointer-events-none" src="/manager-signature.png" alt="Manager Signature" />
+        <div className="flex flex-col items-center min-w-[130px]">
+          <div className="relative h-9 w-28 flex items-end justify-center">
+            <img className="absolute bottom-0 w-28 object-contain z-10 pointer-events-none" src="/manager-signature.png" alt="Manager Signature" />
           </div>
           <div className="w-full border-b border-[#1a237e]" style={{ minHeight: 1 }}></div>
           <span className="text-[13px] font-bold mt-0.5">Manager</span>
@@ -203,11 +203,11 @@ function ReceiptPreview({ data }) {
       </div>
 
       {/* Terms & Conditions Pill */}
-      <div className="text-center my-3">
-        <span className="bg-[#c0392b] text-white text-[12px] font-bold px-6 py-1 rounded-full inline-block">Terms &amp; Conditions</span>
+      <div className="text-center my-2.5">
+        <span className="bg-[#c0392b] text-white text-[12px] font-bold px-7 py-1 rounded-full inline-block">Terms &amp; Conditions</span>
       </div>
 
-      <ul className="text-[10.5px] space-y-1 leading-tight mb-2">
+      <ul className="text-[10px] space-y-1 leading-tight mb-2">
         {[
           "Advance non refundable. Balance must be paid within 48 hours prior your event.",
           "Cold drinks are strictly not allowed from outside. All drinks are available at company price @ Rs.1500 per crate chilled on counter. NESTLE / AQUAFINA water bottle for Rs.150 per table with service.",
@@ -218,7 +218,7 @@ function ReceiptPreview({ data }) {
           "Management will not be responsible for loss of any kind of property."
         ].map((t, i) => (
           <li key={i} className="flex gap-1.5 items-start">
-            <span className="text-[#c0392b] text-[10px] leading-none mt-1">●</span>
+            <span className="text-[#c0392b] text-[9px] leading-none mt-1">●</span>
             <span>{t}</span>
           </li>
         ))}
@@ -227,18 +227,20 @@ function ReceiptPreview({ data }) {
       <div className="text-[11px] mb-2">I have read &amp; agreed to the above terms &amp; conditions.</div>
       <div className="border-t-[1.5px] border-[#c0392b] mb-2"></div>
 
-      {/* Footer Split Layout */}
+      {/* Footer Split Layout with Updated Single Phone Number */}
       <div className="grid grid-cols-2 relative pt-1 pb-1">
-        <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1.5px] bg-[#c0392b]"></div>
+        <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1px] bg-[#e2d9d2]"></div>
         
-        <div className="pr-3 text-[11px] font-bold leading-tight">
-          D-16, Block "N" Near Sakhi Hassan,<br />North Nazimabad, Karachi.
+        <div className="pr-2">
+          <div className="text-[9.5px] font-bold text-[#c0392b] mb-0.5">📍 LOCATION</div>
+          <div className="text-[11px] font-bold text-[#1a237e] leading-tight">D-16, Block "N" Near Sakhi Hassan,</div>
+          <div className="text-[11px] font-bold text-[#1a237e] leading-tight">North Nazimabad, Karachi.</div>
         </div>
         
-        <div className="pl-4 text-[10.5px] leading-tight">
-          <div className="font-bold text-[#c0392b] mb-0.5">Contact Numbers:</div>
-          <div className="font-bold">WhatsApp: 03002319171</div>
-          <div className="font-bold">Phone: 03008928058</div>
+        <div className="pl-3">
+          <div className="text-[9.5px] font-bold text-[#c0392b] mb-0.5">📞 CONTACT US</div>
+          <div className="text-[10px] font-bold text-[#1a237e] leading-tight">WhatsApp: 0300 8207221</div>
+          <div className="text-[10px] font-bold text-[#1a237e] leading-tight">Phone: 0300 2319171</div>
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import {
   Bot, MessageCircle, Database, Globe, Smartphone, Wallet,
-  ArrowRight, ArrowUpRight, Menu, X
+  ArrowRight, ArrowUpRight, Menu, X, Terminal, Activity, UserCheck, Play,
+  Mic, MessageSquare
 } from "lucide-react";
 import { ReviewCard, REVIEWS } from "../components/clientReviews.jsx";
 
@@ -27,6 +28,19 @@ const FONTS = `
 .sweep { animation: sweep 6s ease-in-out infinite; }
 @keyframes scroll-dot { 0%,100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(6px); opacity: 0.4; } }
 .scroll-dot { animation: scroll-dot 1.8s ease-in-out infinite; }
+
+/* Interactive Demo Animations */
+@keyframes eq-wave { 0%, 100% { height: 4px; opacity: 0.4; } 50% { height: 24px; opacity: 1; } }
+.wave-1 { animation: eq-wave 0.6s ease-in-out infinite; }
+.wave-2 { animation: eq-wave 0.4s ease-in-out 0.1s infinite; }
+.wave-3 { animation: eq-wave 0.8s ease-in-out 0.2s infinite; }
+.wave-4 { animation: eq-wave 0.5s ease-in-out 0.15s infinite; }
+
+@keyframes fade-slide-up {
+  0% { transform: translateY(10px) scale(0.98); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.animate-entry { animation: fade-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 `;
 
 const SERVICES = [
@@ -38,12 +52,8 @@ const SERVICES = [
   { icon: Wallet, n: "06", title: "Crypto Payment Gateways", desc: "Gateways that settle straight into your existing checkout." },
 ];
 
-// Two rows, counter-scrolling, each duplicated for a seamless loop.
-// Row B is reversed so the two rows don't feel like mirrors of each other.
 function Marquee() {
   const rowA = [...REVIEWS, ...REVIEWS];
-  const reversed = [...REVIEWS].reverse();
-  const rowB = [...reversed, ...reversed];
 
   return (
     <section id="reviews" className="border-y border-zinc-200 bg-zinc-50 py-20">
@@ -66,11 +76,6 @@ function Marquee() {
             <ReviewCard key={`a-${i}`} r={r} index={i} />
           ))}
         </div>
-        {/* <div className="flex w-max gap-5 marquee-r">
-          {rowB.map((r, i) => (
-            <ReviewCard key={`b-${i}`} r={r} index={i} />
-          ))}
-        </div> */}
       </div>
     </section>
   );
@@ -235,18 +240,212 @@ function Services() {
   );
 }
 
+/* --- Human-Readable Interactive System Demo --- */
+function SystemTerminalDemo() {
+  const [selectedTab, setSelectedTab] = useState("whatsapp"); 
+  const [isRunning, setIsRunning] = useState(false);
+  const [stepState, setStepState] = useState(0);
+
+  const [metrics, setMetrics] = useState({ leadsBooked: 247, latency: "< 1s", accuracy: "99.8%" });
+  const [voiceStream, setVoiceStream] = useState([]);
+  const [waStream, setWaStream] = useState([{ role: "agent", text: "Welcome to Vanexta! How can we help scale your systems today?", actions: ["Book Discovery Call", "View Services"] }]);
+  
+  const [crmLeads, setCrmLeads] = useState([
+    { id: 1, name: "Alexander Vance", contact: "+1 (415) 890-2100", channel: "Voice Call", req: "Strategy Consultation", slot: "Tomorrow @ 3:30 PM", status: "Confirmed" },
+  ]);
+
+  const runSimulation = () => {
+    setIsRunning(true);
+    setStepState(1);
+    
+    if (selectedTab === "voice") {
+      setVoiceStream([]);
+      setTimeout(() => { setStepState(2); setVoiceStream([{ role: "user", text: "Hi, I want to book a call to discuss automating my sales team." }]); }, 1500);
+      setTimeout(() => { setVoiceStream(p => [...p, { role: "agent", text: "I can absolutely help with that. I have an opening this Thursday at 2:00 PM EST. Should I lock that in for you?" }]); }, 3500);
+      setTimeout(() => { setVoiceStream(p => [...p, { role: "user", text: "Yes, book it under Marcus Brody." }]); }, 5500);
+      setTimeout(() => { 
+        setStepState(3); 
+        setVoiceStream(p => [...p, { role: "agent", text: "You're all set! Marcus Brody is booked for Thursday. I've sent the details directly to the CRM." }]); 
+        pushToCrm("Marcus Brody", "+1 (305) 789-0112", "Voice Call", "Sales Automation", "Thursday @ 2:00 PM");
+      }, 7500);
+    } else {
+      setWaStream([{ role: "agent", text: "Welcome to Vanexta! How can we help scale your systems today?", actions: ["Book Discovery Call", "View Services"] }]);
+      setTimeout(() => { setWaStream(p => [...p, { role: "user", text: "Book Discovery Call" }]); }, 1200);
+      setTimeout(() => { setWaStream(p => [...p, { role: "agent", text: "Great! I have an opening on Tuesday, Nov 12th with our lead engineer. Should I hold this slot for Sarah Jenkins?" }]); }, 2800);
+      setTimeout(() => { setWaStream(p => [...p, { role: "user", text: "Yes, that works perfectly." }]); }, 4500);
+      setTimeout(() => { 
+        setWaStream(p => [...p, { role: "agent", text: "Booking confirmed!", verified: true }]); 
+        pushToCrm("Sarah Jenkins", "+44 7700 900077", "WhatsApp", "System Scoping", "Nov 12 @ 10:00 AM");
+      }, 6200);
+    }
+  };
+
+  const pushToCrm = (name, contact, channel, req, slot) => {
+    setCrmLeads(p => [{ id: Date.now(), name, contact, channel, req, slot, status: "Confirmed", fresh: true }, ...p]);
+    setMetrics(p => ({ ...p, leadsBooked: p.leadsBooked + 1 }));
+    setIsRunning(false);
+  };
+
+  return (
+    <div className="mb-16 overflow-hidden rounded-3xl border border-zinc-200 bg-white p-2 shadow-xl shadow-zinc-200/50">
+      <div className="rounded-2xl border border-zinc-100 bg-white p-6">
+        
+        {/* Top Header / Business Metrics Row */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border-b border-zinc-200 pb-6">
+          <div className="flex gap-6">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Automated Bookings</p>
+              <div className="mt-1 flex items-center gap-2 font-display text-2xl font-semibold text-zinc-900">
+                {metrics.leadsBooked} <span className="text-emerald-600 flex items-center"><Activity size={16} /></span>
+              </div>
+            </div>
+            <div className="hidden sm:block w-px h-10 bg-zinc-200" />
+            <div className="hidden sm:block">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Avg Response Time</p>
+              <div className="mt-1 font-mono text-xl text-zinc-800">{metrics.latency}</div>
+            </div>
+            <div className="hidden sm:block w-px h-10 bg-zinc-200" />
+            <div className="hidden sm:block">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">AI Accuracy</p>
+              <div className="mt-1 font-mono text-xl text-zinc-800">{metrics.accuracy}</div>
+            </div>
+          </div>
+
+          <div className="flex w-full lg:w-auto items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 p-1">
+            <button onClick={() => setSelectedTab("whatsapp")} className={`flex-1 lg:flex-none flex items-center justify-center gap-2 rounded-full px-4 py-2 font-mono text-[10px] uppercase tracking-wider transition-all ${selectedTab === "whatsapp" ? "bg-white text-emerald-600 shadow-sm border border-zinc-200" : "text-zinc-500 hover:text-zinc-900"}`}>
+              <MessageSquare size={12} /> Test WhatsApp Bot
+            </button>
+            <button onClick={() => setSelectedTab("voice")} className={`flex-1 lg:flex-none flex items-center justify-center gap-2 rounded-full px-4 py-2 font-mono text-[10px] uppercase tracking-wider transition-all ${selectedTab === "voice" ? "bg-white text-emerald-600 shadow-sm border border-zinc-200" : "text-zinc-500 hover:text-zinc-900"}`}>
+              <Mic size={12} /> Test Voice AI
+            </button>
+          </div>
+        </div>
+
+        {/* Split Console Panels */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-12">
+          
+          {/* Live Agent Interaction Feed (Left) */}
+          <div className="lg:col-span-5 rounded-2xl border border-zinc-200 bg-zinc-50 p-5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-zinc-200">
+                <span className="flex items-center gap-2 font-mono text-[10px] uppercase text-zinc-500">
+                  <Terminal size={14} className="text-emerald-600" /> Live Agent Chat Feed
+                </span>
+                <span className={`flex h-2 w-2 rounded-full ${stepState > 0 ? "bg-emerald-500 animate-pulse" : "bg-zinc-300"}`} />
+              </div>
+
+              {selectedTab === "voice" ? (
+                <div className="mt-5 space-y-4">
+                  <div className="flex h-20 flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm p-4">
+                    {stepState > 0 && stepState < 3 ? (
+                      <div className="flex items-center gap-2">
+                        <span className="w-1 rounded-full bg-emerald-500 wave-1" />
+                        <span className="w-1 rounded-full bg-emerald-500 wave-2" />
+                        <span className="w-1 rounded-full bg-emerald-500 wave-3" />
+                        <span className="w-1 rounded-full bg-emerald-500 wave-4" />
+                        <span className="w-1 rounded-full bg-emerald-500 wave-2" />
+                      </div>
+                    ) : (
+                      <span className="font-mono text-[10px] text-zinc-400">Ready for Voice Call Simulation</span>
+                    )}
+                  </div>
+                  <div className="min-h-[140px] space-y-2 overflow-y-auto font-mono text-[11px]">
+                    {voiceStream.map((msg, i) => (
+                      <div key={i} className={`p-2.5 rounded-lg border ${msg.role === "agent" ? "bg-emerald-50 border-emerald-100 text-emerald-900" : "bg-white border-zinc-200 text-zinc-700"}`}>
+                        <span className="opacity-50 block mb-1 font-bold">{msg.role === "agent" ? "Voice AI Agent" : "Customer Phone"}</span>
+                        {msg.text}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 space-y-4">
+                  <div className="min-h-[200px] space-y-3 overflow-y-auto">
+                    {waStream.map((m, idx) => (
+                      <div key={idx} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
+                        <div className={`max-w-[90%] rounded-xl px-3.5 py-2.5 text-[11px] font-mono ${m.role === "user" ? "bg-emerald-600 text-white rounded-br-none shadow-sm" : "bg-white border border-zinc-200 text-zinc-800 rounded-bl-none shadow-sm"}`}>
+                          <span className="block opacity-60 mb-1 font-bold">{m.role === "user" ? "Customer" : "WhatsApp Bot"}</span>
+                          {m.text}
+                          {m.actions && (
+                            <div className="mt-2.5 flex flex-wrap gap-1.5">
+                              {m.actions.map((act, i) => (
+                                <span key={i} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[9px] text-emerald-700">{act}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <button
+              onClick={runSimulation}
+              disabled={isRunning}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-3.5 font-mono text-[11px] uppercase font-bold text-white transition-all hover:bg-zinc-800 disabled:opacity-50"
+            >
+              <Play size={12} fill="currentColor" /> {isRunning ? "Simulating Interaction..." : selectedTab === "voice" ? "Start Voice Call Demo" : "Start WhatsApp Demo"}
+            </button>
+          </div>
+
+          {/* CRM Dashboard Live (Right) */}
+          <div className="lg:col-span-7 rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-200">
+              <span className="flex items-center gap-2 font-mono text-[10px] uppercase text-zinc-500">
+                <Database size={14} className="text-emerald-600" /> Live CRM Dashboard
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {crmLeads.map((lead) => (
+                <div key={lead.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border p-4 transition-all ${lead.fresh ? "animate-entry border-emerald-300 bg-emerald-50/50" : "border-zinc-200 bg-white"}`}>
+                  <div className="flex items-center gap-3.5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                      <UserCheck size={18} />
+                    </div>
+                    <div>
+                      <h5 className="font-mono text-xs font-semibold text-zinc-900">{lead.name}</h5>
+                      <div className="font-mono text-[10px] text-zinc-500 mt-1">{lead.contact}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center sm:justify-end gap-5">
+                    <span className="hidden sm:inline-block font-mono text-[10px] text-zinc-500 text-right">
+                      {lead.req}<br/><span className="text-emerald-600 font-semibold">{lead.slot}</span>
+                    </span>
+                    <span className="rounded border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 font-mono text-[9px] uppercase text-zinc-600 font-semibold">
+                      {lead.channel}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+/* ---------------------------------------------------------------------- */
+
 function Showcase() {
   return (
     <section className="border-y border-zinc-200 bg-white">
-      <div className="mx-auto grid max-w-6xl gap-16 px-6 py-24">
-        <div className="grid gap-10 md:grid-cols-2 md:items-center">
+      <div className="mx-auto grid max-w-6xl px-6 py-24">
+        
+        {/* Render the interactive system demo */}
+        <SystemTerminalDemo />
+
+        <div className="grid gap-16 md:grid-cols-2 md:items-center mt-12">
           <div>
             <h3 className="mt-3 font-display text-2xl font-semibold text-zinc-900 md:text-3xl">Your customers already live on WhatsApp.</h3>
             <p className="mt-4 font-body text-zinc-600">Booking confirmations, payment reminders, and support — automated on the official Meta Cloud API, no third-party middleman costs.</p>
           </div>
           <img src={WA_IMG} alt="AI chat automation illustration" className="rounded-2xl border border-zinc-200 md:-rotate-1" />
         </div>
-        <div className="grid gap-10 md:grid-cols-2 md:items-center">
+        
+        <div className="grid gap-16 md:grid-cols-2 md:items-center mt-16">
           <img src={CRYPTO_IMG} alt="Crypto payment gateway illustration" className="order-2 rounded-2xl border border-zinc-200 md:order-1 md:rotate-1" />
           <div className="order-1 md:order-2">
             <p className="font-mono text-xs uppercase tracking-widest text-emerald-600">Fintech-ready</p>

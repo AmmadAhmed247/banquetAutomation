@@ -1,11 +1,11 @@
-import { SlidersHorizontal } from "lucide-react";
+import React from "react";
+import { SlidersHorizontal, FileText } from "lucide-react";
 import { currency } from "./ManagementUtils";
 
 export function BookingLedger({
   ledgerSearch,
   setLedgerSearch,
   setLedgerPage,
-  ledgerFilteredBookings,
   displayedLedgerBookings,
   ledgerPage,
   ledgerTotalPages,
@@ -15,7 +15,6 @@ export function BookingLedger({
   setSelectedBookingId,
   setAddingTo,
 }) {
-  
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -27,10 +26,10 @@ export function BookingLedger({
   });
 
   return (
-    <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center">
         <h2 className="text-[15px] font-bold text-stone-900">Booking Ledger</h2>
-        <div className="bg-stone-50 p-1.5 rounded-lg">
+        <div className="bg-stone-50 p-1.5 rounded-lg border border-stone-100">
           <SlidersHorizontal size={13} className="text-stone-400" />
         </div>
       </div>
@@ -40,7 +39,7 @@ export function BookingLedger({
             value={ledgerSearch}
             onChange={(e) => { setLedgerSearch(e.target.value); setLedgerPage(1); }}
             placeholder="Search bookings..."
-            className="px-3.5 py-2 border border-stone-200 rounded-xl text-[13px] outline-none w-64 focus:border-stone-400 transition-colors"
+            className="px-3.5 py-2 border border-stone-200 rounded-xl text-[13px] outline-none w-64 focus:border-stone-400 transition-colors bg-stone-50/50"
           />
           <div className="text-[12px] text-stone-400 font-medium">{upcomingBookings.length} results</div>
         </div>
@@ -49,7 +48,6 @@ export function BookingLedger({
         <table className="w-full text-left">
           <thead>
             <tr className="bg-stone-50/70 border-b border-stone-100">
-              {/* Added "R.No" into the header array index 0 */}
               {["R.No", "Client", "Hall", "Event", "Date", "Revenue", "Costs", "Profit", ""].map(h => (
                 <th key={h} className="px-5 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">{h}</th>
               ))}
@@ -57,17 +55,20 @@ export function BookingLedger({
           </thead>
           <tbody className="divide-y divide-stone-100">
             {upcomingBookings.map(b => {
-              const bA = addonsByBooking[b.id] || []; const bE = expensesByBooking[b.id] || [];
+              const bA = addonsByBooking[b.id] || []; 
+              const bE = expensesByBooking[b.id] || [];
               const aR = bA.reduce((s, a) => s + (a.received ? Number(a.client_price) : 0), 0);
               const vE = bA.reduce((s, a) => s + (a.received ? Number(a.vendor_cost) : 0), 0);
-              const tR = b.revenue + aR; const tE = bE.reduce((s, e) => s + Number(e.amount), 0) + vE;
+              const tR = b.revenue + aR; 
+              const tE = bE.reduce((s, e) => s + Number(e.amount), 0) + vE;
+              const isSelected = selectedBookingId === b.id;
+
               return (
                 <tr
                   key={b.id}
                   onClick={() => setSelectedBookingId(b.id)}
-                  className={`cursor-pointer transition-colors ${selectedBookingId === b.id ? "bg-emerald-50/60" : "hover:bg-stone-50"}`}
+                  className={`cursor-pointer transition-colors ${isSelected ? "bg-emerald-50/60" : "hover:bg-stone-50"}`}
                 >
-                  {/* R.No Data Cell */}
                   <td className="px-5 py-3.5 text-[12px] font-mono font-medium text-stone-600">
                     {b.r_no ? `#${b.r_no}` : `#${b.id}`}
                   </td>
@@ -85,12 +86,20 @@ export function BookingLedger({
                   <td className="px-5 py-3.5 text-[13px] font-medium text-rose-600">{currency(tE)}</td>
                   <td className={`px-5 py-3.5 text-[13px] font-bold ${tR - tE >= 0 ? "text-emerald-700" : "text-rose-600"}`}>{currency(tR - tE)}</td>
                   <td className="px-5 py-3.5 text-right">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }}
-                      className="text-[11px] font-semibold px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors"
-                    >
-                      + Add
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      {/* Note Indicator Icon */}
+                      {b.menu_note && (
+                        <span className="p-1 rounded bg-emerald-100 text-emerald-800" title="Has setup note">
+                          <FileText size={12} />
+                        </span>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAddingTo(b.id); setSelectedBookingId(b.id); }}
+                        className="text-[11px] font-semibold px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors"
+                      >
+                        + Add
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
