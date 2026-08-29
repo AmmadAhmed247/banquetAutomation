@@ -250,7 +250,7 @@ export default function Cashflow() {
       items.push({
         id: `daily-${d.id}`,
         flow: "OUT",
-        category: "Petty Cash",
+        category: d.category || d.expense_category || "Petty Cash",
         note: d.label || d.title || d.category || "Daily Expense",
         who: d.recorded_by || "—",
         method: "Cash",

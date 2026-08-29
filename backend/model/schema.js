@@ -57,7 +57,6 @@ const packages = pgTable("packages", {
     price: integer("package_price").notNull()
 })
 
-
 const clients=pgTable("clients",{
     id:serial("id").primaryKey().notNull().unique(),
     name:varchar("name",{length:100}).notNull().unique(),

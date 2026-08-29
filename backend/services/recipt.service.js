@@ -240,12 +240,12 @@ async function generateReceipt(data = {}) {
   line(midX, footY + 2, midX, footY + 46, '#e2d9d2', 1);
 
   // Left Side: Address Info
-  text('📍 LOCATION', 45, footY + 14, { size: 9.5, weight: 'bold', color: '#c0392b', align: 'left' });
+  text('LOCATION', 45, footY + 14, { size: 9.5, weight: 'bold', color: '#c0392b', align: 'left' });
   text('D-16, Block "N" Near Sakhi Hassan,', 45, footY + 31, { size: 11, weight: 'bold', color: '#1a237e', align: 'left' });
   text('North Nazimabad, Karachi.', 45, footY + 46, { size: 11, weight: 'bold', color: '#1a237e', align: 'left' });
 
   // Right Side: Contact Numbers (Updated to show single phone number)
-  text('📞 CONTACT US', midX + 25, footY + 14, { size: 9.5, weight: 'bold', color: '#c0392b', align: 'left' });
+  text('CONTACT US', midX + 25, footY + 14, { size: 9.5, weight: 'bold', color: '#c0392b', align: 'left' });
   text(`WhatsApp: 0300 8207221`, midX + 25, footY + 31, { size: 10, weight: 'bold', color: '#1a237e', align: 'left' });
   text(`Phone: 0300 2319171`, midX + 25, footY + 46, { size: 10, weight: 'bold', color: '#1a237e', align: 'left' });
 
