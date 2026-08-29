@@ -45,6 +45,7 @@ export function normalizeBooking(b) {
     event: b.event, 
     date: b.date, 
     status: b.status, 
-    revenue: getBookingRevenue(b) 
+    revenue: getBookingRevenue(b),
+    note: b.note,
   };
 }

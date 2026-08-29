@@ -85,6 +85,13 @@
       "when": 1787261761003,
       "tag": "0011_mushy_tyrannus",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788032580520,
+      "tag": "0012_bright_nicolaos",
+      "breakpoints": true
     }
   ]
 }

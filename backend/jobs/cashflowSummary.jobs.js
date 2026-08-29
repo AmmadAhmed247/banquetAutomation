@@ -29,7 +29,7 @@ async function runDailyCashflowSummary() {
 // SCHEDULER (registered once, only when startCashflowSummaryJob() is called)
 function startCashflowSummaryJob() {
     // Runs daily at 9:00 AM ('0 9 * * *')
-    cron.schedule("* * * * *", async () => {
+    cron.schedule("0 9 * * *", async () => {
         console.log("=== Running Daily Cashflow Summary job ===");
         await runDailyCashflowSummary();
         console.log("=== Cashflow Summary job complete ===");

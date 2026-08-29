@@ -1,4 +1,4 @@
-const { eq, and, ne } = require("drizzle-orm");
+const { eq, and, ne, sql } = require("drizzle-orm");
 const { db } = require("../config/db");
 const { booking, payments } = require("../model/schema");
 const { sendMessage } = require("./meta.service.");
@@ -408,6 +408,53 @@ function parseWhatsAppMessage(body, phone) {
   return { phone, date, event, package: pkg || "Standard" };
 }
 
+async function addBookingNote(bookingId, noteText, options = {}) {
+  const { overwrite = false } = options;
+
+  if (!bookingId) throw new Error("bookingId is required");
+  if (!noteText || !noteText.trim()) throw new Error("noteText is required");
+
+  const existing = await db
+    .select({ id: booking.id, note: booking.note })
+    .from(booking)
+    .where(eq(booking.id, bookingId))
+    .limit(1);
+
+  if (existing.length === 0) {
+    const err = new Error(`Booking with id ${bookingId} not found`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const currentNote = existing[0].note;
+
+  // Timestamp in Pakistan Standard Time (Asia/Karachi, UTC+5)
+  const timestamp = new Date().toLocaleString("en-US", {
+    timeZone: "Asia/Karachi",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+  const newNoteEntry = `[${timestamp}] ${noteText.trim()}`;
+
+  const finalNote = overwrite
+    ? newNoteEntry
+    : currentNote
+      ? `${currentNote}\n${newNoteEntry}`
+      : newNoteEntry;
+
+  const [updated] = await db
+    .update(booking)
+    .set({
+      note: finalNote,
+      updated_at: sql`now()`, // this stays UTC in Postgres — see note below
+    })
+    .where(eq(booking.id, bookingId))
+    .returning();
+
+  return updated;
+}
+
 module.exports = {
   CreateBooking,
   GetAllBookings,
@@ -415,4 +462,5 @@ module.exports = {
   UpdateBooking,
   parseWhatsAppMessage,
   DeleteBooking,
+  addBookingNote,
 };
