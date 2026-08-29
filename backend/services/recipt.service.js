@@ -121,7 +121,7 @@ async function generateReceipt(data = {}) {
   
   text('Phone.', 390, 328, { size: 14, weight: 'bold' });
   line(448, 332, W - 42, 332);
-  const phoneNum = data.phone || "03002319171 / 03008928058";
+  const phoneNum = data.phone || "03002319171"; // Updated default phone
   centeredText(cleanPhone(phoneNum), 448, W - 42, 328, { size: 14 });
 
   // Reserved for Date / Day
@@ -244,10 +244,10 @@ async function generateReceipt(data = {}) {
   text('D-16, Block "N" Near Sakhi Hassan,', 45, footY + 31, { size: 11, weight: 'bold', color: '#1a237e', align: 'left' });
   text('North Nazimabad, Karachi.', 45, footY + 46, { size: 11, weight: 'bold', color: '#1a237e', align: 'left' });
 
-  // Right Side: Contact Numbers
+  // Right Side: Contact Numbers (Updated to show single phone number)
   text('📞 CONTACT US', midX + 25, footY + 14, { size: 9.5, weight: 'bold', color: '#c0392b', align: 'left' });
-  text(`WhatsApp: 0300 8207221  |  Ph: 0300 2319171`, midX + 25, footY + 31, { size: 10, weight: 'bold', color: '#1a237e', align: 'left' });
-  text(`Alternate Phone: 0300 8928058`, midX + 25, footY + 46, { size: 10, weight: 'bold', color: '#1a237e', align: 'left' });
+  text(`WhatsApp: 0300 8207221`, midX + 25, footY + 31, { size: 10, weight: 'bold', color: '#1a237e', align: 'left' });
+  text(`Phone: 0300 2319171`, midX + 25, footY + 46, { size: 10, weight: 'bold', color: '#1a237e', align: 'left' });
 
   // Powered by Vanexta / Raabta website at bottom right
   text('Powered by Vanexta', W - 42, H - 28, { size: 9, weight: 'normal', color: '#777777', align: 'right' });

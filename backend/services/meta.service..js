@@ -1,5 +1,7 @@
 // services/meta.service.js
 const axios = require("axios");
+const fs = require("fs");
+const FormData = require("form-data");
 
 function parseIncoming(req) {
     const entry = req.body.entry?.[0];
@@ -69,7 +71,8 @@ async function sendMediaMessage(to, body, mediaUrl) {
             },
             { headers: { Authorization: `Bearer ${process.env.ACCESS_TOKEN}` } }
         );
-        return { success: true, data: response.data };
+        const messageId = response.data.messages?.[0]?.id;
+        return { success: true, data: response.data, messageId };
     } catch (error) {
         console.log("Error sending Meta media message:", error.response?.data || error.message);
         return { success: false, message: error.response?.data || error.message };
@@ -77,8 +80,11 @@ async function sendMediaMessage(to, body, mediaUrl) {
 }
 
 async function sendReceiptTemplate(phone, mediaUrl, { clientName, functionName, date }) {
-  const to = normalizePakistaniNumber(phone); // replaces the old whatsapp:+ strip logic
+  const to = normalizePakistaniNumber(phone);
   try {
+    const mediaId = await uploadMediaFromUrl(mediaUrl);
+    console.log(`[RECEIPT] Uploaded media, id=${mediaId} at ${Date.now()}`);
+
     const response = await axios.post(
       `https://graph.facebook.com/v22.0/${process.env.phoneID}/messages`,
       {
@@ -89,7 +95,7 @@ async function sendReceiptTemplate(phone, mediaUrl, { clientName, functionName, 
           name: "receipt2",
           language: { code: "en" },
           components: [
-            { type: "header", parameters: [{ type: "image", image: { link: mediaUrl } }] },
+            { type: "header", parameters: [{ type: "image", image: { id: mediaId } }] },
             {
               type: "body",
               parameters: [
@@ -103,12 +109,17 @@ async function sendReceiptTemplate(phone, mediaUrl, { clientName, functionName, 
       },
       { headers: { Authorization: `Bearer ${process.env.ACCESS_TOKEN}` } }
     );
-    return { success: true, data: response.data };
+
+    const messageId = response.data.messages?.[0]?.id;
+    console.log(`[RECEIPT] Meta accepted, messageId=${messageId} at ${Date.now()}`);
+
+    return { success: true, data: response.data, messageId };
   } catch (error) {
     console.log("Error sending receipt template:", error.response?.data || error.message);
     return { success: false, message: error.response?.data || error.message };
   }
 }
+
 
 async function sendBookingReminder(to, languageCode, clientName, eventName, eventDate, venue) {
     to = normalizePakistaniNumber(to);
@@ -200,7 +211,102 @@ async function sendVoiceCallFollowup(to, languageCode = "en") {
         return { success: false, error: error.response?.data || error.message };
     }
 }
+async function uploadMedia(filePath) {
+  const form = new FormData();
+  form.append("file", fs.createReadStream(filePath));
+  form.append("messaging_product", "whatsapp");
+  form.append("type", "image/jpeg"); // fixed: was "image/jpg" which is not a valid MIME type
 
+  const response = await axios.post(
+    `https://graph.facebook.com/v22.0/${process.env.phoneID}/media`,
+    form,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
+        ...form.getHeaders(),
+      },
+    }
+  );
+
+  return response.data.id;
+}
+async function uploadMediaFromUrl(remoteUrl, mimeType = "image/jpeg") {
+  const imageResponse = await axios.get(remoteUrl, { responseType: "stream" });
+
+  const contentType = imageResponse.headers["content-type"];
+  if (!contentType || !contentType.startsWith("image/")) {
+    throw new Error(`Expected image, got content-type: ${contentType}`);
+  }
+
+  const form = new FormData();
+  form.append("file", imageResponse.data, { filename: "receipt.jpg" });
+  form.append("messaging_product", "whatsapp");
+  form.append("type", mimeType);
+
+  const response = await axios.post(
+    `https://graph.facebook.com/v22.0/${process.env.phoneID}/media`,
+    form,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
+        ...form.getHeaders(),
+      },
+    }
+  );
+
+  return response.data.id;
+}
+
+let cachedPromoMediaId = null;
+let cachedAt = null;
+const MEDIA_ID_TTL_MS = 1000 * 60 * 60 * 24; 
+
+async function getPromoMediaId() {
+  const isStale = !cachedPromoMediaId || (Date.now() - cachedAt) > MEDIA_ID_TTL_MS;
+  if (isStale) {
+    cachedPromoMediaId = await uploadMedia("./assets/promo.jpg");
+    cachedAt = Date.now();
+  }
+  return cachedPromoMediaId;
+}
+
+async function sendZeappPromoTemplate(phone) {
+  const to = normalizePakistaniNumber(phone);
+  try {
+    const mediaId = await getPromoMediaId();
+
+    const response = await axios.post(
+      `https://graph.facebook.com/v22.0/${process.env.phoneID}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to,
+        type: "template",
+        template: {
+          name: "zeapp",
+          language: { code: "en" },
+          components: [
+            {
+              type: "header",
+              parameters: [{ type: "image", image: { id: mediaId } }],
+            },
+          ],
+        },
+      },
+      { headers: { Authorization: `Bearer ${process.env.ACCESS_TOKEN}` } }
+    );
+
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.log("Error sending Zeapp promo template:", error.response?.data || error.message);
+
+    // If the cached media_id ever goes stale on Meta's side, clear it so next call re-uploads
+    if (error.response?.data?.error?.code === 100) {
+      cachedPromoMediaId = null;
+    }
+
+    return { success: false, message: error.response?.data || error.message };
+  }
+}
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -215,4 +321,5 @@ module.exports = {
     sendReceiptTemplate,
     sendVoiceCallFollowup,
     sleep,
+    sendZeappPromoTemplate
 };

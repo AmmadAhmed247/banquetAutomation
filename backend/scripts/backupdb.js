@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 
 const fs = require('fs');
@@ -6,7 +5,8 @@ const path = require('path');
 const { drizzle } = require('drizzle-orm/node-postgres');
 const { sql } = require('drizzle-orm');
 const nodemailer = require('nodemailer');
-const {db} = require("../config/db")
+const { db } = require("../config/db")
+const cron = require("node-cron")
 
 async function getAllTableNames() {
   const result = await db.execute(sql`
@@ -42,24 +42,28 @@ async function dumpDatabaseToJSON() {
   return backup;
 }
 
-
-
 function writeBackupFile(backupObject) {
+  // Written outside scripts/ so nodemon's watcher doesn't see the file
+  // appear and restart the server mid-send.
+  const backupDir = path.join(__dirname, '..', 'backups');
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const fileName = `db-backup-${timestamp}.json`;
-  const filePath = path.join(__dirname, fileName);
+  const filePath = path.join(backupDir, fileName);
 
   fs.writeFileSync(filePath, JSON.stringify(backupObject, null, 2), 'utf8');
 
   return filePath;
 }
 
-
 async function emailBackup(filePath) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
-    secure: Number(process.env.SMTP_PORT) === 465, 
+    secure: Number(process.env.SMTP_PORT) === 465,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
@@ -84,7 +88,7 @@ async function emailBackup(filePath) {
   return info;
 }
 
-async function main() {
+async function runDatabaseBackup() {
   try {
     console.log('Starting database backup...');
     const backup = await dumpDatabaseToJSON();
@@ -104,8 +108,22 @@ async function main() {
     console.log('Backup complete.');
   } catch (err) {
     console.error('Backup failed:', err);
-    process.exitCode = 1;
-  } 
+  }
 }
 
-main();
+function StartDbBackUp() {
+  // "0 2 * * *" = daily at 2 AM. Change to "* * * * *" temporarily if
+  // you want to test it firing every minute.
+  cron.schedule("0 9 * * *", async () => {
+    console.log("===Running Database Backup====")
+    await runDatabaseBackup();
+    console.log("===Database Backup Complete===")
+  })
+
+  console.log("Database Cronjob Working!")
+}
+
+module.exports = {
+  StartDbBackUp,
+  runDatabaseBackup,
+}

@@ -1,10 +1,15 @@
 const { getAllPackages } = require("../services/package.service");
-const { sendMessage, sendMediaMessage, sendReceiptTemplate, sleep } = require("./meta.service.");
+const { 
+  sendMessage, 
+  sendMediaMessage, 
+  sendReceiptTemplate, 
+  sendZeappPromoTemplate, 
+  sleep 
+} = require("./meta.service.");
 const { generateCalendarImage } = require("../services/calender.service");
 const { generateReceipt } = require("./recipt.service");
 const { getUserByPhone, isWithinWindow } = require("./session.service");
-
-
+const { waitForDeliveryStatus } = require("./messageStatus.service");
 
 async function getHelpMessage() {
   return `
@@ -22,14 +27,13 @@ HELP — Display this interactive menu
 }
 
 async function getPackagesMessage() {
-  const packages = await getAllPackages()
+  const packages = await getAllPackages();
 
   const list = packages.map(p =>
     `*${p.name}* — ${p.price}\n${p.description || ""}`
-  ).join("\n\n")
+  ).join("\n\n");
 
   return `Our packages:\n\n${list}\n\nTo book, send:\nBOOK: Date | Event | Package`;
-
 }
 
 async function getReceiptMessage(phone, data) {
@@ -55,46 +59,63 @@ async function getReceiptMessage(phone, data) {
     return { success: false, fileName, error: result.message };
   }
 
-  return { success: true, fileName, mediaUrl };
-}
+  console.log(`[RECEIPT-FLOW] Receipt sent, messageId=${result.messageId}`);
 
+  if (result.messageId) {
+    const waitResult = await waitForDeliveryStatus(result.messageId, {
+      targetStatuses: ["delivered", "read"],
+      timeoutMs: 8000,
+    });
+    console.log(`[RECEIPT-FLOW] Wait result:`, waitResult);
+  } else {
+    console.warn("[RECEIPT-FLOW] No messageId returned, falling back to sleep");
+    await sleep(2000);
+  }
+
+  const promoResult = await sendZeappPromoTemplate(phone);
+
+  if (!promoResult.success) {
+    console.warn("Zeapp promo template delivery failed:", promoResult.message);
+  }
+
+  return { success: true, fileName, mediaUrl, promoResult };
+}
 
 async function getCalendarMessage(phone, hall, year, month) {
   try {
     const { url } = await generateCalendarImage(year, month, hall);
     await sendMediaMessage(
       phone,
-      `Here is ${hall}'s availability!\n\n${hall === "Hall B" ? "🔴 Red" : "🔵 Blue"} = Booked \n⚪ White = Available`,     
+      `Here is ${hall}'s availability!\n\n${hall === "Hall B" ? "🔴 Red" : "🔵 Blue"} = Booked \n⚪ White = Available`,    
       url
     );
-    await sleep(1500);
+    await sleep(10000);
     return await sendMessage(phone, `Type *HELP* to show the menu or *SWITCH* to change halls.`);
   } catch (error) {
     console.log("An Error Occurred: ", error);
   }
 }
 
-
 function getGalleryMessage() {
   return `View our gallery here:\nhttps://your-website.com/gallery
 
-      Or follow us on Instagram:\nhttps://instagram.com/your-handle`
+      Or follow us on Instagram:\nhttps://instagram.com/your-handle`;
 }
 
 async function SendMessageToUser(phone, message) {
   try {
-    const result = await sendMessage(phone, message)
+    const result = await sendMessage(phone, message);
 
     if (!result) {
       return {
         success: false,
         message: "Message Not Sent!"
-      }
+      };
     }
 
-    return result
+    return result;
   } catch (error) {
-    console.log("An Error Occured While Sending Message (Service): ", error)
+    console.log("An Error Occurred While Sending Message (Service): ", error);
   }
 }
 
@@ -105,4 +126,4 @@ module.exports = {
   SendMessageToUser,
   getCalendarMessage,
   getReceiptMessage
-}
+};

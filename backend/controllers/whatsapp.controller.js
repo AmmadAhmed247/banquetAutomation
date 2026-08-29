@@ -4,6 +4,7 @@ const { getOrCreateUser } = require("../services/user.service")
 const { parseWhatsAppMessage, CreateBooking } = require("../services/booking.service")
 const { getHelpMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage } = require("../services/message.service")
 const { createOrGetConversation, addAdminToConversation } = require("../services/conversation.service");
+const { recordStatus } = require("../services/messageStatus.service");
 
 async function handleWhatsappWebhook(req, res) {
     res.sendStatus(200);
@@ -16,6 +17,7 @@ async function handleWhatsappWebhook(req, res) {
             timestamp: statusEntry.timestamp,
             errors: statusEntry.errors || null
         }, null, 2));
+        recordStatus(statusEntry.id, statusEntry.status, statusEntry.timestamp);
         return;
     }
 
