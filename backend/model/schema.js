@@ -25,6 +25,7 @@ const booking = pgTable("bookings", {
   package_name:varchar("package_name", { length: 100 }).notNull(),
   venue:varchar("venue", { length: 100 }).notNull(),
   status:varchar("status", { length: 50 }).notNull().default("Pending"),
+  note:text("note").default("New Booking"),
  
   // Payment Details
   total_amount:numeric("total_amount", { precision: 12, scale: 2 }).notNull().default("0"),

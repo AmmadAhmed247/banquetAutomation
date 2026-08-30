@@ -85,6 +85,17 @@ const bookingService = {
   }
 },
 
+submitNote: async ({ bookingId, note, overwrite = false }) => {
+  const res = await api.post("/api/booking/note", {
+    bookingId,
+    note,
+    overwrite,
+  });
+  const data = res.data;
+  if (!data.success) throw new Error(data.error);
+  return data.booking;
+}
+
 };
 
 export default bookingService;

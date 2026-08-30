@@ -31,10 +31,11 @@ export function BookingInspector({
   const [noteText, setNoteText] = useState("");
 
   // Sync local note text whenever selected booking changes
+  // useEffect sync
   useEffect(() => {
-    setNoteText(selectedBooking?.menu_note || "");
+    setNoteText(selectedBooking?.note || "");
     setIsEditingNote(false);
-  }, [selectedBookingId, selectedBooking?.menu_note]);
+  }, [selectedBookingId, selectedBooking?.note]);
 
   const handleSaveNote = () => {
     if (onUpdateMenuNote && selectedBookingId) {
@@ -67,8 +68,8 @@ export function BookingInspector({
                   {selectedBooking?.event} · {selectedBooking?.date ? new Date(selectedBooking.date).toLocaleDateString("en-US", { timeZone: "Asia/Karachi", day: "numeric", month: "short", year: "numeric" }) : ""}
                 </p>
               </div>
-              <button 
-                onClick={() => setSelectedBookingId(null)} 
+              <button
+                onClick={() => setSelectedBookingId(null)}
                 className="text-stone-400 hover:text-stone-900 p-1 rounded-lg hover:bg-white transition-colors"
               >
                 <X size={16} />
@@ -92,7 +93,7 @@ export function BookingInspector({
 
           {/* Scrollable Lists & Notes Area */}
           <div className="flex-1 overflow-y-auto px-5 py-3 max-h-[380px] space-y-4">
-            
+
             {/* Menu & Setup Note Section */}
             <div className="bg-emerald-50/40 border border-emerald-100 rounded-xl p-3">
               <div className="flex items-center justify-between mb-1.5">
@@ -104,7 +105,7 @@ export function BookingInspector({
                     onClick={() => setIsEditingNote(true)}
                     className="text-[11px] font-medium text-emerald-700 hover:underline flex items-center gap-0.5"
                   >
-                    <Pencil size={11} /> {selectedBooking?.menu_note ? "Edit" : "Add Note"}
+                    <Pencil size={11} /> {selectedBooking?.note ? "Edit" : "Add Note"}
                   </button>
                 ) : (
                   <button
@@ -136,7 +137,7 @@ export function BookingInspector({
                 </div>
               ) : (
                 <p className="text-[12px] text-stone-700 whitespace-pre-wrap">
-                  {selectedBooking?.menu_note || <span className="text-stone-400 italic">No notes added yet.</span>}
+                  {selectedBooking?.note|| <span className="text-stone-400 italic">No notes added yet.</span>}
                 </p>
               )}
             </div>
@@ -149,10 +150,10 @@ export function BookingInspector({
               ) : (
                 <div className="divide-y divide-stone-50">
                   {selExp.map(e => (
-                    <ExpenseRow 
-                      key={e.id} 
-                      expense={e} 
-                      onDelete={id => deleteExpenseMutation.mutate(id)} 
+                    <ExpenseRow
+                      key={e.id}
+                      expense={e}
+                      onDelete={id => deleteExpenseMutation.mutate(id)}
                     />
                   ))}
                 </div>
@@ -185,14 +186,14 @@ export function BookingInspector({
             {addingTo === selectedBookingId ? (
               <div className="flex flex-col gap-2.5">
                 <div className="flex items-center justify-between bg-stone-200/70 p-1 rounded-xl">
-                  <button 
-                    onClick={() => setMode("expense")} 
+                  <button
+                    onClick={() => setMode("expense")}
                     className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${mode === "expense" ? "bg-white text-stone-900 shadow-sm" : "text-stone-500"}`}
                   >
                     Standard
                   </button>
-                  <button 
-                    onClick={() => setMode("addon")} 
+                  <button
+                    onClick={() => setMode("addon")}
                     className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${mode === "addon" ? "bg-violet-600 text-white shadow-sm" : "text-stone-500"}`}
                   >
                     Add-on
@@ -201,25 +202,25 @@ export function BookingInspector({
 
                 {mode === "expense" ? (
                   <div className="space-y-2">
-                    <select 
-                      value={newExp.category} 
-                      onChange={e => setNewExp({ ...newExp, category: e.target.value })} 
+                    <select
+                      value={newExp.category}
+                      onChange={e => setNewExp({ ...newExp, category: e.target.value })}
                       className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-emerald-500 bg-white"
                     >
                       {STANDARD_EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
-                    <input 
-                      value={newExp.label} 
-                      onChange={e => setNewExp({ ...newExp, label: e.target.value })} 
-                      placeholder="Description" 
-                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white" 
+                    <input
+                      value={newExp.label}
+                      onChange={e => setNewExp({ ...newExp, label: e.target.value })}
+                      placeholder="Description"
+                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white"
                     />
-                    <input 
-                      type="number" 
-                      value={newExp.amount} 
-                      onChange={e => setNewExp({ ...newExp, amount: e.target.value })} 
-                      placeholder="Amount" 
-                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white" 
+                    <input
+                      type="number"
+                      value={newExp.amount}
+                      onChange={e => setNewExp({ ...newExp, amount: e.target.value })}
+                      placeholder="Amount"
+                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white"
                     />
                     <div className="flex gap-2 pt-1">
                       <button
@@ -232,8 +233,8 @@ export function BookingInspector({
                       >
                         Add Expense
                       </button>
-                      <button 
-                        onClick={() => setAddingTo(null)} 
+                      <button
+                        onClick={() => setAddingTo(null)}
                         className="px-3 py-1.5 bg-white border border-stone-200 text-[12px] font-medium rounded-lg hover:bg-stone-50 transition-colors text-stone-600"
                       >
                         Cancel
@@ -242,33 +243,33 @@ export function BookingInspector({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <select 
-                      value={newAddon.service} 
-                      onChange={e => setNewAddon({ ...newAddon, service: e.target.value })} 
+                    <select
+                      value={newAddon.service}
+                      onChange={e => setNewAddon({ ...newAddon, service: e.target.value })}
                       className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none focus:border-violet-500 bg-white"
                     >
                       {ADDON_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
-                    <input 
-                      value={newAddon.description} 
-                      onChange={e => setNewAddon({ ...newAddon, description: e.target.value })} 
-                      placeholder="Notes / Description" 
-                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white" 
+                    <input
+                      value={newAddon.description}
+                      onChange={e => setNewAddon({ ...newAddon, description: e.target.value })}
+                      placeholder="Notes / Description"
+                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white"
                     />
                     <div className="grid grid-cols-2 gap-2">
-                      <input 
-                        type="number" 
-                        value={newAddon.client_price} 
-                        onChange={e => setNewAddon({ ...newAddon, client_price: e.target.value })} 
-                        placeholder="Client Price" 
-                        className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] bg-white" 
+                      <input
+                        type="number"
+                        value={newAddon.client_price}
+                        onChange={e => setNewAddon({ ...newAddon, client_price: e.target.value })}
+                        placeholder="Client Price"
+                        className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] bg-white"
                       />
-                      <input 
-                        type="number" 
-                        value={newAddon.vendor_cost} 
-                        onChange={e => setNewAddon({ ...newAddon, vendor_cost: e.target.value })} 
-                        placeholder="Vendor Cost" 
-                        className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] bg-white" 
+                      <input
+                        type="number"
+                        value={newAddon.vendor_cost}
+                        onChange={e => setNewAddon({ ...newAddon, vendor_cost: e.target.value })}
+                        placeholder="Vendor Cost"
+                        className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] bg-white"
                       />
                     </div>
                     <div className="flex gap-2 pt-1">
@@ -282,8 +283,8 @@ export function BookingInspector({
                       >
                         Add Add-on
                       </button>
-                      <button 
-                        onClick={() => setAddingTo(null)} 
+                      <button
+                        onClick={() => setAddingTo(null)}
                         className="px-3 py-1.5 bg-white border border-stone-200 text-[12px] font-medium rounded-lg hover:bg-stone-50 transition-colors text-stone-600"
                       >
                         Cancel

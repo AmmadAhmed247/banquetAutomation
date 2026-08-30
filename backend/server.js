@@ -46,6 +46,8 @@ app.get("/", (req,res)=> {
     })
 })
 
+
+
 app.use("/api/user", UserRouter)
 app.use("/api/booking", BookingRouter)
 app.use("/api/package", PackageRouter)

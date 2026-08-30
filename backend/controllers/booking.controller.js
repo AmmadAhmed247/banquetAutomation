@@ -4,6 +4,7 @@ const {
   GetAllBookingsUnfiltered,
   UpdateBooking,
   DeleteBooking,
+  addBookingNote
 } = require("../services/booking.service");
 
 async function CreateUserBooking(req, res) {
@@ -189,10 +190,32 @@ async function DeleteUserBooking(req, res) {
   }
 }
 
+async function addNoteToBooking(req, res) {
+  try {
+    const { bookingId, note, overwrite } = req.body;
+
+    if (!bookingId) {
+      return res.status(400).json({ success: false, error: "bookingId is required" });
+    }
+
+    const updated = await addBookingNote(Number(bookingId), note, { overwrite });
+
+    console.log(updated)
+
+    res.status(200).json({ success: true, booking: updated });
+  } catch (err) {
+    res.status(err.statusCode || 400).json({
+      success: false,
+      error: err.message,
+    });
+  }
+}
+
 module.exports = {
   CreateUserBooking,
   GetAllUserBookings,
   GetAllBookingsAdmin,
   UpdateUserBooking,
   DeleteUserBooking,
+  addNoteToBooking
 };

@@ -19,6 +19,7 @@ import { BookingLedger } from "../components/Management/BookingLedger.jsx";
 import { MonthlyOverheadPanel } from "../components/Management/MonthlyOverheadPanel";
 import { DailyExpensesPanel } from "../components/Management/DailyExpensesPanel";
 import { BookingInspector } from "../components/Management/BookingInspector";
+import { useAddBookingNote } from "../lib/hooks/booking.hook.js"
 
 export default function Management() {
   // ── Raw data ──
@@ -98,27 +99,40 @@ export default function Management() {
     selectedBookingId,
   });
 
-const handleMarkReceived = (id, payloadOrMethod) => {
-  console.log("handleMarkReceived called with ID:", id, "Payload/Method:", payloadOrMethod);
+  const addNoteMutation = useAddBookingNote();
 
-  if (typeof payloadOrMethod === 'object' && payloadOrMethod !== null) {
-    console.log("Mutating with object payload:", { id, ...payloadOrMethod });
-    markReceived.mutate({ id, ...payloadOrMethod });
-    return;
-  }
-
-  const method = payloadOrMethod;
-  const isBank = method !== "Cash" && method !== "JazzCash" && method !== "EasyPaisa";
-  const payload = { 
-    id, 
-    payment_method: isBank ? "Bank Transfer" : method, 
-    bank_name: isBank ? method : null,
-    received: true 
+  const handleUpdateMenuNote = (bookingId, noteText) => {
+    addNoteMutation.mutate(
+      { bookingId, note: noteText, overwrite: true },
+      {
+        onError: (err) => {
+          console.error("Failed to save note:", err.response?.data || err.message);
+        },
+      }
+    );
   };
-  
-  console.log("Mutating with payment payload:", payload);
-  markReceived.mutate(payload);
-};
+
+  const handleMarkReceived = (id, payloadOrMethod) => {
+    console.log("handleMarkReceived called with ID:", id, "Payload/Method:", payloadOrMethod);
+
+    if (typeof payloadOrMethod === 'object' && payloadOrMethod !== null) {
+      console.log("Mutating with object payload:", { id, ...payloadOrMethod });
+      markReceived.mutate({ id, ...payloadOrMethod });
+      return;
+    }
+
+    const method = payloadOrMethod;
+    const isBank = method !== "Cash" && method !== "JazzCash" && method !== "EasyPaisa";
+    const payload = {
+      id,
+      payment_method: isBank ? "Bank Transfer" : method,
+      bank_name: isBank ? method : null,
+      received: true
+    };
+
+    console.log("Mutating with payment payload:", payload);
+    markReceived.mutate(payload);
+  };
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 p-5 md:p-8 antialiased selection:bg-emerald-100 font-['Inter']">
@@ -206,6 +220,7 @@ const handleMarkReceived = (id, payloadOrMethod) => {
             setNewAddon={setNewAddon}
             createExpenseMutation={createExpenseMutation}
             createAddonMutation={createAddonMutation}
+            onUpdateMenuNote={handleUpdateMenuNote}
           />
         </div>
       </div>
