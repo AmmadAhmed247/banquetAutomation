@@ -11,7 +11,7 @@ async function runDailyCashflowSummary() {
         console.log(`[CashflowSummary] Running daily report job as of ${new Date().toISOString()}`);
 
         // Call the unified report function (handles image generation & template sending)
-        const result = await sendDailySummaryReport(process.env.OWNER_PHONE);
+        const result = await sendDailySummaryReport(process.env.ADMIN_PHONE);
 
         if (result.success) {
             console.log(
@@ -26,15 +26,16 @@ async function runDailyCashflowSummary() {
     }
 }
 
-// SCHEDULER (registered once, only when startCashflowSummaryJob() is called)
-function startCashflowSummaryJob() {
-    // Runs daily at 9:00 AM ('0 9 * * *')
-    cron.schedule("* * * * *", async () => {
-        console.log("=== Running Daily Cashflow Summary job ===");
-        await runDailyCashflowSummary();
-        console.log("=== Cashflow Summary job complete ===");
-    });
 
+function startCashflowSummaryJob() {
+    // 11:58 pm
+   cron.schedule("58 23 * * *", async () => {
+    console.log("=== Running Daily Cashflow Summary job ===");
+    await runDailyCashflowSummary();
+    console.log("=== Cashflow Summary job complete ===");
+}, {
+    timezone: "Asia/Karachi"
+});
     console.log("Cashflow summary cron job scheduled (Daily at 9:00 AM)");
 }
 

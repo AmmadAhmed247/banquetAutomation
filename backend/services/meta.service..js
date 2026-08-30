@@ -324,25 +324,22 @@ async function sendCashflowSummaryTemplate(to, imageUrl, languageCode = "en") {
                         {
                             type: "header",
                             parameters: [
-                                {
-                                    type: "image",
-                                    image: {
-                                        link: imageUrl
-                                    }
-                                }
+                                { type: "image", image: { link: imageUrl } }
                             ]
                         }
                     ]
                 }
             },
-            { 
-                headers: { 
+            {
+                headers: {
                     Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
                     "Content-Type": "application/json"
-                } 
+                }
             }
         );
-
+        console.log("Sending to normalized number:", to);
+        console.log(res.data);
+        
         return { success: true, data: res.data };
     } catch (error) {
         console.error("Cashflow Summary Template Error:", JSON.stringify(error.response?.data, null, 2));

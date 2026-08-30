@@ -1,13 +1,21 @@
 const { createCanvas } = require("canvas");
 const { uploadBuffer } = require("../utils/uploadToImagekit");
-const { sendCashflowSummaryTemplate } = require("../services/meta.service."); // Imported here
+const { sendCashflowSummaryTemplate } = require("../services/meta.service.");
 const { computeCashflowSummary } = require("./cashflow.service");
 const { db } = require("../config/db");
-const { booking } = require("../model/schema");
-const { and, gte, lte, eq } = require("drizzle-orm");
+const { booking, addons } = require("../model/schema");
+const { and, gte, lte, eq, inArray } = require("drizzle-orm");
 
 function currency(n) {
   return "Rs " + Number(n || 0).toLocaleString("en-PK");
+}
+
+/**
+ * Returns the current date/time as it would read in Asia/Karachi,
+ * regardless of the server's own system timezone.
+ */
+function nowInKarachi() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Karachi" }));
 }
 
 /**
@@ -26,7 +34,6 @@ function renderBookingCard(ctx, b, x, y, width) {
     cardHeight += 35 + b.addons.length * 22;
   }
 
-  // Card background & border
   ctx.save();
   ctx.fillStyle = "#eff6ff";
   ctx.strokeStyle = "#bfdbfe";
@@ -37,7 +44,6 @@ function renderBookingCard(ctx, b, x, y, width) {
   ctx.stroke();
   ctx.restore();
 
-  // Hall name
   ctx.save();
   ctx.font = "bold 14px Arial";
   ctx.fillStyle = accentBlue;
@@ -45,7 +51,6 @@ function renderBookingCard(ctx, b, x, y, width) {
   ctx.fillText(b.hall || "Hall A", x + cardPadding, y + 26);
   ctx.restore();
 
-  // Status badge
   const statusText = (b.status || "CONFIRMED").toUpperCase();
   ctx.save();
   ctx.font = "bold 11px Arial";
@@ -64,7 +69,6 @@ function renderBookingCard(ctx, b, x, y, width) {
   ctx.fillText(statusText, badgeX + badgeWidth / 2, badgeY + 15);
   ctx.restore();
 
-  // Customer Name & Receipt
   ctx.save();
   ctx.font = "bold 16px Arial";
   ctx.fillStyle = "#0f172a";
@@ -78,7 +82,6 @@ function renderBookingCard(ctx, b, x, y, width) {
   ctx.fillText(`${b.receiptNo || "N/A"}`, x + cardPadding + 42, y + 70);
   ctx.restore();
 
-  // Key-value pairs
   const fields = [
     { label: "Phone:", value: b.phone || "-" },
     { label: "Guests:", value: String(b.guests || 0) },
@@ -105,7 +108,6 @@ function renderBookingCard(ctx, b, x, y, width) {
     currentY += rowGap;
   });
 
-  // Add-ons
   if (hasAddons) {
     currentY -= 6;
     ctx.save();
@@ -155,17 +157,13 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
   const cardW = W - 80;
   const maxRows = Math.min(cashflowData.activity.length, 12);
 
-  // Dynamic height calculation
   let contentHeight = 90;
-
-  // 1. Cashflow section
   contentHeight += 40 + 80 + 30;
   const methodsCount = Object.keys(cashflowData.byMethod).length;
   contentHeight += (methodsCount === 0 ? 1 : methodsCount) * 20 + 30;
   contentHeight += 40;
   contentHeight += (maxRows === 0 ? 1 : maxRows) * 34 + 40;
 
-  // 2. Today's Bookings
   contentHeight += 50;
   if (todayBookings.length === 0) {
     contentHeight += 40;
@@ -176,7 +174,6 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
     });
   }
 
-  // 3. Tomorrow's Bookings
   contentHeight += 50;
   if (nextDayBookings.length === 0) {
     contentHeight += 40;
@@ -212,11 +209,9 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
     ctx.restore();
   };
 
-  // Background
   ctx.fillStyle = "#fcfcfc";
   ctx.fillRect(0, 0, W, H);
 
-  // Main Header Banner
   ctx.fillStyle = "#0f172a";
   ctx.fillRect(0, 0, W, 90);
   text("DARBAR BANQUET", W / 2, 40, { size: 24, weight: "bold", color: "#ffffff", align: "center" });
@@ -224,11 +219,9 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
 
   let y = 130;
 
-  // SECTION 1: CASHFLOW SUMMARY
   text("CASHFLOW SUMMARY", 40, y, { size: 16, weight: "bold", color: "#0f172a" });
   y += 20;
 
-  // KPI Row
   const kpiW = (W - 80) / 3;
   const kpis = [
     { label: "MONEY IN", value: currency(cashflowData.totalIn), color: "#059669" },
@@ -252,7 +245,6 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
 
   y += 110;
 
-  // Money in by Method
   text("Money In by Method", 40, y, { size: 13, weight: "bold", color: "#0f172a" });
   y += 22;
   const methods = Object.entries(cashflowData.byMethod);
@@ -267,7 +259,6 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
     });
   }
 
-  // Transactions list
   y += 10;
   line(40, y, W - 40, y);
   y += 26;
@@ -296,17 +287,15 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
     }
   }
 
-  // SECTION SEPARATOR
   y += 20;
   line(40, y, W - 40, y, "#94a3b8", 2);
   y += 30;
 
-  // SECTION 2: TODAY'S BOOKINGS
-  text("TODAY'S BOOKINGS", 40, y, { size: 16, weight: "bold", color: "#0f172a" });
+  text("TODAY'S BOOKINGS (created today)", 40, y, { size: 16, weight: "bold", color: "#0f172a" });
   y += 24;
 
   if (todayBookings.length === 0) {
-    text("No bookings scheduled for today.", 40, y, { size: 13, color: "#64748b" });
+    text("No new bookings created today.", 40, y, { size: 13, color: "#64748b" });
     y += 30;
   } else {
     todayBookings.forEach((b) => {
@@ -315,13 +304,12 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
     });
   }
 
-  // SECTION 3: TOMORROW'S BOOKINGS
   y += 20;
-  text("TOMORROW'S BOOKINGS", 40, y, { size: 16, weight: "bold", color: "#0f172a" });
+  text("TOMORROW'S BOOKINGS (upcoming events)", 40, y, { size: 16, weight: "bold", color: "#0f172a" });
   y += 24;
 
   if (nextDayBookings.length === 0) {
-    text("No bookings scheduled for tomorrow.", 40, y, { size: 13, color: "#64748b" });
+    text("No events scheduled for tomorrow.", 40, y, { size: 13, color: "#64748b" });
   } else {
     nextDayBookings.forEach((b) => {
       const h = renderBookingCard(ctx, b, 40, y, cardW);
@@ -337,21 +325,40 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
 }
 
 /**
+ * Maps a raw booking row (snake_case, matching the Drizzle schema exactly)
+ * into the shape renderBookingCard expects, and attaches its add-ons.
+ */
+function mapRecord(rec, addonsByBookingId) {
+  return {
+    hall: rec.venue,
+    status: rec.status,
+    name: rec.client,
+    receiptNo: rec.r_no || rec.id,
+    phone: rec.phone,
+    guests: rec.guests,
+    totalAmount: rec.total_amount,
+    advanceAmount: rec.advance_paid,
+    timeSlot: rec.time_slot,
+    paymentMethod: rec.payment_method,
+    addons: (addonsByBookingId[rec.id] || []).map((a) => ({
+      name: a.service,
+      price: a.client_price,
+    })),
+  };
+}
+
+/**
  * Main Orchestrator Function
  */
 async function sendDailySummaryReport(phone) {
-  // 1. Date Range Setup
-  const startToday = new Date();
+  // 1. Date Range Setup — all anchored to Karachi time, not server-local time
+  const nowKhi = nowInKarachi();
+
+  const startToday = new Date(nowKhi);
   startToday.setHours(0, 0, 0, 0);
 
   const endToday = new Date(startToday);
   endToday.setHours(23, 59, 59, 999);
-
-  const startYesterday = new Date(startToday);
-  startYesterday.setDate(startYesterday.getDate() - 1);
-
-  const endYesterday = new Date(startYesterday);
-  endYesterday.setHours(23, 59, 59, 999);
 
   const startTomorrow = new Date(startToday);
   startTomorrow.setDate(startTomorrow.getDate() + 1);
@@ -366,41 +373,47 @@ async function sendDailySummaryReport(phone) {
     year: "numeric",
   });
 
-  // 2. Fetch Cashflow Data (Yesterday)
-  const cashflowData = await computeCashflowSummary(startYesterday, endYesterday, {
-    startQ: startYesterday.toISOString().split("T")[0],
-    endQ: endYesterday.toISOString().split("T")[0],
+  // 2. Fetch Cashflow Data for TODAY — matches the label shown on the report
+  const cashflowData = await computeCashflowSummary(startToday, endToday, {
+    startQ: startToday.toISOString().split("T")[0],
+    endQ: endToday.toISOString().split("T")[0],
   });
 
-  // 3. Fetch Bookings (Today & Tomorrow)
-  const mapRecord = (rec) => ({
-    hall: rec.venue || rec.hall,
-    status: rec.status,
-    name: rec.customerName || rec.name,
-    receiptNo: rec.receiptNo || rec.id,
-    phone: rec.phone,
-    guests: rec.guests,
-    totalAmount: rec.totalAmount || rec.total,
-    advanceAmount: rec.advanceAmount || rec.advance || 0,
-    timeSlot: rec.timeSlot,
-    paymentMethod: rec.paymentMethod || rec.method,
-    addons: rec.addons || [],
-  });
-
+  // 3a. TODAY'S BOOKINGS = bookings CREATED today (new sign-ups today),
+  // regardless of when the actual event happens.
   const todayRecords = await db
     .select()
     .from(booking)
-    .where(and(gte(booking.date, startToday), lte(booking.date, endToday), eq(booking.status, "Confirmed")));
+    .where(and(gte(booking.created_at, startToday), lte(booking.created_at, endToday)));
 
+  // 3b. TOMORROW'S BOOKINGS = upcoming events happening tomorrow
+  // (filtered by the event date, status Confirmed).
   const nextDayRecords = await db
     .select()
     .from(booking)
     .where(and(gte(booking.date, startTomorrow), lte(booking.date, endTomorrow), eq(booking.status, "Confirmed")));
 
-  const todayBookings = todayRecords.map(mapRecord);
-  const nextDayBookings = nextDayRecords.map(mapRecord);
+  // 4. Fetch add-ons for every booking involved, in one query
+  const allBookingIds = [...todayRecords, ...nextDayRecords].map((r) => r.id);
+  let addonsByBookingId = {};
 
-  // 4. Generate Canvas Image
+  if (allBookingIds.length > 0) {
+    const addonRows = await db
+      .select()
+      .from(addons)
+      .where(inArray(addons.bookingId, allBookingIds));
+
+    addonsByBookingId = addonRows.reduce((acc, a) => {
+      if (!acc[a.bookingId]) acc[a.bookingId] = [];
+      acc[a.bookingId].push(a);
+      return acc;
+    }, {});
+  }
+
+  const todayBookings = todayRecords.map((r) => mapRecord(r, addonsByBookingId));
+  const nextDayBookings = nextDayRecords.map((r) => mapRecord(r, addonsByBookingId));
+
+  // 5. Generate Canvas Image
   const { url } = await generateCombinedSummaryImage({
     cashflowData,
     todayBookings,
@@ -408,20 +421,8 @@ async function sendDailySummaryReport(phone) {
     label,
   });
 
-  // 5. Format Values for Meta Template Parameters
-  const moneyIn = currency(cashflowData.totalIn);
-  const moneyOut = currency(cashflowData.totalOut);
-  const netFormatted = (cashflowData.net >= 0 ? "+" : "-") + currency(Math.abs(cashflowData.net));
-
-  // 6. Send via Imported WhatsApp Template API
-  const templateResult = await sendCashflowSummaryTemplate(
-    phone,
-    url,
-    label,
-    moneyIn,
-    moneyOut,
-    netFormatted
-  );
+  // 6. Send via WhatsApp Template API (header-image-only template — no body params)
+  const templateResult = await sendCashflowSummaryTemplate(phone, url);
 
   return {
     success: templateResult.success,
