@@ -27,8 +27,17 @@ async function runDailyCashflowSummary() {
 }
 
 
-
-
+function startCashflowSummaryJob() {
+    // 11:58 pm
+   cron.schedule("58 23 * * *", async () => {
+    console.log("=== Running Daily Cashflow Summary job ===");
+    await runDailyCashflowSummary();
+    console.log("=== Cashflow Summary job complete ===");
+}, {
+    timezone: "Asia/Karachi"
+});
+    console.log("Cashflow summary cron job scheduled (Daily at 9:00 AM)");
+}
 
 module.exports = {
     startCashflowSummaryJob,
