@@ -26,7 +26,7 @@ async function handleWhatsappWebhook(req, res) {
     }
 
     const parsed = parseIncoming(req);
-    if (!parsed) return; // acknowledge Meta immediately
+    if (!parsed) return; 
 
 
 
@@ -35,7 +35,7 @@ async function handleWhatsappWebhook(req, res) {
     const keyword = cleanBody.toUpperCase();
     await updateLastInbound(phone);
     console.log("[DEBUG] phone:", JSON.stringify(phone), "| ADMIN_PHONE:", JSON.stringify(process.env.ADMIN_PHONE), "| keyword:", JSON.stringify(keyword));
-const adminPhonesDigits = (process.env.ADMIN_PHONES || "")
+    const adminPhonesDigits = (process.env.ADMIN_PHONES || "")
     .split(",")
     .map(p => p.trim().replace(/\D/g, ""))
     .filter(Boolean);
@@ -43,8 +43,8 @@ const adminPhonesDigits = (process.env.ADMIN_PHONES || "")
 if (adminPhonesDigits.includes(phone) && keyword === "/ADMIN") {
     console.log("[ADMIN TRIGGER] Matched! phone:", phone, "| admin list:", adminPhonesDigits);
     try {
-        await runDailyCashflowSummary();
-        console.log("[ADMIN TRIGGER] Report job completed.");
+        await runDailyCashflowSummary(phone);
+        console.log("[ADMIN TRIGGER] Report job completed, sent to:", phone);
     } catch (err) {
         console.error("[ADMIN TRIGGER] Failed:", err);
     }

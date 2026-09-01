@@ -16,10 +16,10 @@ async function runDailyCashflowSummary(overridePhone) {
 
         if (result.success) {
             console.log(
-                `[CashflowSummary] Report sent successfully! Today Bookings: ${result.todayCount}, Tomorrow Bookings: ${result.tomorrowCount}`
+                `[CashflowSummary] Report sent successfully to ${targetPhone}! Today Bookings: ${result.todayCount}, Tomorrow Bookings: ${result.tomorrowCount}`
             );
         } else {
-            console.error("[CashflowSummary] Failed to send report:", result.error);
+            console.error(`[CashflowSummary] Failed to send report to ${targetPhone}:`, result.error);
         }
 
     } catch (error) {
@@ -30,12 +30,12 @@ async function runDailyCashflowSummary(overridePhone) {
 function startCashflowSummaryJob() {
     cron.schedule("58 23 * * *", async () => {
         console.log("=== Running Daily Cashflow Summary job ===");
-        await runDailyCashflowSummary(); 
+        await runDailyCashflowSummary(); // no override → always goes to fixed ADMIN_PHONE
         console.log("=== Cashflow Summary job complete ===");
     }, {
         timezone: "Asia/Karachi"
     });
-    console.log("Cashflow summary cron job scheduled (Daily at 11:00 PM)");
+    console.log("Cashflow summary cron job scheduled (Daily at 11:58 PM)");
 }
 
 module.exports = {
