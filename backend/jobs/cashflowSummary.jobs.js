@@ -1,24 +1,25 @@
 const cron = require("node-cron");
 const { sendDailySummaryReport } = require("../services/cashflowSummary.service");
 
-async function runDailyCashflowSummary() {
+async function runDailyCashflowSummary(overridePhone) {
     try {
-        if (!process.env.OWNER_PHONE) {
-            console.log("[CashflowSummary] OWNER_PHONE not set in .env — skipping send.");
+        const targetPhone = overridePhone || process.env.ADMIN_PHONE;
+
+        if (!targetPhone) {
+            console.log("[CashflowSummary] No target phone available — skipping send.");
             return;
         }
 
-        console.log(`[CashflowSummary] Running daily report job as of ${new Date().toISOString()}`);
+        console.log(`[CashflowSummary] Running daily report job as of ${new Date().toISOString()} for ${targetPhone}`);
 
-        // Call the unified report function (handles image generation & template sending)
-        const result = await sendDailySummaryReport(process.env.ADMIN_PHONE);
+        const result = await sendDailySummaryReport(targetPhone);
 
         if (result.success) {
             console.log(
                 `[CashflowSummary] Report sent successfully! Today Bookings: ${result.todayCount}, Tomorrow Bookings: ${result.tomorrowCount}`
             );
         } else {
-            console.error("[CashflowSummary] Failed to send report template:", result.error);
+            console.error("[CashflowSummary] Failed to send report:", result.error);
         }
 
     } catch (error) {
@@ -26,17 +27,15 @@ async function runDailyCashflowSummary() {
     }
 }
 
-
 function startCashflowSummaryJob() {
-    // 11:58 pm
-   cron.schedule("58 23 * * *", async () => {
-    console.log("=== Running Daily Cashflow Summary job ===");
-    await runDailyCashflowSummary();
-    console.log("=== Cashflow Summary job complete ===");
-}, {
-    timezone: "Asia/Karachi"
-});
-    console.log("Cashflow summary cron job scheduled (Daily at 9:00 AM)");
+    cron.schedule("58 23 * * *", async () => {
+        console.log("=== Running Daily Cashflow Summary job ===");
+        await runDailyCashflowSummary(); 
+        console.log("=== Cashflow Summary job complete ===");
+    }, {
+        timezone: "Asia/Karachi"
+    });
+    console.log("Cashflow summary cron job scheduled (Daily at 11:00 PM)");
 }
 
 module.exports = {

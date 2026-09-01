@@ -5,9 +5,13 @@ const { parseWhatsAppMessage, CreateBooking } = require("../services/booking.ser
 const { getHelpMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage } = require("../services/message.service")
 const { createOrGetConversation, addAdminToConversation } = require("../services/conversation.service");
 const { recordStatus } = require("../services/messageStatus.service");
+const { runDailyCashflowSummary } = require("../jobs/cashflowSummary.jobs.js");
+
 
 async function handleWhatsappWebhook(req, res) {
     res.sendStatus(200);
+    console.log("[RAW BODY]", JSON.stringify(req.body, null, 2));
+    
     const statusEntry = req.body.entry?.[0]?.changes?.[0]?.value?.statuses?.[0];
     if (statusEntry) {
         console.log("[WA Status]", JSON.stringify({
@@ -30,6 +34,23 @@ async function handleWhatsappWebhook(req, res) {
     const cleanBody = body.trim();
     const keyword = cleanBody.toUpperCase();
     await updateLastInbound(phone);
+    console.log("[DEBUG] phone:", JSON.stringify(phone), "| ADMIN_PHONE:", JSON.stringify(process.env.ADMIN_PHONE), "| keyword:", JSON.stringify(keyword));
+const adminPhonesDigits = (process.env.ADMIN_PHONES || "")
+    .split(",")
+    .map(p => p.trim().replace(/\D/g, ""))
+    .filter(Boolean);
+
+if (adminPhonesDigits.includes(phone) && keyword === "/ADMIN") {
+    console.log("[ADMIN TRIGGER] Matched! phone:", phone, "| admin list:", adminPhonesDigits);
+    try {
+        await runDailyCashflowSummary();
+        console.log("[ADMIN TRIGGER] Report job completed.");
+    } catch (err) {
+        console.error("[ADMIN TRIGGER] Failed:", err);
+    }
+    return;
+}
+
 
     try {
         let session = getSession(phone);

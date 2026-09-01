@@ -112,8 +112,9 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
   });
 
   rangeAddons.forEach((a) => {
+    if (!a.received) return; // skip if not yet received
     addOutflow(`addon-vendor-${a.id}`, a.created_at, "Vendor Payout", `${a.service} (Vendor)`, null, a.payment_method || "Cash", Number(a.vendor_cost || 0));
-  });
+});
 
   rangeExpenses.forEach((e) => {
     addOutflow(`expense-${e.id}`, e.created_at, e.category || "Expense", e.label || "Event Expense", null, "Cash", Number(e.amount || 0));

@@ -1,6 +1,6 @@
 const { createCanvas } = require("canvas");
 const { uploadBuffer } = require("../utils/uploadToImagekit");
-const { sendCashflowSummaryTemplate } = require("../services/meta.service.");
+const { sendCashflowSummaryTemplate, sendMediaMessage } = require("../services/meta.service.");
 const { computeCashflowSummary } = require("./cashflow.service");
 const { db } = require("../config/db");
 const { booking, addons } = require("../model/schema");
@@ -422,15 +422,16 @@ async function sendDailySummaryReport(phone) {
   });
 
   // 6. Send via WhatsApp Template API (header-image-only template — no body params)
-  const templateResult = await sendCashflowSummaryTemplate(phone, url);
+  const caption = `Daily Summary Report — ${label}`;
+  const sendResult = await sendMediaMessage(phone, caption, url);
 
   return {
-    success: templateResult.success,
+    success: sendResult.success,
     url,
     cashflow: cashflowData,
     todayCount: todayBookings.length,
     tomorrowCount: nextDayBookings.length,
-    error: templateResult.error,
+    error: sendResult.message,
   };
 }
 
