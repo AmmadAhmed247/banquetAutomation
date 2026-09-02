@@ -14,9 +14,23 @@ function currency(n) {
  * Returns the current date/time as it would read in Asia/Karachi,
  * regardless of the server's own system timezone.
  */
-function nowInKarachi() {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Karachi" }));
+const KARACHI_OFFSET_MIN = 5 * 60; // UTC+5, no DST
+
+function getKarachiDayBounds(dayOffset = 0) {
+  const nowMs = Date.now();
+  const karachiMs = nowMs + KARACHI_OFFSET_MIN * 60000;
+  const karachiDate = new Date(karachiMs);
+
+  const y = karachiDate.getUTCFullYear();
+  const m = karachiDate.getUTCMonth();
+  const d = karachiDate.getUTCDate() + dayOffset;
+
+  const startUtcMs = Date.UTC(y, m, d) - KARACHI_OFFSET_MIN * 60000;
+  const start = new Date(startUtcMs);
+  const end = new Date(startUtcMs + 24 * 60 * 60 * 1000 - 1);
+  return { start, end };
 }
+
 
 /**
  * Renders a single booking card directly on the canvas context.
@@ -352,19 +366,10 @@ function mapRecord(rec, addonsByBookingId) {
  */
 async function sendDailySummaryReport(phone) {
   // 1. Date Range Setup — all anchored to Karachi time, not server-local time
-  const nowKhi = nowInKarachi();
+ const { start: startToday, end: endToday } = getKarachiDayBounds(0);
+const { start: startTomorrow, end: endTomorrow } = getKarachiDayBounds(1);
 
-  const startToday = new Date(nowKhi);
-  startToday.setHours(0, 0, 0, 0);
 
-  const endToday = new Date(startToday);
-  endToday.setHours(23, 59, 59, 999);
-
-  const startTomorrow = new Date(startToday);
-  startTomorrow.setDate(startTomorrow.getDate() + 1);
-
-  const endTomorrow = new Date(startTomorrow);
-  endTomorrow.setHours(23, 59, 59, 999);
   console.log("[REPORT] nowKhi:", nowKhi.toISOString());
   console.log("[REPORT] startToday:", startToday.toISOString(), "| endToday:", endToday.toISOString());
   console.log("[REPORT] startTomorrow:", startTomorrow.toISOString(), "| endTomorrow:", endTomorrow.toISOString());
