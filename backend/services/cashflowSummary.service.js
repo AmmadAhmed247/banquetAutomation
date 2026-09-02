@@ -370,9 +370,9 @@ async function sendDailySummaryReport(phone) {
 const { start: startTomorrow, end: endTomorrow } = getKarachiDayBounds(1);
 
 
-  console.log("[REPORT] nowKhi:", nowKhi.toISOString());
-  console.log("[REPORT] startToday:", startToday.toISOString(), "| endToday:", endToday.toISOString());
-  console.log("[REPORT] startTomorrow:", startTomorrow.toISOString(), "| endTomorrow:", endTomorrow.toISOString());
+  // console.log("[REPORT] nowKhi:", nowKhi.toISOString());
+  // console.log("[REPORT] startToday:", startToday.toISOString(), "| endToday:", endToday.toISOString());
+  // console.log("[REPORT] startTomorrow:", startTomorrow.toISOString(), "| endTomorrow:", endTomorrow.toISOString());
 
   const label = startToday.toLocaleDateString("en-PK", {
     weekday: "long",
