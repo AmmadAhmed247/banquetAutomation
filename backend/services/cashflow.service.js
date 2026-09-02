@@ -141,6 +141,9 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
 
   activity.sort((a, b2) => new Date(b2.time).getTime() - new Date(a.time).getTime());
 
+  console.log("startDate:", startDate.toISOString(), "endDate:", endDate.toISOString());
+console.log("rangePayments:", rangePayments.map(p => ({ id: p.id, bookingId: p.bookingId, amount: p.amount, created_at: p.created_at })));
+
   return {
     totalIn,
     totalOut,
