@@ -1,6 +1,13 @@
 import { Trash2 } from "lucide-react";
 import { DAILY_EXPENSE_CATEGORIES, currency } from "./ManagementUtils.js";
 
+function isTodayPKT(dateInput) {
+  if (!dateInput) return false;
+  const todayPKT = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date());
+  const recordPKT = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date(dateInput));
+  return todayPKT === recordPKT;
+}
+
 export function DailyExpensesPanel({
   allDailyExpenses,
   selectedYear,
@@ -12,17 +19,14 @@ export function DailyExpensesPanel({
   createDailyExpenseMutation,
   deleteDailyExpenseMutation,
 }) {
-  const visible = allDailyExpenses.filter(de => {
-    const d = new Date(de.date);
-    return d.getFullYear() === selectedYear && (selectedMonth === null || d.getMonth() === selectedMonth);
-  });
+  const visible = allDailyExpenses.filter(de => isTodayPKT(de.date));
 
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-[13px] font-bold text-stone-900">Daily Expenses</p>
-          <p className="text-[11px] text-stone-400 mt-0.5">Petty cash and small spends</p>
+          <p className="text-[11px] text-stone-400 mt-0.5">Petty cash and small spends (today)</p>
         </div>
         {!addingDaily && (
           <button onClick={() => setAddingDaily(true)} className="text-[11px] font-semibold px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors">
@@ -31,20 +35,24 @@ export function DailyExpensesPanel({
         )}
       </div>
       <div className="space-y-2 mb-2">
-        {visible.map(de => (
-          <div key={de.id} className="flex justify-between items-center bg-stone-50 p-2.5 rounded-xl border border-stone-100 group">
-            <div>
-              <p className="text-[12px] font-semibold text-stone-800">{de.label}</p>
-              <p className="text-[10px] text-stone-400 mt-0.5">{de.category} • {new Date(de.date).toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', day: 'numeric', month: 'short' })}</p>
+        {visible.length === 0 ? (
+          <p className="text-[11px] text-stone-400 text-center py-4">No expenses recorded today.</p>
+        ) : (
+          visible.map(de => (
+            <div key={de.id} className="flex justify-between items-center bg-stone-50 p-2.5 rounded-xl border border-stone-100 group">
+              <div>
+                <p className="text-[12px] font-semibold text-stone-800">{de.label}</p>
+                <p className="text-[10px] text-stone-400 mt-0.5">{de.category} • {new Date(de.date).toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', day: 'numeric', month: 'short' })}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] font-bold text-stone-800">{currency(de.amount)}</span>
+                <button onClick={() => deleteDailyExpenseMutation.mutate(de.id)} className="text-rose-500 hover:text-rose-800 transition-all">
+                  <Trash2 size={12} />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-stone-800">{currency(de.amount)}</span>
-              <button onClick={() => deleteDailyExpenseMutation.mutate(de.id)} className="text-rose-500 hover:text-rose-800 transition-all">
-                <Trash2 size={12} />
-              </button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
       {addingDaily && (
         <div className="flex flex-col gap-2 pt-3 border-t border-stone-100">

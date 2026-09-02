@@ -365,6 +365,9 @@ async function sendDailySummaryReport(phone) {
 
   const endTomorrow = new Date(startTomorrow);
   endTomorrow.setHours(23, 59, 59, 999);
+  console.log("[REPORT] nowKhi:", nowKhi.toISOString());
+  console.log("[REPORT] startToday:", startToday.toISOString(), "| endToday:", endToday.toISOString());
+  console.log("[REPORT] startTomorrow:", startTomorrow.toISOString(), "| endTomorrow:", endTomorrow.toISOString());
 
   const label = startToday.toLocaleDateString("en-PK", {
     weekday: "long",

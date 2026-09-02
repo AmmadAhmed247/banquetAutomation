@@ -94,10 +94,8 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
           advancePaid
         );
       }
-    }
 
-    if (status === "finished" || status === "completed") {
-      if (remainingBalance > 0) {
+      if ((status === "finished" || status === "completed") && remainingBalance > 0) {
         addInflow(
           `booking-settlement-${bk.id}`,
           bk.updated_at || bk.created_at,
@@ -109,7 +107,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
         );
       }
     }
-  });
+});
 
   rangeAddons.forEach((a) => {
     if (!a.received) return; // skip if not yet received
