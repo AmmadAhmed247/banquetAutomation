@@ -366,8 +366,8 @@ function mapRecord(rec, addonsByBookingId) {
  */
 async function sendDailySummaryReport(phone) {
   // 1. Date Range Setup — all anchored to Karachi time, not server-local time
- const { start: startToday, end: endToday } = getKarachiDayBounds(0);
-const { start: startTomorrow, end: endTomorrow } = getKarachiDayBounds(1);
+  const { start: startToday, end: endToday } = getKarachiDayBounds(0);
+  const { start: startTomorrow, end: endTomorrow } = getKarachiDayBounds(1);
 
 
   // console.log("[REPORT] nowKhi:", nowKhi.toISOString());
@@ -379,8 +379,8 @@ const { start: startTomorrow, end: endTomorrow } = getKarachiDayBounds(1);
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: "Asia/Karachi",
   });
-
   // 2. Fetch Cashflow Data for TODAY — matches the label shown on the report
   const cashflowData = await computeCashflowSummary(startToday, endToday, {
     startQ: startToday.toISOString().split("T")[0],
