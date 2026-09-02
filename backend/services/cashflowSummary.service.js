@@ -31,6 +31,15 @@ function getKarachiDayBounds(dayOffset = 0) {
   return { start, end };
 }
 
+function karachiDateString(date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 
 /**
  * Renders a single booking card directly on the canvas context.
@@ -383,9 +392,9 @@ async function sendDailySummaryReport(phone) {
   });
   // 2. Fetch Cashflow Data for TODAY — matches the label shown on the report
   const cashflowData = await computeCashflowSummary(startToday, endToday, {
-    startQ: startToday.toISOString().split("T")[0],
-    endQ: endToday.toISOString().split("T")[0],
-  });
+  startQ: karachiDateString(startToday),
+  endQ: karachiDateString(endToday),
+});
 
   // 3a. TODAY'S BOOKINGS = bookings CREATED today (new sign-ups today),
   // regardless of when the actual event happens.

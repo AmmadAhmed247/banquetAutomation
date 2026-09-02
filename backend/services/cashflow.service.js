@@ -7,6 +7,30 @@ const { gte, lte, and, sql } = require("drizzle-orm");
  * for the given date range. Shared by the /api/cashflow route and the
  * daily WhatsApp summary cron job, so both always agree on the numbers.
  */
+const KARACHI_OFFSET_MIN = 5 * 60;
+
+function getKarachiDayBounds(dayOffset = 0) {
+  const nowMs = Date.now();
+  const karachiMs = nowMs + KARACHI_OFFSET_MIN * 60000;
+  const karachiDate = new Date(karachiMs);
+  const y = karachiDate.getUTCFullYear();
+  const m = karachiDate.getUTCMonth();
+  const d = karachiDate.getUTCDate() + dayOffset;
+  const startUtcMs = Date.UTC(y, m, d) - KARACHI_OFFSET_MIN * 60000;
+  const start = new Date(startUtcMs);
+  const end = new Date(startUtcMs + 24 * 60 * 60 * 1000 - 1);
+  return { start, end };
+}
+
+function karachiDateString(date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {}) {
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -107,12 +131,12 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
         );
       }
     }
-});
+  });
 
   rangeAddons.forEach((a) => {
     if (!a.received) return; // skip if not yet received
     addOutflow(`addon-vendor-${a.id}`, a.created_at, "Vendor Payout", `${a.service} (Vendor)`, null, a.payment_method || "Cash", Number(a.vendor_cost || 0));
-});
+  });
 
   rangeExpenses.forEach((e) => {
     addOutflow(`expense-${e.id}`, e.created_at, e.category || "Expense", e.label || "Event Expense", null, "Cash", Number(e.amount || 0));
@@ -122,8 +146,10 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
     addOutflow(`daily-${d.id}`, d.date, d.category || "Daily Expense", d.label || "Daily Petty Cash", null, "Cash", Number(d.amount || 0));
   });
 
-  const targetMonth = startDate.getMonth() + 1;
-  const targetYear = startDate.getFullYear();
+  const karachiDateStr = karachiDateString(startDate); // "YYYY-MM-DD" in Karachi
+  const [targetYearStr, targetMonthStr] = karachiDateStr.split("-");
+  const targetMonth = Number(targetMonthStr);
+  const targetYear = Number(targetYearStr);
 
   rangeMonthlyExpenses.forEach((m) => {
     if (Number(m.month) === targetMonth && Number(m.year) === targetYear) {
@@ -141,8 +167,6 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
 
   activity.sort((a, b2) => new Date(b2.time).getTime() - new Date(a.time).getTime());
 
-  console.log("startDate:", startDate.toISOString(), "endDate:", endDate.toISOString());
-console.log("rangePayments:", rangePayments.map(p => ({ id: p.id, bookingId: p.bookingId, amount: p.amount, created_at: p.created_at })));
 
   return {
     totalIn,
