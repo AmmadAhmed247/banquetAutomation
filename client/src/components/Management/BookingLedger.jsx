@@ -20,10 +20,11 @@ export function BookingLedger({
 
   // Filter out past bookings (keep only today onwards)
   const upcomingBookings = displayedLedgerBookings.filter(b => {
-    const bookingDate = new Date(b.date);
-    bookingDate.setHours(0, 0, 0, 0);
-    return bookingDate >= today;
-  });
+  const bookingDate = new Date(b.date);
+  bookingDate.setHours(0, 0, 0, 0);
+  
+  return bookingDate >= today && !['Cancelled', 'Pending'].includes(b.status);
+});
 
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import {
-  Sparkles, ChevronDown, ChevronRight, X, Building, Wallet, TrendingUp, Inbox, PlusCircle, Layers, Zap, Trash2, Plus,
+  Sparkles, ChevronDown, ChevronRight, X, Building, Wallet, TrendingUp, Inbox, PlusCircle, Layers, Zap, Trash2, Plus, Loader2,
   ClipboardList, Receipt, Search
 } from "lucide-react";
 import {
@@ -102,13 +102,33 @@ function DetailSidebar({ title, subtitle, children, onClose }) {
 }
 
 export default function BookingsAddonsPage() {
-  const { data: addons = [] } = getAllAddons();
-  const { data: rawBookings = [] } = getAllBookings() || {};
+  const addonsQuery = getAllAddons();
+  const bookingsQuery = getAllBookings() || {};
+  const monthlyExpensesQuery = getAllMonthlyExpenses();
+  const dailyExpensesQuery = getAllDailyExpenses();
+  const expensesQuery = getAllExpenses() || {};
+
+  const addons = Array.isArray(addonsQuery.data) ? addonsQuery.data : [];
+  const rawBookings = Array.isArray(bookingsQuery.data) ? bookingsQuery.data : [];
+  const monthlyExpenses = Array.isArray(monthlyExpensesQuery.data) ? monthlyExpensesQuery.data : [];
+  const dailyExpenses = Array.isArray(dailyExpensesQuery.data)
+    ? dailyExpensesQuery.data
+    : dailyExpensesQuery.data?.dailyExpenses || [];
+  const rawMonthlyExpenses = expensesQuery.data;
+  const standardExpenses = Array.isArray(rawMonthlyExpenses)
+    ? rawMonthlyExpenses
+    : rawMonthlyExpenses?.data || [];
+  const isLoading = [
+    addonsQuery,
+    bookingsQuery,
+    monthlyExpensesQuery,
+    dailyExpensesQuery,
+    expensesQuery,
+  ].some((query) => query.isLoading);
+
   const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
-  const { data: monthlyExpenses = [] } = getAllMonthlyExpenses();
   const createMonthlyExpenseMutation = useCreateMonthlyExpense();
   const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense();
-  const { data: dailyExpenses = [] } = getAllDailyExpenses();
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState("all");
@@ -198,9 +218,6 @@ export default function BookingsAddonsPage() {
     count: s.count,
   }));
 
-  const { data: rawMonthlyExpenses } = getAllExpenses() || {};
-  const standardExpenses = Array.isArray(rawMonthlyExpenses) ? rawMonthlyExpenses : (rawMonthlyExpenses?.data || []);
-  
   const filteredStandardExpenses = useMemo(() => {
     return standardExpenses.filter((e) => {
       if (!e.created_at) return false;
@@ -268,6 +285,17 @@ export default function BookingsAddonsPage() {
 
   function deleteMonthlyExpense(id) {
     deleteMonthlyExpenseMutation.mutate(id);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-3 text-stone-500">
+          <Loader2 size={32} className="animate-spin text-green-600" />
+          <p className="text-sm font-medium">Loading data...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

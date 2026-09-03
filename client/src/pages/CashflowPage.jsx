@@ -7,6 +7,7 @@ import {
   Calendar,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2,
 } from "lucide-react";
 
 import { getAllBookings } from "../lib/hooks/booking.hook";
@@ -87,6 +88,7 @@ export default function Cashflow() {
 
   // Still need raw bookings just for the receivables card
   const bookingsQuery = getAllBookings();
+  const isLoading = cashflowQuery.isLoading || bookingsQuery.isLoading;
   const extractArray = (raw) => {
     if (Array.isArray(raw)) return raw;
     if (Array.isArray(raw?.data)) return raw.data;
@@ -133,6 +135,18 @@ export default function Cashflow() {
       : range === "all"
       ? "all time"
       : "selected range";
+
+
+      if (isLoading) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-3 text-stone-500">
+          <Loader2 size={32} className="animate-spin text-green-600" />
+          <p className="text-sm font-medium">Loading data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fcfcfc] p-6 lg:p-10 text-stone-800 antialiased font-sans">

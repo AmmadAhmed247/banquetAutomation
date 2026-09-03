@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 // Hooks
 import { getAllBookings } from "../lib/hooks/booking.hook";
@@ -23,15 +24,27 @@ import { useAddBookingNote } from "../lib/hooks/booking.hook.js"
 
 export default function Management() {
   // ── Raw data ──
-  const { data: rawExpenses } = getAllExpenses() || {};
+  const expensesQuery = getAllExpenses() || {};
+  const { data: rawExpenses } = expensesQuery;
   const expenses = Array.isArray(rawExpenses) ? rawExpenses : (rawExpenses?.data || []);
-  const { data: rawAddons } = getAllAddons() || {};
+  const addonsQuery = getAllAddons() || {};
+  const { data: rawAddons } = addonsQuery;
   const addons = Array.isArray(rawAddons) ? rawAddons : (rawAddons?.data || []);
-  const { data: rawMonthlyExpenses } = getAllMonthlyExpenses() || {};
+  const monthlyExpensesQuery = getAllMonthlyExpenses() || {};
+  const { data: rawMonthlyExpenses } = monthlyExpensesQuery;
   const allMonthlyExpenses = Array.isArray(rawMonthlyExpenses) ? rawMonthlyExpenses : (rawMonthlyExpenses?.data || []);
-  const { data: rawDailyExpenses } = getAllDailyExpenses() || {};
+  const dailyExpensesQuery = getAllDailyExpenses() || {};
+  const { data: rawDailyExpenses } = dailyExpensesQuery;
   const allDailyExpenses = Array.isArray(rawDailyExpenses) ? rawDailyExpenses : (rawDailyExpenses?.data || []);
-  const { data: rawBookings = [] } = getAllBookings() || {};
+  const bookingsQuery = getAllBookings() || {};
+  const { data: rawBookings = [] } = bookingsQuery;
+  const isLoading = [
+    expensesQuery,
+    addonsQuery,
+    monthlyExpensesQuery,
+    dailyExpensesQuery,
+    bookingsQuery,
+  ].some((query) => query.isLoading);
 
   // ── Mutations ──
   const createExpenseMutation = useCreateExpense();
@@ -133,6 +146,16 @@ export default function Management() {
     console.log("Mutating with payment payload:", payload);
     markReceived.mutate(payload);
   };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-3 text-stone-500">
+          <Loader2 size={32} className="animate-spin text-green-600" />
+          <p className="text-sm font-medium">Loading data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 p-5 md:p-8 antialiased selection:bg-emerald-100 font-['Inter']">

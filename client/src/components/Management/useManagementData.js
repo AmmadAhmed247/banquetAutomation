@@ -1,11 +1,6 @@
 import { useMemo } from "react";
 import { MONTHS, normalizeBooking, daysUntil, pct } from "./ManagementUtils";
 
-/**
- * Centralizes every derived/computed value the Management page needs.
- * Pure calculation only — no mutations, no JSX. If a number looks wrong
- * on the dashboard, this is the one file to check.
- */
 export function useManagementData({
   rawBookings,
   expenses,
@@ -99,8 +94,11 @@ export function useManagementData({
   }), [bookings, selectedYear, addonsByBooking]);
 
   const upcomingEvents = useMemo(() =>
-    [...bookings].filter(b => daysUntil(b.date) >= 0).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5),
-  [bookings]);
+  [...bookings]
+    .filter(b => daysUntil(b.date) >= 0 && b.status !== 'Cancelled' && b.status !== 'Pending')
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(0, 5),
+[bookings]);
 
   const selectedBooking = bookings.find(b => b.id === selectedBookingId);
   const selAddons = selectedBookingId ? (addonsByBooking[selectedBookingId] || []) : [];
