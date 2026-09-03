@@ -10,16 +10,15 @@ import {
 } from "lucide-react";
 
 import { getAllBookings } from "../lib/hooks/booking.hook";
-import { useGetCashflow } from "../lib/hooks/cashflow.hook"; // adjust path to wherever you put useGetCashflow
+import { useGetCashflow } from "../lib/hooks/cashflow.hook"; 
 
 const currency = (n) => `Rs ${Number(n || 0).toLocaleString("en-PK")}`;
 
-const getPKTDateISO = (dateInput = new Date()) => {
-  if (!dateInput) return "";
-  let d = dateInput;
-
-  if (typeof dateInput === "string" && dateInput.trim().length === 7) {
-    d = `${dateInput.trim()}-01`;
+const getPKTDateISO = (dateInput) => {
+  let d = dateInput || new Date();
+  
+  if (typeof d === "string" && d.trim().length === 7) {
+    d = `${d.trim()}-01`;
   }
 
   const parsedDate = typeof d === "string" ? new Date(d) : d;
@@ -75,15 +74,18 @@ export default function Cashflow() {
     if (range === "custom") {
       return { queryStart: startDate, queryEnd: endDate };
     }
-    // "all" — no bounds; getCashflow controller needs to handle missing start/end as all-time (see note below)
     return { queryStart: "", queryEnd: "" };
   }, [range, startDate, endDate, todayPKT]);
 
-  // Single source of truth — same backend function the WhatsApp report uses
-  const cashflowQuery = useGetCashflow({ start: queryStart, end: queryEnd, range });
+  // Single source of truth — passing range so backend knows when to fetch all history
+  const cashflowQuery = useGetCashflow({ 
+    start: range === "all" ? "" : queryStart, 
+    end: range === "all" ? "" : queryEnd, 
+    range 
+  });
   const cashflowData = cashflowQuery?.data;
 
-  // Still need raw bookings just for the receivables card (not returned by computeCashflowSummary)
+  // Still need raw bookings just for the receivables card
   const bookingsQuery = getAllBookings();
   const extractArray = (raw) => {
     if (Array.isArray(raw)) return raw;
@@ -108,7 +110,6 @@ export default function Cashflow() {
   const totalIn = cashflowData?.totalIn || 0;
   const totalOut = cashflowData?.totalOut || 0;
   const net = cashflowData?.net || 0;
-  const byMethod = cashflowData?.byMethod || {};
 
   const mergedActivity = useMemo(() => {
     const activity = cashflowData?.activity || [];

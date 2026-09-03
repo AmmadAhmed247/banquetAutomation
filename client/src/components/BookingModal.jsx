@@ -3,7 +3,8 @@ import {
   CalendarDays, Phone, Users,
   PlusCircle, X, CreditCard, ChevronDown, Loader, Save, Pencil, Landmark
 } from "lucide-react";
-import { getAllAddons, useCreateAddon, useDeleteAddon, useUpdateAddon } from "../lib/hooks/addon.hook";
+import { getAllAddons, useCreateAddon, useDeleteAddon, useUpdateAddon, useMarkAddonReceived } from "../lib/hooks/addon.hook";
+import { AddonRow } from "./Management/ManagementRows";
 
 function formatPKR(val) {
   if (!val && val !== 0) return "—";
@@ -57,7 +58,6 @@ const ADDON_SERVICES = [ "Pepsi Co.", "Coca Cola Co.", "Fresh Flower", "Cola Nex
   "Water Bottles", "Ayaz Tissue", "Stage", "Fire Crackers", "Ladies Staff", "BBQ" , "Sound System", "Entry" , "Decoration","Miscellaneous"];
 const emptyAddon = { service: "", description: "", client_price: "", vendor_cost: "" };
 
-// ── Bank selection popup ─────────────────────────────────────────────────────
 function BankPopup({ selected, onSelect, onClose }) {
   return (
     <div className="fixed inset-0 bg-green-950/50 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
@@ -93,7 +93,6 @@ function BankPopup({ selected, onSelect, onClose }) {
   );
 }
 
-// ── Addon Popup Component ───────────────────────────────────────────────────
 function AddonPopup({ draft, setDraft, onSubmit, onClose, isLoading }) {
   return (
     <div className="fixed inset-0 bg-green-950/50 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
@@ -192,14 +191,19 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
 
   const addonQueryResult = getAllAddons();
   const rawAddons = addonQueryResult?.data?.addons ?? addonQueryResult?.data ?? addonQueryResult ?? [];
-  const allAddonsList = Array.isArray(rawAddons) ? rawAddons : [];
+  const allAddonsList = Array.isArray(rawAddons) 
+    ? rawAddons.map(a => ({ ...a, id: a.id || a._id })) 
+    : [];
 
   const createAddon = useCreateAddon();
   const deleteAddon = useDeleteAddon();
   const updateAddon = useUpdateAddon();
-
-  const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState(emptyAddon);
+  const markAddonReceived = useMarkAddonReceived?.() || {
+    mutate: (id, payload) => {
+      // Fallback if mutation hook name differs slightly in your codebase
+      updateAddon.mutate({ id, data: payload });
+    }
+  };
 
   const addonRows = (!isNew && booking?.id)
     ? allAddonsList.filter(a => (a.bookingId ?? a.booking_id) === booking.id)
@@ -219,34 +223,24 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
     setAddonDraft(emptyAddon);
   }
 
-  function removeAddonRow(row) {
-    deleteAddon.mutate(row.id);
+  function removeAddonRow(id) {
+    deleteAddon.mutate(id);
   }
 
-  function startEdit(row) {
-    setEditingId(row.id);
-    setEditDraft({
-      service: row.service,
-      description: row.description,
-      client_price: row.client_price,
-      vendor_cost: row.vendor_cost,
+  function handleUpdateAddon(id, updatedData) {
+    updateAddon.mutate({
+      id,
+      data: {
+        ...updatedData,
+        client_price: Number(updatedData.client_price || 0),
+        vendor_cost: Number(updatedData.vendor_cost || 0),
+      },
     });
   }
 
-  function saveEdit() {
-    updateAddon.mutate(
-      {
-        id: editingId,
-        data: {
-          ...editDraft,
-          client_price: Number(editDraft.client_price || 0),
-          vendor_cost: Number(editDraft.vendor_cost || 0),
-        },
-      },
-      { onSuccess: () => setEditingId(null) }
-    );
+  function handleMarkReceived(id, payload) {
+    markAddonReceived.mutate({ id, ...payload });
   }
-
   useEffect(() => {
     setForm(normalizeBooking(booking));
   }, [booking]);
@@ -498,73 +492,18 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
                 Save this booking first — add-ons are linked to a specific booking and can be added once it's created.
               </div>
             ) : addonRows.length > 0 ? (
-              <div className="space-y-2">
-                {addonRows.map((row) => {
-                  const isEditing = editingId === row.id;
-                  const commission = Number(row.client_price || 0) - Number(row.vendor_cost || 0);
-
-                  if (isEditing) {
-                    return (
-                      <div key={row.id} className="border border-green-200 rounded-xl p-3 bg-green-50 space-y-2">
-                        <select
-                          value={editDraft.service}
-                          onChange={e => setEditDraft(d => ({ ...d, service: e.target.value }))}
-                          className={selectCls}
-                        >
-                          {ADDON_SERVICES.map(s => <option key={s}>{s}</option>)}
-                        </select>
-                        <input
-                          type="text"
-                          placeholder="Description"
-                          value={editDraft.description}
-                          onChange={e => setEditDraft(d => ({ ...d, description: e.target.value }))}
-                          className={inputCls}
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="number"
-                            placeholder="Client Price"
-                            value={editDraft.client_price}
-                            onChange={e => setEditDraft(d => ({ ...d, client_price: e.target.value }))}
-                            className={inputCls}
-                          />
-                          <input
-                            type="number"
-                            placeholder="Vendor Cost"
-                            value={editDraft.vendor_cost}
-                            onChange={e => setEditDraft(d => ({ ...d, vendor_cost: e.target.value }))}
-                            className={inputCls}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={saveEdit} className="flex-1 bg-green-600 text-white text-xs font-semibold py-2 rounded-lg border-none cursor-pointer">
-                            Save
-                          </button>
-                          <button type="button" onClick={() => setEditingId(null)} className="px-4 border border-green-200 text-green-600 text-xs font-semibold py-2 rounded-lg bg-transparent cursor-pointer">
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div key={row.id} className="flex items-center justify-between border border-green-100 rounded-xl px-3 py-2 bg-green-50/50">
-                      <div>
-                        <p className="text-sm font-semibold text-green-900">{row.service}</p>
-                        <p className="text-[11px] text-green-500">{formatPKR(row.client_price)} · Commission {formatPKR(commission)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => startEdit(row)} className="text-green-400 hover:text-green-600 cursor-pointer bg-transparent border-none">
-                          <Pencil size={14} />
-                        </button>
-                        <button type="button" onClick={() => removeAddonRow(row)} className="text-green-300 hover:text-red-500 cursor-pointer bg-transparent border-none">
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="border border-green-100 rounded-xl p-3 bg-green-50/30 divide-y divide-stone-100">
+                {addonRows.map((row) => (
+                  <AddonRow 
+                    key={row.id} 
+                    addon={row} 
+                    onDelete={removeAddonRow} 
+                    onUpdate={handleUpdateAddon}
+                    onMarkReceived={handleMarkReceived}
+                    ADDON_CATEGORIES={ADDON_SERVICES}
+                    ADDON_PAYMENT_METHODS={PAYMENT_METHODS}
+                  />
+                ))}
               </div>
             ) : (
               <p className="text-xs text-green-400 text-center py-3">No add-ons yet</p>
