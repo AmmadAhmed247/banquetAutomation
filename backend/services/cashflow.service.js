@@ -9,18 +9,7 @@ const { gte, lte, and, sql } = require("drizzle-orm");
  */
 const KARACHI_OFFSET_MIN = 5 * 60;
 
-function getKarachiDayBounds(dayOffset = 0) {
-  const nowMs = Date.now();
-  const karachiMs = nowMs + KARACHI_OFFSET_MIN * 60000;
-  const karachiDate = new Date(karachiMs);
-  const y = karachiDate.getUTCFullYear();
-  const m = karachiDate.getUTCMonth();
-  const d = karachiDate.getUTCDate() + dayOffset;
-  const startUtcMs = Date.UTC(y, m, d) - KARACHI_OFFSET_MIN * 60000;
-  const start = new Date(startUtcMs);
-  const end = new Date(startUtcMs + 24 * 60 * 60 * 1000 - 1);
-  return { start, end };
-}
+
 
 function karachiDateString(date) {
   const pktDate = new Date(date.getTime() + KARACHI_OFFSET_MIN * 60000);
@@ -72,9 +61,22 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
   let totalOut = 0;
   const byMethod = {};
 
-  const addInflow = (id, time, category, note, who, method, amount) => {
+  const resolveInflowMethod = (method, bank) => {
+    const normalizedMethod = (method || "").trim().toLowerCase();
+    const normalizedBank = (bank || "").trim().toLowerCase();
+
+    if (normalizedBank === "meezan bank sadar") return "Meezan Bank Sadar";
+    if (normalizedBank === "habib metro usman") return "Habib Metro Usman";
+    if (normalizedMethod === "cash") return "Cash";
+    if (normalizedMethod === "jazzcash") return "JazzCash";
+    if (normalizedMethod === "easypaisa") return "EasyPaisa";
+    if (normalizedMethod === "bank transfer" || normalizedBank) return "Other Banks";
+    return method || "Cash";
+  };
+
+  const addInflow = (id, time, category, note, who, method, amount, bank) => {
     if (amount <= 0) return;
-    const m = method || "Cash";
+    const m = resolveInflowMethod(method, bank);
     byMethod[m] = (byMethod[m] || 0) + amount;
     totalIn += amount;
     activity.push({ id, time, flow: "IN", category, note, who, method: m, amount });
@@ -94,7 +96,8 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
       p.note || `Payment Received (${p.category || "Booking"})`,
       p.who || null,
       p.payment_method || "Cash",
-      Number(p.amount || 0)
+      Number(p.amount || 0),
+      p.bank_name
     );
   });
 
@@ -116,7 +119,8 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
           `Advance for ${bk.event || "Event"} (${bk.client})`,
           bk.client,
           method,
-          advancePaid
+          advancePaid,
+          bk.bank_name
         );
       }
 
@@ -128,7 +132,8 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
           `Remaining balance collected for finished event (${bk.client})`,
           bk.client,
           method,
-          remainingBalance
+          remainingBalance,
+          bk.bank_name
         );
       }
     }

@@ -108,6 +108,14 @@ export default function Cashflow() {
   const totalIn = cashflowData?.totalIn || 0;
   const totalOut = cashflowData?.totalOut || 0;
   const net = cashflowData?.net || 0;
+  const paymentBoxes = [
+    { label: "Cash Received", key: "Cash", color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: "Meezan Bank", key: "Meezan Bank Sadar", color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Habib Metro", key: "Habib Metro Usman", color: "text-indigo-600", bg: "bg-indigo-50" },
+    { label: "JazzCash", key: "JazzCash", color: "text-orange-600", bg: "bg-orange-50" },
+    { label: "EasyPaisa", key: "EasyPaisa", color: "text-lime-600", bg: "bg-lime-50" },
+    
+  ];
 
   const mergedActivity = useMemo(() => {
     const activity = cashflowData?.activity || [];
@@ -282,6 +290,25 @@ export default function Cashflow() {
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+        {paymentBoxes.map((box) => (
+          <div key={box.key} className="bg-white p-4 rounded-2xl border border-stone-100 shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-lg ${box.bg} ${box.color} flex items-center justify-center`}>
+                <Wallet size={14} />
+              </div>
+              <span className="text-[10px] font-semibold tracking-wide text-stone-500 uppercase">
+                {box.label}
+              </span>
+            </div>
+            <h2 className="text-lg font-semibold text-stone-900 tracking-tight mt-3">
+              {currency(cashflowData?.byMethod?.[box.key] || 0)}
+            </h2>
+            <p className="text-[10px] text-stone-400 mt-1">Received ({rangeLabel})</p>
+          </div>
+        ))}
       </div>
 
       <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
