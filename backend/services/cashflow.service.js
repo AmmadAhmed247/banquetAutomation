@@ -23,19 +23,18 @@ function getKarachiDayBounds(dayOffset = 0) {
 }
 
 function karachiDateString(date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Karachi",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
+  const pktDate = new Date(date.getTime() + KARACHI_OFFSET_MIN * 60000);
+  return `${pktDate.getUTCFullYear()}-${String(pktDate.getUTCMonth() + 1).padStart(2, "0")}-${String(pktDate.getUTCDate()).padStart(2, "0")}`;
 }
 
 async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {}) {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = karachiDateString(new Date());
+  const effectiveStartQ = startQ || karachiDateString(startDate);
+  const effectiveEndQ = endQ || karachiDateString(endDate);
 
   const [
     rangePayments,
+    allPayments,
     rangeAddons,
     rangeExpenses,
     rangeDailyExpenses,
@@ -46,6 +45,8 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
       .where(and(gte(b.payments.created_at, startDate), lte(b.payments.created_at, endDate)))
       .orderBy(sql`${b.payments.created_at} DESC`),
 
+    db.select({ bookingId: b.payments.bookingId }).from(b.payments),
+
     db.select().from(b.addons)
       .where(and(gte(b.addons.created_at, startDate), lte(b.addons.created_at, endDate))),
 
@@ -54,8 +55,8 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
 
     db.select().from(b.dailyExpenses)
       .where(and(
-        gte(b.dailyExpenses.date, startQ || todayStr),
-        lte(b.dailyExpenses.date, endQ || startQ || todayStr)
+        gte(b.dailyExpenses.date, effectiveStartQ || todayStr),
+        lte(b.dailyExpenses.date, effectiveEndQ || effectiveStartQ || todayStr)
       )),
 
     db.select().from(b.monthlyExpenses),
@@ -64,7 +65,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
       .where(and(gte(b.booking.created_at, startDate), lte(b.booking.created_at, endDate)))
   ]);
 
-  const paymentBookingIds = new Set(rangePayments.map((p) => p.bookingId));
+  const paymentBookingIds = new Set(allPayments.map((p) => p.bookingId));
 
   const activity = [];
   let totalIn = 0;
@@ -146,16 +147,17 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
     addOutflow(`daily-${d.id}`, d.date, d.category || "Daily Expense", d.label || "Daily Petty Cash", null, "Cash", Number(d.amount || 0));
   });
 
-  const karachiDateStr = karachiDateString(startDate); // "YYYY-MM-DD" in Karachi
-  const [targetYearStr, targetMonthStr] = karachiDateStr.split("-");
-  const targetMonth = Number(targetMonthStr);
-  const targetYear = Number(targetYearStr);
+  const [startYearStr, startMonthStr] = effectiveStartQ.split("-");
+  const [endYearStr, endMonthStr] = effectiveEndQ.split("-");
+  const startMonthIndex = Number(startYearStr) * 12 + Number(startMonthStr) - 1;
+  const endMonthIndex = Number(endYearStr) * 12 + Number(endMonthStr) - 1;
 
   rangeMonthlyExpenses.forEach((m) => {
-    if (Number(m.month) === targetMonth && Number(m.year) === targetYear) {
+    const expenseMonthIndex = Number(m.year) * 12 + Number(m.month) - 1;
+    if (expenseMonthIndex >= startMonthIndex && expenseMonthIndex <= endMonthIndex) {
       addOutflow(
         `monthly-${m.id}`,
-        new Date(targetYear, targetMonth - 1, 1),
+        new Date(`${m.year}-${String(m.month).padStart(2, "0")}-01T00:00:00.000+05:00`),
         "Monthly Overhead",
         m.label || m.category,
         null,

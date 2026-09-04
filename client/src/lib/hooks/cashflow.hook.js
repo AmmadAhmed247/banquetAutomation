@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import api from "../../api/api.js"; // or your configured API instance
 
 const cashflowService = {
-  getCashflow: async ({ start, end }) => {
+  getCashflow: async ({ start, end, range }) => {
     const params = new URLSearchParams();
     if (start) params.append("start", start);
     if (end) params.append("end", end);
+    if (range) params.append("range", range);
 
     const res = await api.get(`/api/cashflow?${params.toString()}`);
     return res.data?.data || { totalIn: 0, totalOut: 0, net: 0, byMethod: {}, activity: [] };
@@ -15,7 +16,7 @@ const cashflowService = {
 export function useGetCashflow({ start, end, range }) {
   return useQuery({
     queryKey: ["cashflow", { start, end, range }],
-    queryFn: () => cashflowService.getCashflow({ start, end }),
+    queryFn: () => cashflowService.getCashflow({ start, end, range }),
     keepPreviousData: true,
   });
 }

@@ -30,7 +30,7 @@ async function runDailyCashflowSummary(overridePhone) {
 function startCashflowSummaryJob() {
     cron.schedule("58 23 * * *", async () => {
         console.log("=== Running Daily Cashflow Summary job ===");
-        await runDailyCashflowSummary(); // no override → always goes to fixed ADMIN_PHONE
+        await runDailyCashflowSummary(); 
         console.log("=== Cashflow Summary job complete ===");
     }, {
         timezone: "Asia/Karachi"

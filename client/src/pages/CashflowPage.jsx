@@ -25,12 +25,8 @@ const getPKTDateISO = (dateInput) => {
   const parsedDate = typeof d === "string" ? new Date(d) : d;
   if (isNaN(parsedDate.getTime())) return "";
 
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Karachi",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(parsedDate);
+  const pktDate = new Date(parsedDate.getTime() + 5 * 60 * 60 * 1000);
+  return `${pktDate.getUTCFullYear()}-${String(pktDate.getUTCMonth() + 1).padStart(2, "0")}-${String(pktDate.getUTCDate()).padStart(2, "0")}`;
 };
 
 function formatMethod(method, bank) {
