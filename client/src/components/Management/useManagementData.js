@@ -26,11 +26,13 @@ export function useManagementData({
 
   const ledgerFilteredBookings = useMemo(() => {
     const q = ledgerSearch.trim().toLowerCase();
+    const receiptQuery = q.replace(/^r\.?\s*n(?:o\.?|umber)?\s*[:#-]?\s*/i, "").replace(/^#/, "");
     const res = q
       ? filteredBookings.filter(b =>
           (b.client || "").toLowerCase().includes(q) ||
           (b.event || "").toLowerCase().includes(q) ||
-          (b.hall || "").toLowerCase().includes(q))
+          (b.hall || "").toLowerCase().includes(q) ||
+          (receiptQuery && String(b.r_no || "").toLowerCase().includes(receiptQuery)))
       : filteredBookings;
     return [...res].sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [filteredBookings, ledgerSearch]);

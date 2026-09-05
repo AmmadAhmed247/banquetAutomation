@@ -29,6 +29,7 @@ function currency(n) {
 function normalizeBooking(b) {
   return {
     id: b.id,
+    r_no: b.r_no,
     hall: b.venue,
     client: b.client,
     event: b.event,
@@ -169,6 +170,7 @@ export default function BookingsAddonsPage() {
         b.client?.toLowerCase().includes(q) ||
         b.event?.toLowerCase().includes(q) ||
         b.hall?.toLowerCase().includes(q) ||
+        String(b.r_no || "").toLowerCase().includes(q.replace(/^r\.?\s*n(?:o\.?|umber)?\s*[:#-]?\s*/i, "").replace(/^#/, "")) ||
         (addonsByBooking[b.id] || []).some((a) => a.service?.toLowerCase().includes(q));
 
       return yearMatch && monthMatch && hallMatch && hasAddons && searchMatch;
@@ -582,7 +584,7 @@ export default function BookingsAddonsPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-100">
-                    {["Client", "Hall", "Event", "Date", "Items", "Revenue", "Commission", ""].map((h) => (
+                    {["R.No", "Client", "Hall", "Event", "Date", "Items", "Revenue", "Commission", ""].map((h) => (
                       <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
                         {h}
                       </th>
@@ -592,7 +594,7 @@ export default function BookingsAddonsPage() {
                 <tbody className="divide-y divide-stone-100">
                   {filteredBookings.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-16 text-stone-400 text-[13px]">
+                      <td colSpan={9} className="text-center py-16 text-stone-400 text-[13px]">
                         <Inbox size={28} className="mx-auto mb-2 text-stone-200" />
                         No bookings match your filters / search.
                       </td>
@@ -611,6 +613,9 @@ export default function BookingsAddonsPage() {
                           onClick={() => setSelectedBooking(isSel ? null : b)}
                           className={`cursor-pointer transition-colors ${isSel ? "bg-green-50/60" : "hover:bg-stone-50"}`}
                         >
+                          <td className="px-5 py-3.5 text-[12px] font-mono font-medium text-stone-600">
+                            {b.r_no ? `#${b.r_no}` : `#${b.id}`}
+                          </td>
                           <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}</td>
                           <td className="px-5 py-3.5">
                             <span
@@ -655,7 +660,14 @@ export default function BookingsAddonsPage() {
           {selectedBooking && (
             <DetailSidebar
               title="Add-on Breakdown"
-              subtitle={selectedBooking.client}
+              subtitle={
+                <span>
+                  {selectedBooking.client}
+                  <span className="block text-[11px] font-mono text-stone-400 mt-0.5">
+                    R.No. {selectedBooking.r_no || selectedBooking.id}
+                  </span>
+                </span>
+              }
               onClose={() => setSelectedBooking(null)}
             >
               <div className="flex flex-col gap-3">

@@ -11,13 +11,13 @@ import {
 } from "lucide-react";
 
 import { getAllBookings } from "../lib/hooks/booking.hook";
-import { useGetCashflow } from "../lib/hooks/cashflow.hook"; 
+import { useGetCashflow } from "../lib/hooks/cashflow.hook";
 
 const currency = (n) => `Rs ${Number(n || 0).toLocaleString("en-PK")}`;
 
 const getPKTDateISO = (dateInput) => {
   let d = dateInput || new Date();
-  
+
   if (typeof d === "string" && d.trim().length === 7) {
     d = `${d.trim()}-01`;
   }
@@ -75,10 +75,10 @@ export default function Cashflow() {
   }, [range, startDate, endDate, todayPKT]);
 
   // Single source of truth — passing range so backend knows when to fetch all history
-  const cashflowQuery = useGetCashflow({ 
-    start: range === "all" ? "" : queryStart, 
-    end: range === "all" ? "" : queryEnd, 
-    range 
+  const cashflowQuery = useGetCashflow({
+    start: range === "all" ? "" : queryStart,
+    end: range === "all" ? "" : queryEnd,
+    range
   });
   const cashflowData = cashflowQuery?.data;
 
@@ -114,7 +114,7 @@ export default function Cashflow() {
     { label: "Habib Metro", key: "Habib Metro Usman", color: "text-indigo-600", bg: "bg-indigo-50" },
     { label: "JazzCash", key: "JazzCash", color: "text-orange-600", bg: "bg-orange-50" },
     { label: "EasyPaisa", key: "EasyPaisa", color: "text-lime-600", bg: "bg-lime-50" },
-    
+
   ];
 
   const mergedActivity = useMemo(() => {
@@ -125,6 +125,8 @@ export default function Cashflow() {
       category: item.category,
       note: item.note,
       who: item.who || "—",
+      receiptNo: item.receiptNo,
+      addonService: item.addonService || null,
       method: formatMethod(item.method),
       amount: item.amount,
       date: item.time,
@@ -135,13 +137,13 @@ export default function Cashflow() {
     range === "today"
       ? "today"
       : range === "month"
-      ? "this month"
-      : range === "all"
-      ? "all time"
-      : "selected range";
+        ? "this month"
+        : range === "all"
+          ? "all time"
+          : "selected range";
 
 
-      if (isLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
         <div className="flex flex-col items-center gap-3 text-stone-500">
@@ -174,22 +176,20 @@ export default function Cashflow() {
               <button
                 key={r.key}
                 onClick={() => setRange(r.key)}
-                className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
-                  range === r.key
+                className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${range === r.key
                     ? "bg-stone-900 text-white shadow-sm"
                     : "text-stone-600 hover:text-stone-900"
-                }`}
+                  }`}
               >
                 {r.label}
               </button>
             ))}
             <button
               onClick={() => setRange("custom")}
-              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
-                range === "custom"
+              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${range === "custom"
                   ? "bg-stone-900 text-white shadow-sm"
                   : "text-stone-600 hover:text-stone-900"
-              }`}
+                }`}
             >
               <Calendar size={13} />
               Custom
@@ -262,9 +262,8 @@ export default function Cashflow() {
           </div>
           <div className="mt-4">
             <h2
-              className={`text-2xl lg:text-3xl font-semibold tracking-tight ${
-                net >= 0 ? "text-stone-900" : "text-rose-600"
-              }`}
+              className={`text-2xl lg:text-3xl font-semibold tracking-tight ${net >= 0 ? "text-stone-900" : "text-rose-600"
+                }`}
             >
               {`${net < 0 ? "-" : ""}${currency(Math.abs(net))}`}
             </h2>
@@ -348,11 +347,10 @@ export default function Cashflow() {
                   <tr key={item.id} className="hover:bg-stone-50/50 transition-colors">
                     <td className="px-6 py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium ${
-                          item.flow === "IN"
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium ${item.flow === "IN"
                             ? "bg-emerald-50 text-[#00b560]"
                             : "bg-rose-50 text-rose-600"
-                        }`}
+                          }`}
                       >
                         {item.flow === "IN" ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
                         {item.flow === "IN" ? "INFLOW" : "OUTFLOW"}
@@ -366,28 +364,34 @@ export default function Cashflow() {
                         <p className="font-medium text-stone-900">{item.category}</p>
                         {item.status && (
                           <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase ${
-                              ["finished", "completed"].includes((item.status || "").toLowerCase())
+                            className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase ${["finished", "completed"].includes((item.status || "").toLowerCase())
                                 ? "bg-emerald-100 text-emerald-800"
                                 : (item.status || "").toLowerCase() === "cancelled"
-                                ? "bg-rose-100 text-rose-700"
-                                : "bg-stone-100 text-stone-600"
-                            }`}
+                                  ? "bg-rose-100 text-rose-700"
+                                  : "bg-stone-100 text-stone-600"
+                              }`}
                           >
                             {item.status}
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-stone-400 mt-0.5">{item.note}</p>
+                      <p className="text-[10px] text-stone-400 mt-0.5">
+                        {item.addonService || item.note}
+                        {item.receiptNo ? ` · R.No. ${item.receiptNo}` : ""}
+                      </p>
                     </td>
-                    <td className="px-6 py-3.5 text-stone-600">{item.who}</td>
+                    <td className="px-6 py-3.5 text-stone-600">
+                      <p>{item.who}</p>
+                      {item.receiptNo && (
+                        <p className="text-[10px] text-stone-400 mt-0.5">R.No. {item.receiptNo}</p>
+                      )}
+                    </td>
                     <td className="px-6 py-3.5 text-stone-500">
                       {formatMethod(item.method, item.bankName)}
                     </td>
                     <td
-                      className={`px-6 py-3.5 text-right text-sm font-semibold ${
-                        item.flow === "IN" ? "text-stone-900" : "text-rose-600"
-                      }`}
+                      className={`px-6 py-3.5 text-right text-sm font-semibold ${item.flow === "IN" ? "text-stone-900" : "text-rose-600"
+                        }`}
                     >
                       {item.flow === "IN" ? "+" : "-"}
                       {currency(item.amount)}
