@@ -49,7 +49,6 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
     db.select().from(b.monthlyExpenses),
 
     db.select().from(b.booking)
-      .where(and(gte(b.booking.created_at, startDate), lte(b.booking.created_at, endDate)))
   ]);
 
   const relatedBookingIds = [
@@ -136,7 +135,10 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
     const method = bk.payment_method || "Cash";
 
     if (!paymentBookingIds.has(bk.id)) {
-      if (advancePaid > 0) {
+      const bookingCreatedInRange = bk.created_at >= startDate && bk.created_at <= endDate;
+      const bookingUpdatedInRange = bk.updated_at >= startDate && bk.updated_at <= endDate;
+
+      if (advancePaid > 0 && bookingCreatedInRange) {
         addInflow(
           `booking-adv-${bk.id}`,
           bk.created_at,
@@ -150,7 +152,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
         );
       }
 
-      if ((status === "finished" || status === "completed") && remainingBalance > 0) {
+      if ((status === "finished" || status === "completed") && remainingBalance > 0 && bookingUpdatedInRange) {
         addInflow(
           `booking-settlement-${bk.id}`,
           bk.updated_at || bk.created_at,
