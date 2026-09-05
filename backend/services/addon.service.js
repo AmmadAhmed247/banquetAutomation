@@ -3,46 +3,46 @@ const { addons, payments } = require("../model/schema");
 const { eq, and } = require("drizzle-orm");
 
 async function addAddon({ bookingId, service, client_price, vendor_cost, description }) {
-    const commission = Number(client_price || 0) - Number(vendor_cost || 0);
+  const commission = Number(client_price || 0) - Number(vendor_cost || 0);
 
-    const [newAddon] = await db
-        .insert(addons)
-        .values({
-            bookingId,
-            service,
-            client_price: client_price || 0,
-            vendor_cost: vendor_cost || 0,
-            commission,
-            description: description || "",
-            received: false,
-            received_at: null
-        })
-        .returning();
+  const [newAddon] = await db
+    .insert(addons)
+    .values({
+      bookingId,
+      service,
+      client_price: client_price || 0,
+      vendor_cost: vendor_cost || 0,
+      commission,
+      description: description || "",
+      received: false,
+      received_at: null
+    })
+    .returning();
 
-    return newAddon;
+  return newAddon;
 }
 
 async function GetAllAddons() {
-    return db.select().from(addons);
+  return db.select().from(addons);
 }
 
 async function deleteAddon(id) {
-    const addonId = Number(id);
-    
-    // Fetch the addon first so we know its details for cleanup
-    const [existing] = await db.select().from(addons).where(eq(addons.id, addonId));
-    if (existing) {
-        // Remove the corresponding payment entry from cash flow if it exists
-        await db.delete(payments)
-            .where(
-                and(
-                    eq(payments.bookingId, existing.bookingId),
-                    eq(payments.note, `Add-on: ${existing.service}`)
-                )
-            );
-    }
+  const addonId = Number(id);
 
-    return db.delete(addons).where(eq(addons.id, addonId));
+  // Fetch the addon first so we know its details for cleanup
+  const [existing] = await db.select().from(addons).where(eq(addons.id, addonId));
+  if (existing) {
+    // Remove the corresponding payment entry from cash flow if it exists
+    await db.delete(payments)
+      .where(
+        and(
+          eq(payments.bookingId, existing.bookingId),
+          eq(payments.note, `Add-on #${existing.id}: ${existing.service}`)
+        )
+      );
+  }
+
+  return db.delete(addons).where(eq(addons.id, addonId));
 }
 
 async function updateAddon(addonId, data) {
