@@ -331,10 +331,30 @@ async function UpdateBooking(bookingId, bookingData) {
         });
       }
 
-      // Final settlement (can use DIFFERENT method)
-      if (justFinished) {
-        const remaining = Number(totalAmount || 0) - Number(advancePaid || 0);
-        if (remaining > 0) {
+      // Keep the latest final settlement synchronized when a finished booking is edited.
+      if (FINISHED.includes((status || "").toLowerCase())) {
+        const remaining = Number(totalAmount || 0) - Number(existing.advance_paid || 0);
+        const [settlementPayment] = await tx
+          .select()
+          .from(payments)
+          .where(and(
+            eq(payments.bookingId, saved.id),
+            eq(payments.category, "Event Final Settlement")
+          ))
+          .orderBy(sql`${payments.created_at} DESC`)
+          .limit(1);
+
+        if (remaining > 0 && settlementPayment) {
+          await tx.update(payments)
+            .set({
+              amount: remaining.toString(),
+              payment_method: settlementPaymentMethod || "Cash",
+              bank_name: settlementBankName || null,
+              who: client,
+              note: `Final settlement for booking #${rNo || saved.id} (${event})`,
+            })
+            .where(eq(payments.id, settlementPayment.id));
+        } else if (remaining > 0) {
           await tx.insert(payments).values({
             flow: "IN",
             category: "Event Final Settlement",
@@ -345,8 +365,10 @@ async function UpdateBooking(bookingId, bookingData) {
             note: `Final settlement for booking #${rNo || saved.id} (${event})`,
             bookingId: saved.id,
           });
+        } else if (settlementPayment) {
+          await tx.delete(payments).where(eq(payments.id, settlementPayment.id));
         }
-        
+
         // Update booking payment_method to reflect final settlement method
         await tx
           .update(booking)
