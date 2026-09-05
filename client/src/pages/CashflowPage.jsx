@@ -177,8 +177,8 @@ export default function Cashflow() {
                 key={r.key}
                 onClick={() => setRange(r.key)}
                 className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${range === r.key
-                    ? "bg-stone-900 text-white shadow-sm"
-                    : "text-stone-600 hover:text-stone-900"
+                  ? "bg-stone-900 text-white shadow-sm"
+                  : "text-stone-600 hover:text-stone-900"
                   }`}
               >
                 {r.label}
@@ -187,8 +187,8 @@ export default function Cashflow() {
             <button
               onClick={() => setRange("custom")}
               className={`px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${range === "custom"
-                  ? "bg-stone-900 text-white shadow-sm"
-                  : "text-stone-600 hover:text-stone-900"
+                ? "bg-stone-900 text-white shadow-sm"
+                : "text-stone-600 hover:text-stone-900"
                 }`}
             >
               <Calendar size={13} />
@@ -348,8 +348,8 @@ export default function Cashflow() {
                     <td className="px-6 py-3.5">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium ${item.flow === "IN"
-                            ? "bg-emerald-50 text-[#00b560]"
-                            : "bg-rose-50 text-rose-600"
+                          ? "bg-emerald-50 text-[#00b560]"
+                          : "bg-rose-50 text-rose-600"
                           }`}
                       >
                         {item.flow === "IN" ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
@@ -365,10 +365,10 @@ export default function Cashflow() {
                         {item.status && (
                           <span
                             className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase ${["finished", "completed"].includes((item.status || "").toLowerCase())
-                                ? "bg-emerald-100 text-emerald-800"
-                                : (item.status || "").toLowerCase() === "cancelled"
-                                  ? "bg-rose-100 text-rose-700"
-                                  : "bg-stone-100 text-stone-600"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : (item.status || "").toLowerCase() === "cancelled"
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-stone-100 text-stone-600"
                               }`}
                           >
                             {item.status}
@@ -377,7 +377,6 @@ export default function Cashflow() {
                       </div>
                       <p className="text-[10px] text-stone-400 mt-0.5">
                         {item.addonService || item.note}
-                        {item.receiptNo ? ` · R.No. ${item.receiptNo}` : ""}
                       </p>
                     </td>
                     <td className="px-6 py-3.5 text-stone-600">

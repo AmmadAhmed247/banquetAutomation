@@ -54,16 +54,14 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
 
   const relatedBookingIds = [
     ...rangeAddons.map((addon) => addon.bookingId),
-    ...rangePayments
-      .filter((payment) => (payment.category || "").toLowerCase() === "addon")
-      .map((payment) => payment.bookingId),
+    ...rangePayments.map((payment) => payment.bookingId),
   ].filter(Boolean);
-  const addonBookings = relatedBookingIds.length > 0
+  const relatedBookings = relatedBookingIds.length > 0
     ? await db.select({ id: b.booking.id, client: b.booking.client, rNo: b.booking.r_no })
       .from(b.booking)
       .where(inArray(b.booking.id, relatedBookingIds))
     : [];
-  const addonBookingById = new Map(addonBookings.map((booking) => [booking.id, booking]));
+  const bookingById = new Map(relatedBookings.map((booking) => [booking.id, booking]));
 
   const paymentBookingIds = new Set(allPayments.map((p) => p.bookingId));
 
@@ -104,7 +102,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
 
   rangePayments.forEach((p) => {
     const isAddonPayment = (p.category || "").toLowerCase() === "addon";
-    const booking = isAddonPayment ? addonBookingById.get(p.bookingId) : null;
+    const booking = bookingById.get(p.bookingId);
     const addonService = isAddonPayment
       ? (p.note || "").replace(/^Add-on #\d+:\s*/i, "")
       : null;
@@ -113,13 +111,13 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
       p.created_at,
       isAddonPayment ? "Addon" : p.category || "Payment",
       isAddonPayment ? addonService || "Addon Payment" : p.note || `Payment Received (${p.category || "Booking"})`,
-      isAddonPayment ? booking?.client || p.who || "Unknown Client" : p.who || null,
+      booking?.client || p.who || null,
       p.payment_method || "Cash",
       Number(p.amount || 0),
       p.bank_name,
       isAddonPayment
         ? { receiptNo: booking?.rNo || null, addonService }
-        : {}
+        : { receiptNo: booking?.rNo || null }
     );
   });
 
@@ -172,7 +170,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
         && Number(payment.amount || 0) === Number(a.client_price || 0)
     );
     if (hasPayment) return;
-    const booking = addonBookingById.get(a.bookingId);
+    const booking = bookingById.get(a.bookingId);
     const clientPrice = Number(a.client_price || 0);
     if (clientPrice <= 0) return;
 
@@ -192,7 +190,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
   // Addon money OUT — what gets paid to the vendor for that same addon.
   rangeAddons.forEach((a) => {
     if (!a.received) return; // vendor only gets paid once client has paid
-    const booking = addonBookingById.get(a.bookingId);
+    const booking = bookingById.get(a.bookingId);
     const vendorCost = Number(a.vendor_cost || 0);
     if (vendorCost <= 0) return;
 
