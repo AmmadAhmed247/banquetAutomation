@@ -67,7 +67,9 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
 
   const activity = [];
   let totalIn = 0;
+  let cashIn = 0;
   let totalOut = 0;
+  let cashOut = 0; // NEW — mirrors cashIn, so net can be pure cash-in-hand
   const byMethod = {};
 
   const resolveInflowMethod = (method, bank) => {
@@ -83,21 +85,24 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
     return method || "Cash";
   };
 
-  // extra now flows through on inflows too (receiptNo, addonService, etc.) —
-  // previously only addOutflow supported this, which is why addon inflow
-  // rows had nowhere to carry the booking's r_no.
   const addInflow = (id, time, category, note, who, method, amount, bank, extra = {}) => {
     if (amount <= 0) return;
     const m = resolveInflowMethod(method, bank);
     byMethod[m] = (byMethod[m] || 0) + amount;
     totalIn += amount;
+    if (m === "Cash") cashIn += amount;
     activity.push({ id, time, flow: "IN", category, note, who, method: m, amount, ...extra });
   };
 
+  // Outflows now resolve method the same way inflows do, so a vendor
+  // payout or expense paid via bank/JazzCash/etc. doesn't get treated as
+  // a cash outflow — otherwise it wrongly drags down cash-in-hand.
   const addOutflow = (id, time, category, note, who, method, amount, extra = {}) => {
     if (amount <= 0) return;
+    const m = (method || "Cash").trim() || "Cash";
     totalOut += amount;
-    activity.push({ id, time, flow: "OUT", category, note, who, method: method || "Cash", amount, ...extra });
+    if (m.toLowerCase() === "cash") cashOut += amount;
+    activity.push({ id, time, flow: "OUT", category, note, who, method: m, amount, ...extra });
   };
 
   rangePayments.forEach((p) => {
@@ -239,7 +244,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
   return {
     totalIn,
     totalOut,
-    net: totalIn - totalOut,
+    net: cashIn - cashOut, // pure cash-in-hand: bank/JazzCash/EasyPaisa money on both sides excluded
     byMethod,
     activity,
   };
