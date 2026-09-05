@@ -204,7 +204,7 @@ async function GetAllBookingsUnfiltered() {
     return { success: true, bookings: mapped };
   } catch (error) {
     console.log("Error On Getting All Bookings (Service): ", error);
-    return { success: false, message: "Failed to fetch bookings", error: error.message };
+    return { success: false, message: "Failed to fetch all bookings", error: error.message };
   }
 }
 
@@ -268,7 +268,6 @@ async function UpdateBooking(bookingId, bookingData) {
       };
     }
 
-    // IMPORTANT: read old values BEFORE updating
     const [existing] = await db
       .select({ status: booking.status, advance_paid: booking.advance_paid })
       .from(booking)
@@ -279,11 +278,7 @@ async function UpdateBooking(bookingId, bookingData) {
     }
 
     const FINISHED = ["finished", "completed"];
-    const justFinished =
-      !FINISHED.includes((existing.status || "").toLowerCase()) &&
-      FINISHED.includes((status || "").toLowerCase());
-
-    const advanceDelta = Number(advancePaid || 0) - Number(existing.advance_paid || 0);
+    const isNowFinished = FINISHED.includes((status || "").toLowerCase());
 
     const savedBooking = await db.transaction(async (tx) => {
       const updatedBooking = await tx
@@ -316,60 +311,96 @@ async function UpdateBooking(bookingId, bookingData) {
       }
 
       const saved = updatedBooking[0];
+      const newAdvance = Number(advancePaid || 0);
 
-      // Extra advance paid
-      if (!justFinished && advanceDelta > 0) {
-        await tx.insert(payments).values({
-          flow: "IN",
-          category: "Booking Advance",
-          amount: advanceDelta.toString(),
-          payment_method: paymentMethod || "Cash",
-          bank_name: bankName || null,
-          who: client,
-          note: `Additional advance for booking #${rNo || saved.id} (${event})`,
-          bookingId: saved.id,
-        });
-      }
+      // Keep a single "Booking Advance" payment row synced to the
+      // booking's CURRENT truth (amount, method, bank, client, note) on
+      // every edit — instead of only ever inserting positive deltas, which
+      // left stale rows behind whenever an amount was corrected downward
+      // or a method/bank/client was changed after the fact.
+      const [existingAdvancePayment] = await tx
+        .select()
+        .from(payments)
+        .where(and(
+          eq(payments.bookingId, saved.id),
+          eq(payments.category, "Booking Advance")
+        ))
+        .orderBy(sql`${payments.created_at} DESC`)
+        .limit(1);
 
-      // Keep the latest final settlement synchronized when a finished booking is edited.
-      if (FINISHED.includes((status || "").toLowerCase())) {
-        const remaining = Number(totalAmount || 0) - Number(existing.advance_paid || 0);
-        const [settlementPayment] = await tx
-          .select()
-          .from(payments)
-          .where(and(
-            eq(payments.bookingId, saved.id),
-            eq(payments.category, "Event Final Settlement")
-          ))
-          .orderBy(sql`${payments.created_at} DESC`)
-          .limit(1);
-
-        if (remaining > 0 && settlementPayment) {
+      if (newAdvance > 0) {
+        if (existingAdvancePayment) {
           await tx.update(payments)
             .set({
+              amount: newAdvance.toString(),
+              payment_method: paymentMethod || "Cash",
+              bank_name: bankName || null,
+              who: client,
+              note: `Advance for booking #${rNo || saved.id} (${event})`,
+            })
+            .where(eq(payments.id, existingAdvancePayment.id));
+        } else {
+          await tx.insert(payments).values({
+            flow: "IN",
+            category: "Booking Advance",
+            amount: newAdvance.toString(),
+            payment_method: paymentMethod || "Cash",
+            bank_name: bankName || null,
+            who: client,
+            note: `Advance for booking #${rNo || saved.id} (${event})`,
+            bookingId: saved.id,
+          });
+        }
+      } else if (existingAdvancePayment) {
+        // Advance corrected down to zero — no cashflow record should remain.
+        await tx.delete(payments).where(eq(payments.id, existingAdvancePayment.id));
+      }
+
+      // Keep the "Event Final Settlement" row synced the same way, using
+      // the NEW advancePaid (not existing.advance_paid, which was the
+      // pre-update value and caused wrong remaining-balance math whenever
+      // advance and status were both changed in the same edit).
+      const [settlementPayment] = await tx
+        .select()
+        .from(payments)
+        .where(and(
+          eq(payments.bookingId, saved.id),
+          eq(payments.category, "Event Final Settlement")
+        ))
+        .orderBy(sql`${payments.created_at} DESC`)
+        .limit(1);
+
+      if (isNowFinished) {
+        const remaining = Number(totalAmount || 0) - newAdvance;
+
+        if (remaining > 0) {
+          if (settlementPayment) {
+            await tx.update(payments)
+              .set({
+                amount: remaining.toString(),
+                payment_method: settlementPaymentMethod || "Cash",
+                bank_name: settlementBankName || null,
+                who: client,
+                note: `Final settlement for booking #${rNo || saved.id} (${event})`,
+              })
+              .where(eq(payments.id, settlementPayment.id));
+          } else {
+            await tx.insert(payments).values({
+              flow: "IN",
+              category: "Event Final Settlement",
               amount: remaining.toString(),
               payment_method: settlementPaymentMethod || "Cash",
               bank_name: settlementBankName || null,
               who: client,
               note: `Final settlement for booking #${rNo || saved.id} (${event})`,
-            })
-            .where(eq(payments.id, settlementPayment.id));
-        } else if (remaining > 0) {
-          await tx.insert(payments).values({
-            flow: "IN",
-            category: "Event Final Settlement",
-            amount: remaining.toString(),
-            payment_method: settlementPaymentMethod || "Cash",
-            bank_name: settlementBankName || null,
-            who: client,
-            note: `Final settlement for booking #${rNo || saved.id} (${event})`,
-            bookingId: saved.id,
-          });
+              bookingId: saved.id,
+            });
+          }
         } else if (settlementPayment) {
+          // Fully paid off by the advance alone — no remaining balance owed.
           await tx.delete(payments).where(eq(payments.id, settlementPayment.id));
         }
 
-        // Update booking payment_method to reflect final settlement method
         await tx
           .update(booking)
           .set({
@@ -377,6 +408,11 @@ async function UpdateBooking(bookingId, bookingData) {
             bank_name: settlementBankName || null,
           })
           .where(eq(booking.id, saved.id));
+      } else if (settlementPayment) {
+        // Status moved back to Pending/Confirmed/etc. — that settlement
+        // never actually happened, so the cashflow record shouldn't
+        // pretend it did.
+        await tx.delete(payments).where(eq(payments.id, settlementPayment.id));
       }
 
       return saved;
@@ -450,7 +486,6 @@ async function addBookingNote(bookingId, noteText, options = {}) {
 
   const currentNote = existing[0].note;
 
-  // Timestamp in Pakistan Standard Time (Asia/Karachi, UTC+5)
   const timestamp = new Date().toLocaleString("en-US", {
     timeZone: "Asia/Karachi",
     dateStyle: "medium",
@@ -469,7 +504,7 @@ async function addBookingNote(bookingId, noteText, options = {}) {
     .update(booking)
     .set({
       note: finalNote,
-      updated_at: sql`now()`, // this stays UTC in Postgres — see note below
+      updated_at: sql`now()`,
     })
     .where(eq(booking.id, bookingId))
     .returning();

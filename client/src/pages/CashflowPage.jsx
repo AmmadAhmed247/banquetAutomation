@@ -108,6 +108,7 @@ export default function Cashflow() {
   const totalIn = cashflowData?.totalIn || 0;
   const totalOut = cashflowData?.totalOut || 0;
   const net = cashflowData?.net || 0;
+  const cashInHand = cashflowData?.cashInHand ?? (net - (cashflowData?.bankIn || 0));
   const paymentBoxes = [
     { label: "Cash Received", key: "Cash", color: "text-emerald-600", bg: "bg-emerald-50" },
     { label: "Meezan Bank", key: "Meezan Bank Sadar", color: "text-blue-600", bg: "bg-blue-50" },
@@ -216,7 +217,7 @@ export default function Cashflow() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
         <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-semibold tracking-wider text-stone-400 uppercase">
@@ -268,6 +269,26 @@ export default function Cashflow() {
               {`${net < 0 ? "-" : ""}${currency(Math.abs(net))}`}
             </h2>
             <p className="text-[11px] text-stone-400 mt-2">Net Cashflow ({rangeLabel})</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold tracking-wider text-stone-400 uppercase">
+              CASH IN HAND
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+              <Wallet size={16} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <h2
+              className={`text-2xl lg:text-3xl font-semibold tracking-tight ${cashInHand >= 0 ? "text-stone-900" : "text-rose-600"
+                }`}
+            >
+              {`${cashInHand < 0 ? "-" : ""}${currency(Math.abs(cashInHand))}`}
+            </h2>
+            <p className="text-[11px] text-stone-400 mt-2">Net less bank/wallet receipts ({rangeLabel})</p>
           </div>
         </div>
 

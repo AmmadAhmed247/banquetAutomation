@@ -246,7 +246,9 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
   return {
     totalIn,
     totalOut,
-    net: cashIn - cashOut, // pure cash-in-hand: bank/JazzCash/EasyPaisa money on both sides excluded
+    net: totalIn - totalOut,
+    bankIn: totalIn - cashIn,
+    cashInHand: (totalIn - totalOut) - (totalIn - cashIn),
     byMethod,
     activity,
   };
