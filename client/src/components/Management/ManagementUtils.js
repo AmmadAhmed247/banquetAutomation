@@ -4,7 +4,30 @@ export const MONTHLY_EXPENSE_CATEGORIES = ["Electric Bill", "Diesel" , "Sui Gas"
 export const DAILY_EXPENSE_CATEGORIES = ["Kitchen/Tea", "Maintenance", "Petty Cash", "Office"];
 export const ADDON_CATEGORIES = ["Pepsi Co.", "Coca Cola Co.", "Fresh Flower", "Cola Next", "Dance Floor", "Water Bottles", "Ayaz Tissue", "Stage", "Fire Crackers", "Ladies Staff", "Miscellaneous" , "BBQ" , "Sound System", "Entry" , "Decoration"];
 export const ADDON_PAYMENT_METHODS = ["Cash", "JazzCash", "EasyPaisa", "Habib Metro Usman", "Meezan Bank Sadar"];
-export const CURRENT_YEAR = new Date().getFullYear();
+export function getPKTDateParts(dateInput = new Date()) {
+  const parsed = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (!parsed || Number.isNaN(parsed.getTime())) return { year: null, month: null, day: null };
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(parsed);
+
+  const partMap = {};
+  parts.forEach((part) => {
+    if (part.type !== "literal") partMap[part.type] = part.value;
+  });
+
+  return {
+    year: Number(partMap.year || 0),
+    month: Number(partMap.month || 0),
+    day: Number(partMap.day || 0),
+  };
+}
+
+export const CURRENT_YEAR = getPKTDateParts().year || new Date().getFullYear();
 export const YEARS = [CURRENT_YEAR, CURRENT_YEAR + 1];
 
 export function currency(n) { return "₨ " + Number(n || 0).toLocaleString("en-PK"); }
@@ -16,9 +39,9 @@ export function compactCurrency(n) {
 export function pct(a, b) { if (!b) return 0; return Math.round((a / b) * 100); }
 
 export function getPKTDateISO(dateInput = new Date()) {
-  const parsed = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-  if (!parsed || Number.isNaN(parsed.getTime())) return "";
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" }).format(parsed);
+  const { year, month, day } = getPKTDateParts(dateInput);
+  if (!year || !month || !day) return "";
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 export function daysUntil(dateStr) {

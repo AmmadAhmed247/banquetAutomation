@@ -25,15 +25,24 @@ export function useManagementData({
   }), [bookings, selectedYear, selectedMonth, hallFilter]);
 
   const ledgerFilteredBookings = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcoming = filteredBookings.filter(b => {
+      const bookingDate = new Date(b.date);
+      bookingDate.setHours(0, 0, 0, 0);
+      return bookingDate >= today && !['Cancelled', 'Pending'].includes(b.status);
+    });
+
     const q = ledgerSearch.trim().toLowerCase();
     const receiptQuery = q.replace(/^r\.?\s*n(?:o\.?|umber)?\s*[:#-]?\s*/i, "").replace(/^#/, "");
     const res = q
-      ? filteredBookings.filter(b =>
+      ? upcoming.filter(b =>
           (b.client || "").toLowerCase().includes(q) ||
           (b.event || "").toLowerCase().includes(q) ||
           (b.hall || "").toLowerCase().includes(q) ||
           (receiptQuery && String(b.r_no || "").toLowerCase().includes(receiptQuery)))
-      : filteredBookings;
+      : upcoming;
     return [...res].sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [filteredBookings, ledgerSearch]);
 

@@ -7,11 +7,21 @@ const { gte, lte, and, inArray, sql } = require("drizzle-orm");
  * for the given date range. Shared by the /api/cashflow route and the
  * daily WhatsApp summary cron job, so both always agree on the numbers.
  */
-const KARACHI_OFFSET_MIN = 5 * 60;
-
 function karachiDateString(date) {
-  const pktDate = new Date(date.getTime() + KARACHI_OFFSET_MIN * 60000);
-  return `${pktDate.getUTCFullYear()}-${String(pktDate.getUTCMonth() + 1).padStart(2, "0")}-${String(pktDate.getUTCDate()).padStart(2, "0")}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const partMap = {};
+  parts.forEach((part) => {
+    if (part.type !== "literal") partMap[part.type] = part.value;
+  });
+
+  const { year, month, day } = partMap;
+  return year && month && day ? `${year}-${month}-${day}` : "";
 }
 
 async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {}) {
@@ -228,17 +238,22 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ } = {})
 
   rangeMonthlyExpenses.forEach((m) => {
     const expenseMonthIndex = Number(m.year) * 12 + Number(m.month) - 1;
-    if (expenseMonthIndex >= startMonthIndex && expenseMonthIndex <= endMonthIndex) {
-      addOutflow(
-        `monthly-${m.id}`,
-        new Date(`${m.year}-${String(m.month).padStart(2, "0")}-01T00:00:00.000+05:00`),
-        "Monthly Overhead",
-        m.label || m.category,
-        null,
-        "Cash",
-        Number(m.amount || 0)
-      );
-    }
+    const monthStart = new Date(`${m.year}-${String(m.month).padStart(2, "0")}-01T00:00:00.000+05:00`);
+    const createdAt = m.created_at ? new Date(m.created_at) : null;
+    const inRangeByCreatedAt = createdAt && createdAt >= startDate && createdAt <= endDate;
+    const inRangeByMonth = !createdAt && expenseMonthIndex >= startMonthIndex && expenseMonthIndex <= endMonthIndex;
+
+    if (!inRangeByCreatedAt && !inRangeByMonth) return;
+
+    addOutflow(
+      `monthly-${m.id}`,
+      createdAt || monthStart,
+      "Monthly Overhead",
+      m.label || m.category,
+      null,
+      "Cash",
+      Number(m.amount || 0)
+    );
   });
 
   activity.sort((a, b2) => new Date(b2.time).getTime() - new Date(a.time).getTime());

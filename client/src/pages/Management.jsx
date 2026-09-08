@@ -9,7 +9,7 @@ import { getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense
 import { getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense } from "../lib/hooks/dailyExpense.hook";
 
 // Utils & data hook
-import { CURRENT_YEAR, STANDARD_EXPENSE_CATEGORIES, MONTHLY_EXPENSE_CATEGORIES, DAILY_EXPENSE_CATEGORIES, ADDON_CATEGORIES, getPKTDateISO } from "../components/Management/ManagementUtils.js";
+import { CURRENT_YEAR, STANDARD_EXPENSE_CATEGORIES, MONTHLY_EXPENSE_CATEGORIES, DAILY_EXPENSE_CATEGORIES, ADDON_CATEGORIES, getPKTDateISO, getPKTDateParts } from "../components/Management/ManagementUtils.js";
 import { useManagementData } from "../components/Management/useManagementData.js";
 
 // Section components
@@ -70,7 +70,8 @@ export default function Management() {
   const [addingTo, setAddingTo] = useState(null);
   const [mode, setMode] = useState("expense");
 
-  const [newMonthly, setNewMonthly] = useState({ category: MONTHLY_EXPENSE_CATEGORIES[0], label: "", amount: "", month: new Date().getMonth() + 1, year: new Date().getFullYear() });
+  const { month: todayMonthPKT, year: todayYearPKT } = getPKTDateParts();
+  const [newMonthly, setNewMonthly] = useState({ category: MONTHLY_EXPENSE_CATEGORIES[0], label: "", amount: "", month: todayMonthPKT || new Date().getMonth() + 1, year: todayYearPKT || new Date().getFullYear() });
   const [newDaily, setNewDaily] = useState({ category: DAILY_EXPENSE_CATEGORIES[0], label: "", amount: "", date: getPKTDateISO() });
   const [newExp, setNewExp] = useState({ category: STANDARD_EXPENSE_CATEGORIES[0], label: "", amount: "" });
   const [newAddon, setNewAddon] = useState({ service: ADDON_CATEGORIES[0], client_price: "", vendor_cost: "", description: "" });

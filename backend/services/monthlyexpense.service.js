@@ -11,6 +11,7 @@ async function addMonthlyExpense({ category, label, amount, month, year }) {
             amount: amount || 0,
             month,
             year,
+            created_at: new Date(),
         })
         .returning();
 

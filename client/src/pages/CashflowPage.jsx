@@ -16,17 +16,24 @@ import { useGetCashflow } from "../lib/hooks/cashflow.hook";
 const currency = (n) => `Rs ${Number(n || 0).toLocaleString("en-PK")}`;
 
 const getPKTDateISO = (dateInput) => {
-  let d = dateInput || new Date();
+  const parsedDate = typeof dateInput === "string" ? new Date(dateInput) : (dateInput || new Date());
+  if (!parsedDate || Number.isNaN(parsedDate.getTime())) return "";
 
-  if (typeof d === "string" && d.trim().length === 7) {
-    d = `${d.trim()}-01`;
-  }
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(parsedDate);
 
-  const parsedDate = typeof d === "string" ? new Date(d) : d;
-  if (isNaN(parsedDate.getTime())) return "";
+  const partMap = {};
+  parts.forEach((part) => {
+    if (part.type !== "literal") partMap[part.type] = part.value;
+  });
 
-  const pktDate = new Date(parsedDate.getTime() + 5 * 60 * 60 * 1000);
-  return `${pktDate.getUTCFullYear()}-${String(pktDate.getUTCMonth() + 1).padStart(2, "0")}-${String(pktDate.getUTCDate()).padStart(2, "0")}`;
+  const { year, month, day } = partMap;
+  if (!year || !month || !day) return "";
+  return `${year}-${month}-${day}`;
 };
 
 function formatMethod(method, bank) {
