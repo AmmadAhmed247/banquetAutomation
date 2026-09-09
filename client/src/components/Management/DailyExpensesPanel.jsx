@@ -1,6 +1,8 @@
 import { Trash2 } from "lucide-react";
 import { DAILY_EXPENSE_CATEGORIES, currency } from "./ManagementUtils.js";
 
+const QUANTITY_CATEGORIES = ["Pepsi Co.", "Coca Cola Co." ];
+
 function isTodayPKT(dateInput) {
   if (!dateInput) return false;
   const todayPKT = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date());
@@ -20,6 +22,7 @@ export function DailyExpensesPanel({
   deleteDailyExpenseMutation,
 }) {
   const visible = allDailyExpenses.filter(de => isTodayPKT(de.date));
+  const isQuantityCategory = QUANTITY_CATEGORIES.includes(newDaily.category);
 
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
@@ -57,10 +60,44 @@ export function DailyExpensesPanel({
       {addingDaily && (
         <div className="flex flex-col gap-2 pt-3 border-t border-stone-100">
           <input type="date" value={newDaily.date} onChange={(e) => setNewDaily({ ...newDaily, date: e.target.value })} className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none" />
-          <select value={newDaily.category} onChange={(e) => setNewDaily({ ...newDaily, category: e.target.value })} className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white">
+          <select
+            value={newDaily.category}
+            onChange={(e) => {
+              const category = e.target.value;
+              // reset label when switching into/out of a quantity category
+              setNewDaily({ ...newDaily, category, label: "" });
+            }}
+            className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white"
+          >
             {DAILY_EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
           </select>
-          <input value={newDaily.label} onChange={(e) => setNewDaily({ ...newDaily, label: e.target.value })} placeholder="Label" className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none" />
+
+          {isQuantityCategory ? (
+            <input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              step="1"
+              value={newDaily.label}
+              onChange={(e) => {
+                const val = e.target.value;
+                // only allow whole numbers (or empty while typing)
+                if (val === "" || /^\d+$/.test(val)) {
+                  setNewDaily({ ...newDaily, label: val });
+                }
+              }}
+              placeholder="Quantity"
+              className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none"
+            />
+          ) : (
+            <input
+              value={newDaily.label}
+              onChange={(e) => setNewDaily({ ...newDaily, label: e.target.value })}
+              placeholder="Label"
+              className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none"
+            />
+          )}
+
           <input type="number" value={newDaily.amount} onChange={(e) => setNewDaily({ ...newDaily, amount: e.target.value })} placeholder="Amount" className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none" />
           <div className="flex gap-2">
             <button

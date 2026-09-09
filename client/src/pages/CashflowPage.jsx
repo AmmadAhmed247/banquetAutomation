@@ -81,17 +81,18 @@ export default function Cashflow() {
     return { queryStart: "", queryEnd: "" };
   }, [range, startDate, endDate, todayPKT]);
 
-  // Single source of truth — passing range so backend knows when to fetch all history
+  // ── Single source of truth ───────────────────────────────────────────────
   const cashflowQuery = useGetCashflow({
     start: range === "all" ? "" : queryStart,
     end: range === "all" ? "" : queryEnd,
-    range
+    range,
   });
-  const cashflowData = cashflowQuery?.data;
 
-  // Still need raw bookings just for the receivables card
+  const data = cashflowQuery?.data || {};
+  const isLoading = cashflowQuery.isLoading;
+
+  // Still need bookings only for receivables
   const bookingsQuery = getAllBookings();
-  const isLoading = cashflowQuery.isLoading || bookingsQuery.isLoading;
   const extractArray = (raw) => {
     if (Array.isArray(raw)) return raw;
     if (Array.isArray(raw?.data)) return raw.data;
@@ -112,21 +113,30 @@ export default function Cashflow() {
       }, 0);
   }, [bookings]);
 
-  const totalIn = cashflowData?.totalIn || 0;
-  const totalOut = cashflowData?.totalOut || 0;
-  const net = cashflowData?.net || 0;
-  const cashInHand = cashflowData?.cashInHand ?? (net - (cashflowData?.bankIn || 0));
+  // ── Values from unified backend ──────────────────────────────────────────
+  const totalIn = data.totalIn || 0;
+  const totalOut = data.totalOut || 0;
+  const net = data.net || 0;
+  const cashInHand = data.cashInHand ?? 0;
+  const byMethod = data.byMethod || {};
+  const activity = data.activity || [];
+
+  // Extra finance metrics (available if you need them later)
+  const grossRevenue = data.grossRevenue || 0;
+  const netProfit = data.netProfit || 0;
+  const addonCommission = data.addonCommission || 0;
+  const monthlyExpense = data.monthlyExpense || 0;
+  const dailyExpense = data.dailyExpense || 0;
+
   const paymentBoxes = [
     { label: "Cash Received", key: "Cash", color: "text-emerald-600", bg: "bg-emerald-50" },
     { label: "Meezan Bank", key: "Meezan Bank Sadar", color: "text-blue-600", bg: "bg-blue-50" },
     { label: "Habib Metro", key: "Habib Metro Usman", color: "text-indigo-600", bg: "bg-indigo-50" },
     { label: "JazzCash", key: "JazzCash", color: "text-orange-600", bg: "bg-orange-50" },
     { label: "EasyPaisa", key: "EasyPaisa", color: "text-lime-600", bg: "bg-lime-50" },
-
   ];
 
   const mergedActivity = useMemo(() => {
-    const activity = cashflowData?.activity || [];
     return activity.map((item) => ({
       id: item.id,
       flow: item.flow,
@@ -139,7 +149,7 @@ export default function Cashflow() {
       amount: item.amount,
       date: item.time,
     }));
-  }, [cashflowData]);
+  }, [activity]);
 
   const rangeLabel =
     range === "today"
@@ -149,7 +159,6 @@ export default function Cashflow() {
         : range === "all"
           ? "all time"
           : "selected range";
-
 
   if (isLoading) {
     return (
@@ -164,6 +173,7 @@ export default function Cashflow() {
 
   return (
     <div className="min-h-screen bg-[#fcfcfc] p-6 lg:p-10 text-stone-800 antialiased font-sans">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <span className="text-[10px] font-semibold tracking-widest text-[#00b560] uppercase">
@@ -184,20 +194,22 @@ export default function Cashflow() {
               <button
                 key={r.key}
                 onClick={() => setRange(r.key)}
-                className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${range === r.key
-                  ? "bg-stone-900 text-white shadow-sm"
-                  : "text-stone-600 hover:text-stone-900"
-                  }`}
+                className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
+                  range === r.key
+                    ? "bg-stone-900 text-white shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
               >
                 {r.label}
               </button>
             ))}
             <button
               onClick={() => setRange("custom")}
-              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${range === "custom"
-                ? "bg-stone-900 text-white shadow-sm"
-                : "text-stone-600 hover:text-stone-900"
-                }`}
+              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                range === "custom"
+                  ? "bg-stone-900 text-white shadow-sm"
+                  : "text-stone-600 hover:text-stone-900"
+              }`}
             >
               <Calendar size={13} />
               Custom
@@ -224,6 +236,7 @@ export default function Cashflow() {
         </div>
       </div>
 
+      {/* Main KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
         <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -270,8 +283,9 @@ export default function Cashflow() {
           </div>
           <div className="mt-4">
             <h2
-              className={`text-2xl lg:text-3xl font-semibold tracking-tight ${net >= 0 ? "text-stone-900" : "text-rose-600"
-                }`}
+              className={`text-2xl lg:text-3xl font-semibold tracking-tight ${
+                net >= 0 ? "text-stone-900" : "text-rose-600"
+              }`}
             >
               {`${net < 0 ? "-" : ""}${currency(Math.abs(net))}`}
             </h2>
@@ -290,8 +304,9 @@ export default function Cashflow() {
           </div>
           <div className="mt-4">
             <h2
-              className={`text-2xl lg:text-3xl font-semibold tracking-tight ${cashInHand >= 0 ? "text-stone-900" : "text-rose-600"
-                }`}
+              className={`text-2xl lg:text-3xl font-semibold tracking-tight ${
+                cashInHand >= 0 ? "text-stone-900" : "text-rose-600"
+              }`}
             >
               {`${cashInHand < 0 ? "-" : ""}${currency(Math.abs(cashInHand))}`}
             </h2>
@@ -319,6 +334,7 @@ export default function Cashflow() {
         </div>
       </div>
 
+      {/* Payment Method Boxes */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         {paymentBoxes.map((box) => (
           <div key={box.key} className="bg-white p-4 rounded-2xl border border-stone-100 shadow-sm">
@@ -331,13 +347,14 @@ export default function Cashflow() {
               </span>
             </div>
             <h2 className="text-lg font-semibold text-stone-900 tracking-tight mt-3">
-              {currency(cashflowData?.byMethod?.[box.key] || 0)}
+              {currency(byMethod[box.key] || 0)}
             </h2>
             <p className="text-[10px] text-stone-400 mt-1">Received ({rangeLabel})</p>
           </div>
         ))}
       </div>
 
+      {/* Activity Ledger */}
       <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-stone-100 flex items-center justify-between">
           <div>
@@ -375,10 +392,11 @@ export default function Cashflow() {
                   <tr key={item.id} className="hover:bg-stone-50/50 transition-colors">
                     <td className="px-6 py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium ${item.flow === "IN"
-                          ? "bg-emerald-50 text-[#00b560]"
-                          : "bg-rose-50 text-rose-600"
-                          }`}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium ${
+                          item.flow === "IN"
+                            ? "bg-emerald-50 text-[#00b560]"
+                            : "bg-rose-50 text-rose-600"
+                        }`}
                       >
                         {item.flow === "IN" ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
                         {item.flow === "IN" ? "INFLOW" : "OUTFLOW"}
@@ -390,18 +408,6 @@ export default function Cashflow() {
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-1.5">
                         <p className="font-medium text-stone-900">{item.category}</p>
-                        {item.status && (
-                          <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase ${["finished", "completed"].includes((item.status || "").toLowerCase())
-                              ? "bg-emerald-100 text-emerald-800"
-                              : (item.status || "").toLowerCase() === "cancelled"
-                                ? "bg-rose-100 text-rose-700"
-                                : "bg-stone-100 text-stone-600"
-                              }`}
-                          >
-                            {item.status}
-                          </span>
-                        )}
                       </div>
                       <p className="text-[10px] text-stone-400 mt-0.5">
                         {item.addonService || item.note}
@@ -414,11 +420,12 @@ export default function Cashflow() {
                       )}
                     </td>
                     <td className="px-6 py-3.5 text-stone-500">
-                      {formatMethod(item.method, item.bankName)}
+                      {formatMethod(item.method)}
                     </td>
                     <td
-                      className={`px-6 py-3.5 text-right text-sm font-semibold ${item.flow === "IN" ? "text-stone-900" : "text-rose-600"
-                        }`}
+                      className={`px-6 py-3.5 text-right text-sm font-semibold ${
+                        item.flow === "IN" ? "text-stone-900" : "text-rose-600"
+                      }`}
                     >
                       {item.flow === "IN" ? "+" : "-"}
                       {currency(item.amount)}

@@ -86,11 +86,11 @@ export default function Management() {
     ledgerTotalPages,
     expensesByBooking,
     addonsByBooking,
-    totalRevenue,
-    totalExpense,
-    totalProfit,
-    margin,
-    totalAddonCommission,
+    // totalRevenue,
+    // totalExpense,
+    // totalProfit,
+    // margin,
+    // totalAddonCommission,
     hallMonthlyData,
     upcomingEvents,
     selectedBooking,
@@ -171,13 +171,7 @@ export default function Management() {
         setSelectedMonth={setSelectedMonth}
       />
 
-      <KpiGrid
-        totalRevenue={totalRevenue}
-        totalExpense={totalExpense}
-        totalProfit={totalProfit}
-        margin={margin}
-        totalAddonCommission={totalAddonCommission}
-      />
+      <KpiGrid />
 
       <HallPerformanceChart hallMonthlyData={hallMonthlyData} upcomingEvents={upcomingEvents} />
 
