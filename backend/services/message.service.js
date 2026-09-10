@@ -78,11 +78,19 @@ function getMonthPriceMessage(month) {
   const monthName = capitalize(monthNames[month - 1]);
 
   if (!ranges || ranges.length === 0) {
-    return `💰 *Pricing for ${monthName}*\nPlease contact us for pricing details for this month.`;
+    return (
+      `💰 *Pricing for ${monthName}*\n` +
+      `Please contact us for pricing details for this month.\n\n` +
+      `Type *MENU* to return to the main menu.`
+    );
   }
 
   const lines = ranges.map(formatRangeLine);
-  return [`💰 *Pricing for ${monthName}*`, ...lines].join("\n");
+
+  return (
+    [`💰 *Pricing for ${monthName}*`, ...lines].join("\n") +
+    `\n\nType *MENU* to return to the main menu.`
+  );
 }
 
 async function getHelpMessage() {
