@@ -243,7 +243,8 @@ async function handleWhatsappWebhook(req, res) {
                 `*1* — CALENDAR (View availability)\n` +
                 `*2* — GALLERY (See venue photos)\n` +
                 `*3* — SUPPORT (Talk to a human)\n` +
-                `*4* — HELP (Show this menu)\n\n` +
+                `*4* — HELP (Show this menu)\n` +
+                `*5* — PRICING (View all pricing)\n\n`
                 `(Type *SWITCH* or *HALL* anytime to change halls) \n\n `
 
             );
