@@ -2,7 +2,7 @@ const { parseIncoming, sendMessage, sendVoiceCallFollowup } = require("../servic
 const { getSession, setSession, clearSession, getActiveHandoffCustomer, setActiveHandoffCustomer, updateLastInbound } = require("../services/session.service")
 const { getOrCreateUser } = require("../services/user.service")
 const { parseWhatsAppMessage, CreateBooking } = require("../services/booking.service")
-const { getHelpMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage } = require("../services/message.service")
+const { getHelpMessage, getGalleryMessage, getCalendarMessage, getReceiptMessage, getMonthPriceMessage } = require("../services/message.service")
 const { createOrGetConversation, addAdminToConversation } = require("../services/conversation.service");
 const { recordStatus } = require("../services/messageStatus.service");
 const { runDailyCashflowSummary } = require("../jobs/cashflowSummary.jobs.js");
@@ -11,7 +11,7 @@ const { runDailyCashflowSummary } = require("../jobs/cashflowSummary.jobs.js");
 async function handleWhatsappWebhook(req, res) {
     res.sendStatus(200);
     console.log("[RAW BODY]", JSON.stringify(req.body, null, 2));
-    
+
     const statusEntry = req.body.entry?.[0]?.changes?.[0]?.value?.statuses?.[0];
     if (statusEntry) {
         console.log("[WA Status]", JSON.stringify({
@@ -26,7 +26,7 @@ async function handleWhatsappWebhook(req, res) {
     }
 
     const parsed = parseIncoming(req);
-    if (!parsed) return; 
+    if (!parsed) return;
 
 
 
@@ -36,20 +36,20 @@ async function handleWhatsappWebhook(req, res) {
     await updateLastInbound(phone);
     console.log("[DEBUG] phone:", JSON.stringify(phone), "| ADMIN_PHONE:", JSON.stringify(process.env.ADMIN_PHONE), "| keyword:", JSON.stringify(keyword));
     const adminPhonesDigits = (process.env.ADMIN_PHONES || "")
-    .split(",")
-    .map(p => p.trim().replace(/\D/g, ""))
-    .filter(Boolean);
+        .split(",")
+        .map(p => p.trim().replace(/\D/g, ""))
+        .filter(Boolean);
 
-if (adminPhonesDigits.includes(phone) && keyword === "/ADMIN") {
-    console.log("[ADMIN TRIGGER] Matched! phone:", phone, "| admin list:", adminPhonesDigits);
-    try {
-        await runDailyCashflowSummary(phone);
-        console.log("[ADMIN TRIGGER] Report job completed, sent to:", phone);
-    } catch (err) {
-        console.error("[ADMIN TRIGGER] Failed:", err);
+    if (adminPhonesDigits.includes(phone) && keyword === "/ADMIN") {
+        console.log("[ADMIN TRIGGER] Matched! phone:", phone, "| admin list:", adminPhonesDigits);
+        try {
+            await runDailyCashflowSummary(phone);
+            console.log("[ADMIN TRIGGER] Report job completed, sent to:", phone);
+        } catch (err) {
+            console.error("[ADMIN TRIGGER] Failed:", err);
+        }
+        return;
     }
-    return;
-}
 
 
     try {
@@ -83,7 +83,9 @@ if (adminPhonesDigits.includes(phone) && keyword === "/ADMIN") {
                 );
             }
 
-            setSession(phone, { ...session, step: "ready", active_hall: hall });
+            const res = setSession(phone, { ...session, step: "ready", active_hall: hall });
+
+            console.log(res)
 
             return sendMessage(
                 phone,
@@ -91,7 +93,8 @@ if (adminPhonesDigits.includes(phone) && keyword === "/ADMIN") {
                 `*1* — CALENDAR (View availability)\n` +
                 `*2* — GALLERY (See venue photos)\n` +
                 `*3* — SUPPORT (Talk to a human)\n` +
-                `*4* — HELP (Show this menu)\n\n` +
+                `*4* — HELP (Show this menu)\n` +
+                `*5* — PRICING (View all pricing)\n\n` +
                 `(Type *SWITCH* or *HALL* anytime to change halls)`
             );
         }
@@ -105,7 +108,8 @@ if (adminPhonesDigits.includes(phone) && keyword === "/ADMIN") {
                 `*1* — CALENDAR (View availability)\n` +
                 `*2* — GALLERY (See venue photos)\n` +
                 `*3* — SUPPORT (Talk to a human)\n` +
-                `*4* — HELP (Show this menu)\n\n` +
+                `*4* — HELP (Show this menu)\n` +
+                `*5* — PRICING (View all pricing)\n\n` +
                 `(Type *SWITCH* or *HALL* anytime to change halls)`
             );
         }
@@ -121,6 +125,30 @@ if (adminPhonesDigits.includes(phone) && keyword === "/ADMIN") {
             setSession(phone, { ...session, step: "awaiting_month" });
             const currentHall = session.hall || session.active_hall || "Hall A";
             return sendMessage(phone, `Which month would you like to see for *${currentHall}*? (e.g. *July* or *7*)`);
+        }
+
+        if (keyword === "PRICING" || keyword === "5") {
+            setSession(phone, { ...session, step: "awaiting_pricing_month" });
+            return sendMessage(phone, `Which month would you like pricing for? (e.g. *July* or *7*)`);
+        }
+
+        if (session?.step === "awaiting_pricing_month") {
+            const asNumber = parseInt(cleanBody, 10);
+            let monthNum = null;
+
+            if (!isNaN(asNumber) && asNumber >= 1 && asNumber <= 12) {
+                monthNum = asNumber;
+            } else {
+                const idx = monthNames.indexOf(cleanBody.toLowerCase());
+                if (idx !== -1) monthNum = idx + 1;
+            }
+
+            if (!monthNum) {
+                return sendMessage(phone, "Please reply with a valid month, like *July* or *7*.");
+            }
+
+            setSession(phone, { ...session, step: "ready" });
+            return sendMessage(phone, getMonthPriceMessage(monthNum));
         }
 
         if (keyword === "SUPPORT" || keyword === "3") {
@@ -159,7 +187,8 @@ if (adminPhonesDigits.includes(phone) && keyword === "/ADMIN") {
                     `*1* — CALENDAR (View availability)\n` +
                     `*2* — GALLERY (See venue photos)\n` +
                     `*3* — SUPPORT (Talk to a human)\n` +
-                    `*4* — HELP (Show this menu)`
+                    `*4* — HELP (Show this menu)\n` +
+                    `*5* — PRICING (View all pricing)\n\n`
                 );
             }
             return;
