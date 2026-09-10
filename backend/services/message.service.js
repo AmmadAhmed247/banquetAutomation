@@ -93,7 +93,7 @@ function getMonthPriceMessage(month) {
   return (
     `*Pricing for ${monthName}*\n` +
     `- Starting from Rs. ${lowestPrice.toLocaleString("en-PK")}/- onwards\n\n` +
-    `Type *MENU* to return to the main menu.`
+    `Type *HELP* to show the menu or *SWITCH* to change halls.`
   );
 }
 
