@@ -91,7 +91,7 @@ function getMonthPriceMessage(month) {
   const lowestPrice = Math.min(...allPrices);
 
   return (
-    `💰 *Pricing for ${monthName}*\n` +
+    `*Pricing for ${monthName}*\n` +
     `- Starting from Rs. ${lowestPrice.toLocaleString("en-PK")}/- onwards\n\n` +
     `Type *MENU* to return to the main menu.`
   );
