@@ -81,7 +81,7 @@ function getMonthPriceMessage(month) {
     return (
       `💰 *Pricing for ${monthName}*\n` +
       `Please contact us for pricing details for this month.\n\n` +
-      `Type *MENU* to return to the main menu.`
+      `Type *HELP* to show the menu or *SWITCH* to change halls.`
     );
   }
 
@@ -112,15 +112,6 @@ HELP — Display this interactive menu
   `;
 }
 
-async function getPackagesMessage() {
-  const packages = await getAllPackages();
-
-  const list = packages.map(p =>
-    `*${p.name}* — ${p.price}\n${p.description || ""}`
-  ).join("\n\n");
-
-  return `Our packages:\n\n${list}\n\nTo book, send:\nBOOK: Date | Event | Package`;
-}
 
 async function getReceiptMessage(phone, data) {
   const { fileName, url } = await generateReceipt(data);
@@ -181,8 +172,6 @@ async function getCalendarMessage(phone, hall, year, month) {
     ].join("\n");
 
     await sendMediaMessage(phone, caption, url);
-    await sleep(10000);
-    return await sendMessage(phone, `Type *HELP* to show the menu or *SWITCH* to change halls.`);
   } catch (error) {
     console.log("An Error Occurred: ", error);
   }
@@ -211,28 +200,6 @@ async function SendMessageToUser(phone, message) {
   }
 }
 
-function getAllPricingMessage() {
-  const lines = ["💰 *Darbar Banquet — Full Year Pricing*", ""];
-
-  for (let month = 1; month <= 12; month++) {
-    const ranges = PRICING[month];
-    const monthName = capitalize(monthNames[month - 1]);
-
-    if (!ranges || ranges.length === 0) {
-      lines.push(`*${monthName}*`);
-      lines.push(`Please contact us for pricing details.`);
-      lines.push("");
-      continue;
-    }
-
-    lines.push(`*${monthName}*`);
-    ranges.forEach((r) => lines.push(formatRangeLine(r)));
-    lines.push("");
-  }
-
-  return lines.join("\n").trim();
-}
-
 module.exports = {
   getHelpMessage,
   getPackagesMessage,
@@ -241,5 +208,4 @@ module.exports = {
   getCalendarMessage,
   getReceiptMessage,
   getMonthPriceMessage,
-  getAllPricingMessage
 };
