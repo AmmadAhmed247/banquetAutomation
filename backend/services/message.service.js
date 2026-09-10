@@ -202,7 +202,6 @@ async function SendMessageToUser(phone, message) {
 
 module.exports = {
   getHelpMessage,
-  getPackagesMessage,
   getGalleryMessage,
   SendMessageToUser,
   getCalendarMessage,
