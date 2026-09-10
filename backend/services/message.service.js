@@ -85,11 +85,15 @@ function getMonthPriceMessage(month) {
     );
   }
 
-  const lines = ranges.map(formatRangeLine);
+  const allPrices = ranges.map((r) =>
+    r.priceMin != null ? r.priceMin : r.price
+  );
+  const lowestPrice = Math.min(...allPrices);
 
   return (
-    [`💰 *Pricing for ${monthName}*`, ...lines].join("\n") +
-    `\n\nType *MENU* to return to the main menu.`
+    `💰 *Pricing for ${monthName}*\n` +
+    `- Starting from Rs. ${lowestPrice.toLocaleString("en-PK")}/- onwards\n\n` +
+    `Type *MENU* to return to the main menu.`
   );
 }
 
