@@ -20,3 +20,25 @@ export const useAddBookingNote = () => {
     },
   });
 };
+
+export const useCreateBooking = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (form) => await bookingService.createBooking(form),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+};
+
+export const useUpdateBooking = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (form) => await bookingService.updateBooking(form),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+};

@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { DAILY_EXPENSE_CATEGORIES, currency } from "./ManagementUtils.js";
 
-const QUANTITY_CATEGORIES = ["Pepsi Co.", "Coca Cola Co." ];
+const QUANTITY_CATEGORIES = ["Pepsi Co.", "Coca Cola Co." , "Diesel"];
 
 function isTodayPKT(dateInput) {
   if (!dateInput) return false;
@@ -12,8 +13,6 @@ function isTodayPKT(dateInput) {
 
 export function DailyExpensesPanel({
   allDailyExpenses,
-  selectedYear,
-  selectedMonth,
   addingDaily,
   setAddingDaily,
   newDaily,
@@ -21,7 +20,11 @@ export function DailyExpensesPanel({
   createDailyExpenseMutation,
   deleteDailyExpenseMutation,
 }) {
+  
+  const [showAll, setShowAll] = useState(false);
+
   const visible = allDailyExpenses.filter(de => isTodayPKT(de.date));
+  const displayed = showAll ? visible : visible.slice(0, 5);
   const isQuantityCategory = QUANTITY_CATEGORIES.includes(newDaily.category);
 
   return (
@@ -41,7 +44,7 @@ export function DailyExpensesPanel({
         {visible.length === 0 ? (
           <p className="text-[11px] text-stone-400 text-center py-4">No expenses recorded today.</p>
         ) : (
-          visible.map(de => (
+          displayed.map(de => (
             <div key={de.id} className="flex justify-between items-center bg-stone-50 p-2.5 rounded-xl border border-stone-100 group">
               <div>
                 <p className="text-[12px] font-semibold text-stone-800">{de.label}</p>
@@ -57,6 +60,17 @@ export function DailyExpensesPanel({
           ))
         )}
       </div>
+
+      {/* NEW: only show when there's actually more than 5 today */}
+      {visible.length > 5 && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="w-full text-center text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 py-1.5 mb-2 transition-colors"
+        >
+          {showAll ? "Show less" : `Show ${visible.length - 5} more`}
+        </button>
+      )}
+
       {addingDaily && (
         <div className="flex flex-col gap-2 pt-3 border-t border-stone-100">
           <input type="date" value={newDaily.date} onChange={(e) => setNewDaily({ ...newDaily, date: e.target.value })} className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none" />
@@ -64,7 +78,6 @@ export function DailyExpensesPanel({
             value={newDaily.category}
             onChange={(e) => {
               const category = e.target.value;
-              // reset label when switching into/out of a quantity category
               setNewDaily({ ...newDaily, category, label: "" });
             }}
             className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none bg-white"
@@ -81,7 +94,6 @@ export function DailyExpensesPanel({
               value={newDaily.label}
               onChange={(e) => {
                 const val = e.target.value;
-                // only allow whole numbers (or empty while typing)
                 if (val === "" || /^\d+$/.test(val)) {
                   setNewDaily({ ...newDaily, label: val });
                 }

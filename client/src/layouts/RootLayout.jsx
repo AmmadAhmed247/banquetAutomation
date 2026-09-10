@@ -29,8 +29,8 @@ export default function RootLayout() {
     { name: "Calendar", path: "calendar", icon: Calendar },
     { name: "Bookings", path: "bookings", icon: CalendarCheck },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon },
-    { name: "Management System", path: "management", icon: FolderKanban },
-    { name: "Add-ons", path: "addons", icon: BanknoteArrowDown },
+    // { name: "Management System", path: "management", icon: FolderKanban },
+    // { name: "Add-ons", path: "addons", icon: BanknoteArrowDown },
     { name: "Cash Flow", path: "cash-flow", icon: DollarSign },
     // { name: "Alerts", path: "Alerts", icon: BanknoteArrowUp },
   ];

@@ -1,7 +1,7 @@
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const STANDARD_EXPENSE_CATEGORIES = ["Staff Wages", "Miscellaneous"];
 export const MONTHLY_EXPENSE_CATEGORIES = ["Electric Bill", "Diesel" , "Sui Gas", "Water Bill", "Internet", "Rent", "Security Guard", "Miscellaneous"];
-export const DAILY_EXPENSE_CATEGORIES = ["Pepsi Co.", "Coca Cola Co.","Kitchen/Tea", "Maintenance", "Petty Cash", "Office"];
+export const DAILY_EXPENSE_CATEGORIES = ["Pepsi Co.", "Coca Cola Co.", "Diesel", "Kitchen/Tea", "Maintenance", "Petty Cash", "Office"];
 export const ADDON_CATEGORIES = ["Pepsi Co.", "Coca Cola Co.", "Fresh Flower", "Cola Next", "Dance Floor", "Water Bottles", "Ayaz Tissue", "Stage", "Fire Crackers", "Ladies Staff", "Miscellaneous" , "BBQ" , "Sound System", "Entry" , "Decoration"];
 export const ADDON_PAYMENT_METHODS = ["Cash", "JazzCash", "EasyPaisa", "Habib Metro Usman", "Meezan Bank Sadar"];
 export function getPKTDateParts(dateInput = new Date()) {
