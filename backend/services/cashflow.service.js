@@ -86,8 +86,8 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
 
   const relatedBookings = relatedBookingIds.length > 0
     ? await db.select({ id: b.booking.id, client: b.booking.client, rNo: b.booking.r_no })
-        .from(b.booking)
-        .where(inArray(b.booking.id, relatedBookingIds))
+      .from(b.booking)
+      .where(inArray(b.booking.id, relatedBookingIds))
     : [];
 
   const bookingById = new Map(relatedBookings.map((b) => [b.id, b]));
@@ -313,16 +313,17 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
   const isSingleDayView = range === "today" || (range === "custom" && startQ && endQ && startQ === endQ);
 
   rangeMonthlyExpenses.forEach((m) => {
-    if (isSingleDayView) return;
-
     const expenseMonthIndex = Number(m.year) * 12 + Number(m.month) - 1;
     const monthStart = new Date(`${m.year}-${String(m.month).padStart(2, "0")}-01T00:00:00.000+05:00`);
     const createdAt = m.created_at ? new Date(m.created_at) : null;
-    const hasExplicitMonth = Number.isFinite(Number(m.year)) && Number.isFinite(Number(m.month));
-    const inRangeByMonth = hasExplicitMonth && expenseMonthIndex >= startMonthIndex && expenseMonthIndex <= endMonthIndex;
-    const inRangeByCreatedAt = !hasExplicitMonth && createdAt && createdAt >= startDate && createdAt <= endDate;
+    const inRangeByMonth = expenseMonthIndex >= startMonthIndex && expenseMonthIndex <= endMonthIndex;
 
-    if (!inRangeByMonth && !inRangeByCreatedAt) return;
+    if (!inRangeByMonth) return;
+
+    if (isSingleDayView) {
+      const createdDateStr = createdAt ? karachiDateString(createdAt) : null;
+      if (createdDateStr !== effectiveStartQ) return;
+    }
 
     const amount = Number(m.amount || 0);
     monthlyExpense += amount;
