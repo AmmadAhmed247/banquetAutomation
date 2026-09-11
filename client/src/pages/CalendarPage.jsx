@@ -1,241 +1,725 @@
-import { useState } from "react";
-import { getAllBookings } from "../lib/hooks/booking.hook";
-import { getAllAddons } from "../lib/hooks/addon.hook";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronDown, ChevronRight, X, Wallet, Inbox, PlusCircle,
+  Layers, Zap, Trash2, Plus, Loader2, ClipboardList, Receipt, Search, Droplet, Calendar, Fuel,
+} from "lucide-react";
+import {
+  ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
+} from "recharts";
 
+import { getAllBookings, useCreateBooking, useUpdateBooking } from "../lib/hooks/booking.hook";
+import { getAllAddons } from "../lib/hooks/addon.hook";
+import {
+  getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense,
+} from "../lib/hooks/dailyExpense.hook";
+import {
+  getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense,
+} from "../lib/hooks/monthlyExpense.hook";
+import { getAllExpenses } from "../lib/hooks/expense.hook";
+import BookingModal from "../components/BookingModal";
+import { DailyExpensesPanel } from "../components/Management/DailyExpensesPanel";
+import { MonthlyOverheadPanel } from "../components/Management/MonthlyOverheadPanel";
+import {
+  MONTHLY_EXPENSE_CATEGORIES, DAILY_EXPENSE_CATEGORIES,
+} from "../components/Management/ManagementUtils";
+
+// ── constants ────────────────────────────────────────────────────────────────
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = [CURRENT_YEAR, CURRENT_YEAR + 1];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_NAMES = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const HIJRI_MONTHS = [
   "Muharram", "Safar", "Rabbi Ul Awwal", "Rabbi Ul Akhir",
   "Jumada Al Ula", "Jumada Al Akhirah", "Rajab", "Sha'ban",
-  "Ramadan", "Shawwal", "Dhu Al Qi'dah", "Dhu Al Hijjah"
+  "Ramadan", "Shawwal", "Dhu Al Qi'dah", "Dhu Al Hijjah",
 ];
+const DRINK_SERVICES = ["Pepsi Co.", "Coca Cola Co."];
 
-// Helper to format today's Hijri date as: 1 Rabbi Ul Awwal 1448 AH
-const getTodayIslamicDate = () => {
+const GOLD = "#b45309";
+const GOLD_SOFT = "#fef3c7";
+const TEAL = "#0f766e";
+const TEAL_SOFT = "#ccfbf1";
+const PEPSI_BLUE = "#004B93";
+const COKE_RED = "#F40009";
+const DIESEL_AMBER = "#d97706";
+
+// ── motion presets (premium feel) ────────────────────────────────────────────
+const easeOut = [0.16, 1, 0.3, 1];
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: easeOut } },
+};
+const fadeIn = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.3, ease: "easeOut" } },
+};
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.96 },
+  show: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: easeOut } },
+};
+const tabPanel = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: easeOut } },
+  exit: { opacity: 0, y: -6, transition: { duration: 0.2 } },
+};
+
+function currency(n) {
+  return "₨ " + Number(n || 0).toLocaleString("en-PK");
+}
+
+function normalizeBooking(b) {
+  return {
+    id: b.id,
+    r_no: b.r_no,
+    hall: b.venue,
+    client: b.client,
+    event: b.event,
+    date: b.date,
+    revenue: Number(b.total_amount) || 0,
+  };
+}
+
+function extractCrates(label = "") {
+  const text = String(label || "");
+  let match = text.match(/(\d+)\s*(crate|crates|crt)/i);
+  if (match) return Number(match[1]);
+  match = text.match(/(?:pay\s*to|for|paid)[^\d]*(\d+)/i);
+  if (match) return Number(match[1]);
+  match = text.match(/(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+function extractLiters(label = "") {
+  const text = String(label || "");
+
+  // 1. Number next to litre / liter / ltr / L
+  let match = text.match(/(\d+(?:\.\d+)?)\s*(litres?|liters?|ltrs?|l)\b/i);
+  if (match) return Number(match[1]);
+
+  // 2. Word first, then number  e.g. "litre 40"
+  match = text.match(/(?:litres?|liters?|ltrs?)\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
+  if (match) return Number(match[1]);
+
+  // 3. After for / paid / diesel / fuel
+  match = text.match(/(?:for|paid|diesel|fuel|petrol)[^\d]*(\d+(?:\.\d+)?)/i);
+  if (match) return Number(match[1]);
+
+  // 4. First number (new data that’s just a number)
+  match = text.match(/(\d+(?:\.\d+)?)/);
+  return match ? Number(match[1]) : 0;
+}
+function isPepsi(label = "", category = "") {
+  return /pepsi/i.test(label) || /pepsi/i.test(category);
+}
+function isCoke(label = "", category = "") {
+  return /coca\s*cola|coke/i.test(label) || /coca\s*cola|coke/i.test(category);
+}
+function isDiesel(label = "", category = "") {
+  return /diesel|fuel|petrol/i.test(label) || /diesel|fuel|petrol/i.test(category);
+}
+
+function matches(query, ...fields) {
+  const q = query.toLowerCase().trim();
+  if (!q) return true;
+  return fields.some((f) => String(f || "").toLowerCase().includes(q));
+}
+
+function getTodayIslamicDate() {
   const formatter = new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura-nu-latn", {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric"
+    day: "numeric", month: "numeric", year: "numeric",
   });
   const parts = Object.fromEntries(
     formatter.formatToParts(new Date()).map((p) => [p.type, p.value])
   );
   const monthName = HIJRI_MONTHS[parseInt(parts.month, 10) - 1];
   return `${parts.day} ${monthName} ${parts.year} AH`;
-};
-function BookingChip({ booking ,addons=[] }) {
+}
+
+function getTodayDateString() {
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+function useCountUp(target, duration = 700) {
+  const [value, setValue] = useState(0);
+  const prev = useRef(0);
+  useEffect(() => {
+    const from = prev.current;
+    let raf;
+    let start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(from + (target - from) * eased));
+      if (progress < 1) raf = requestAnimationFrame(step);
+      else prev.current = target;
+    }
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
+
+// ── small UI pieces ──────────────────────────────────────────────────────────
+function SearchBar({ value, onChange, placeholder }) {
+  return (
+    <div className="relative w-full sm:w-64">
+      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full pl-9 pr-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-[13px] outline-none focus:bg-white focus:border-stone-300 transition-colors"
+      />
+    </div>
+  );
+}
+
+function SectionHeader({ title, sub, children }) {
+  return (
+    <div className="px-5 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div>
+        <h2 className="text-[14px] font-semibold text-stone-900">{title}</h2>
+        {sub && <p className="text-[11px] text-stone-400 mt-0.5">{sub}</p>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function EmptyRow({ colSpan, text }) {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="text-center py-16 text-stone-400 text-[13px]">
+        <Inbox size={26} className="mx-auto mb-2 text-stone-200" />
+        {text}
+      </td>
+    </tr>
+  );
+}
+
+function KpiCard({ label, value, sub, icon: Icon, tone = "neutral" }) {
+  const animated = useCountUp(value);
+  const color = tone === "revenue" ? TEAL : tone === "spend" ? GOLD : "#1c1917";
+  return (
+    <motion.div
+      variants={fadeUp}
+      whileHover={{ y: -3, boxShadow: "0 12px 28px -8px rgba(0,0,0,0.12)" }}
+      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+      className="bg-white border border-stone-200 rounded-xl p-5"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[11px] font-medium text-stone-400">{label}</span>
+        <Icon size={15} style={{ color: tone === "revenue" ? TEAL : tone === "spend" ? GOLD : "#d6d3d1" }} />
+      </div>
+      <p className="text-xl font-semibold tracking-tight" style={{ color }}>
+        {tone === "revenue" || tone === "spend" ? currency(animated) : animated}
+      </p>
+      <p className="text-[12px] text-stone-400 mt-1">{sub}</p>
+    </motion.div>
+  );
+}
+
+function DrinkCard({ name, crates, paid, brand }) {
+  const isP = brand === "pepsi";
+  const accent = isP ? PEPSI_BLUE : COKE_RED;
+  const soft = isP ? "#E8F1FB" : "#FDE8E9";
+  return (
+    <motion.div
+      variants={scaleIn}
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 360, damping: 26 }}
+      className="rounded-xl border p-4 flex flex-col gap-2"
+      style={{ borderColor: soft, background: soft }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[13px] font-bold" style={{ color: accent }}>{name}</span>
+        <Droplet size={14} style={{ color: accent }} />
+      </div>
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-2xl font-semibold text-stone-900 leading-none">{crates}</p>
+          <p className="text-[11px] text-stone-500 mt-0.5">crates</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[14px] font-semibold" style={{ color: GOLD }}>{currency(paid)}</p>
+          <p className="text-[11px] text-stone-500">spent</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function DieselCard({ liters, count, paid }) {
+  return (
+    <motion.div
+      variants={scaleIn}
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 360, damping: 26 }}
+      className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex flex-col gap-2"
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[13px] font-bold text-amber-800">Diesel / Fuel</span>
+        <Fuel size={14} className="text-amber-700" />
+      </div>
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-2xl font-semibold text-stone-900 leading-none">{liters}</p>
+          <p className="text-[11px] text-stone-500 mt-0.5">liters</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[14px] font-semibold" style={{ color: GOLD }}>{currency(paid)}</p>
+          <p className="text-[11px] text-stone-500">
+            spent{count ? ` · ${count} entries` : ""}
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function CategoryBar({ label, percent, amount, color = GOLD }) {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    setWidth(0);
+    const t = setTimeout(() => setWidth(percent), 60);
+    return () => clearTimeout(t);
+  }, [percent]);
+  return (
+    <div>
+      <div className="flex justify-between mb-1">
+        <span className="text-[12px] font-medium text-stone-700">{label}</span>
+        <span className="text-[11px] font-semibold" style={{ color }}>{percent}%</span>
+      </div>
+      <div className="w-full h-1.5 bg-stone-100 rounded-full overflow-hidden">
+        <div className="h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${width}%`, backgroundColor: color }} />
+      </div>
+      <p className="text-[11px] text-stone-400 mt-1">{currency(amount)}</p>
+    </div>
+  );
+}
+
+function DetailSidebar({ title, subtitle, children, onClose }) {
+  return (
+    <div className="fade-up bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden sticky top-6">
+      <div className="p-5 border-b border-stone-100 flex items-start justify-between">
+        <div>
+          <span className="text-[10px] font-medium text-stone-400">{title}</span>
+          <p className="text-[14px] font-semibold text-stone-900 mt-1">{subtitle}</p>
+        </div>
+        <button onClick={onClose} className="text-stone-400 hover:text-stone-900 p-1 transition-colors">
+          <X size={16} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 py-4 max-h-[calc(100vh-260px)]">{children}</div>
+    </div>
+  );
+}
+
+function BookingChip({ booking, addons = [], onEdit }) {
   const isA = booking.hall === "a";
   const isPending = booking.status?.toLowerCase() === "pending";
-
-
   const themeClasses = isPending
     ? "bg-amber-50 border-amber-200 text-amber-800"
-    : isA
-    ? "bg-blue-50 border-blue-200 text-blue-800"
-    : "bg-red-50 border-red-200 text-red-800";
-
-  const accentColorClass = isPending
-    ? "text-amber-700"
-    : isA
-    ? "text-blue-700"
-    : "text-red-700";
-
+    : isA ? "bg-blue-50 border-blue-200 text-blue-800" : "bg-red-50 border-red-200 text-red-800";
+  const accentColorClass = isPending ? "text-amber-700" : isA ? "text-blue-700" : "text-red-700";
   const borderColor = isPending ? "#f59e0b" : isA ? "#2563eb" : "#dc2626";
 
   return (
     <div className={`p-3 rounded-xl mb-2 border ${themeClasses}`}>
       <div className="flex justify-between items-center mb-1">
-        <p className={`text-[10px] font-semibold ${accentColorClass}`}>
-          Hall {booking.hall.toUpperCase()}
-        </p>
-        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-          isPending ? "bg-amber-200 text-amber-900" : isA ? "bg-blue-200 text-blue-900" : "bg-red-200 text-red-900"
-        }`}>
-          {booking.status}
-        </span>
+        <p className={`text-[10px] font-semibold ${accentColorClass}`}>Hall {booking.hall.toUpperCase()}</p>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+            isPending ? "bg-amber-200 text-amber-900" : isA ? "bg-blue-200 text-blue-900" : "bg-red-200 text-red-900"
+          }`}>{booking.status}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(booking); }}
+            className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 cursor-pointer"
+          >Edit</button>
+        </div>
       </div>
-
       <p className="text-xs font-semibold text-gray-900 mb-0.5">{booking.client}</p>
       {booking.rNo && (
         <div className="text-[11px] text-slate-600 mb-1">R.No: <span className="font-medium text-gray-800">{booking.rNo}</span></div>
       )}
-      
-      {/* Additional details */}
       <div className="space-y-1.5 text-[10px] mb-2 pb-2 border-b border-opacity-20" style={{ borderColor }}>
-        {booking.phone && (
-          <div className="flex justify-between">
-            <span className="text-slate-600">Phone:</span>
-            <span className="font-medium text-gray-800">{booking.phone}</span>
-          </div>
-        )}
-        {booking.guests && (
-          <div className="flex justify-between">
-            <span className="text-slate-600">Guests:</span>
-            <span className="font-medium text-gray-800">{booking.guests}</span>
-          </div>
-        )}
-        {booking.totalAmount && (
-          <div className="flex justify-between">
-            <span className="text-slate-600">Total:</span>
-            <span className="font-medium text-gray-800">PKR {Number(booking.totalAmount).toLocaleString()}</span>
-          </div>
-        )}
-        {booking.advancePaid && (
-          <div className="flex justify-between">
-            <span className="text-slate-600">Advance:</span>
-            <span className="font-medium text-gray-800">PKR {Number(booking.advancePaid).toLocaleString()}</span>
-          </div>
-        )}
-        {booking.advanceDueDate && (
-          <div className="flex justify-between">
-            <span className="text-slate-600">Due Date:</span>
-            <span className="font-medium text-gray-800">{new Date(booking.advanceDueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
-          </div>
-        )}
-        {booking.timeSlot && (
-          <div className="flex justify-between">
-            <span className="text-slate-600">Time Slot:</span>
-            <span className="font-medium text-gray-800">{booking.timeSlot}</span>
-          </div>
-        )}
-        {booking.bankName && (
-          <div className="flex justify-between">
-            <span className="text-slate-600">Bank:</span>
-            <span className="font-medium text-gray-800">{booking.bankName}</span>
-          </div>
-        )}
-        {booking.paymentMethod && (
-          <div className="flex justify-between">
-            <span className="text-slate-600">Method:</span>
-            <span className="font-medium text-gray-800">{booking.paymentMethod}</span>
-          </div>
-        )}
+        {booking.phone && <div className="flex justify-between"><span className="text-slate-600">Phone:</span><span className="font-medium text-gray-800">{booking.phone}</span></div>}
+        {booking.guests && <div className="flex justify-between"><span className="text-slate-600">Guests:</span><span className="font-medium text-gray-800">{booking.guests}</span></div>}
+        {booking.totalAmount && <div className="flex justify-between"><span className="text-slate-600">Total:</span><span className="font-medium text-gray-800">PKR {Number(booking.totalAmount).toLocaleString()}</span></div>}
+        {booking.advancePaid && <div className="flex justify-between"><span className="text-slate-600">Advance:</span><span className="font-medium text-gray-800">PKR {Number(booking.advancePaid).toLocaleString()}</span></div>}
+        {booking.timeSlot && <div className="flex justify-between"><span className="text-slate-600">Time Slot:</span><span className="font-medium text-gray-800">{booking.timeSlot}</span></div>}
       </div>
       {addons.length > 0 && (
         <div className="mt-2 pt-2 border-t border-opacity-20" style={{ borderColor }}>
-          <p className={`text-[9px] font-bold uppercase tracking-wider mb-1 ${accentColorClass}`}>
-            Add-ons
-          </p>
+          <p className={`text-[9px] font-bold uppercase tracking-wider mb-1 ${accentColorClass}`}>Add-ons</p>
           <div className="space-y-1">
             {addons.map((a) => (
               <div key={a.id} className="flex justify-between text-[10px]">
                 <span className="text-slate-600 truncate pr-2">{a.service}</span>
-                <span className="font-medium text-gray-800 shrink-0">
-                  PKR {Number(a.client_price).toLocaleString()}
-                </span>
+                <span className="font-medium text-gray-800 shrink-0">PKR {Number(a.client_price).toLocaleString()}</span>
               </div>
             ))}
           </div>
         </div>
       )}
-
-      
     </div>
   );
 }
 
-export default function CalendarView() {
+// ── MAIN PAGE ────────────────────────────────────────────────────────────────
+export default function CalendarAddonsPage() {
   const [current, setCurrent] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState(null);
-  const [view, setView]           = useState("both");
-  const [showPanel, setShowPanel] = useState(false); // mobile side panel toggle
+  const [view, setView] = useState("both");
+  const [showPanel, setShowPanel] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [selectedMonth, setSelectedMonth] = useState("all");
+  const [hallFilter, setHallFilter] = useState("all");
+  const [activeSection, setActiveSection] = useState("overview");
 
-  const { data: fetchedBookings = [], isLoading, error } = getAllBookings();
+  const [editingBooking, setEditingBooking] = useState(null);
+  const [isNewBooking, setIsNewBooking] = useState(false);
+  const updateBookingMutation = useUpdateBooking();
+  const createBookingMutation = useCreateBooking();
+  const bookingModalLoading = isNewBooking ? createBookingMutation.isPending : updateBookingMutation.isPending;
+
+  const [addingDaily, setAddingDaily] = useState(false);
+  const [newDaily, setNewDaily] = useState({
+    date: getTodayDateString(),
+    category: DAILY_EXPENSE_CATEGORIES?.[0] ?? "",
+    label: "",
+    amount: "",
+  });
+  const [addingMonthly, setAddingMonthly] = useState(false);
+  const [newMonthly, setNewMonthly] = useState({
+    month: new Date().getMonth() + 1,
+    year: CURRENT_YEAR,
+    category: MONTHLY_EXPENSE_CATEGORIES?.[0] ?? "Electric Bill",
+    label: "",
+    amount: "",
+  });
+
+  const [bookingSearch, setBookingSearch] = useState("");
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [dailySearch, setDailySearch] = useState("");
+  const [monthlySearch, setMonthlySearch] = useState("");
+  const [standardSearch, setStandardSearch] = useState("");
+  const [selectedBooking, setSelectedBooking] = useState(null);
+
+  const { data: fetchedBookings = [], isLoading: bookingsLoading, error } = getAllBookings();
   const { data: fetchedAddons = [] } = getAllAddons();
+  const { data: allDailyExpenses = [] } = getAllDailyExpenses();
+  const { data: allMonthlyExpenses = [] } = getAllMonthlyExpenses();
+  const expensesQuery = getAllExpenses() || {};
+  const createDailyExpenseMutation = useCreateDailyExpense();
+  const deleteDailyExpenseMutation = useDeleteDailyExpense();
+  const createMonthlyExpenseMutation = useCreateMonthlyExpense();
+  const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense();
+
+  const yr = current.getFullYear();
+  const mo = current.getMonth();
 
   const addonsArray = Array.isArray(fetchedAddons)
     ? fetchedAddons
     : fetchedAddons?.data || fetchedAddons?.addons || [];
 
-  const addonsByBooking = addonsArray.reduce((acc, a) => {
-    const key = a.bookingId ?? a.booking_id; 
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(a);
-    return acc;
-  }, {});
-  const BOOKINGS = fetchedBookings
-    .filter((b) => b.status?.toLowerCase() !== "cancelled") // Filter out cancelled bookings
-    .map((b) => {
-      const dateObj  = new Date(b.date);
-      const month    = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
-      const day      = String(dateObj.getUTCDate()).padStart(2, "0");
-      const year     = dateObj.getUTCFullYear();
-      const hallChar =
-        b.venue?.toLowerCase().includes("hall a") ? "a" :
-        b.venue?.toLowerCase().includes("hall b") ? "b" : "a";
-      return {
-        id:             b.id,
-        hall:           hallChar,
-        date:           `${year}-${month}-${day}`,
-        client:         b.client,
-        rNo:            b.r_no || b.rNo || "",
-        event:          b.event,
-        package:        b.package_name || b.package,
-        status:         b.status,
-        phone:          b.phone,
-        guests:         b.guests,
-        totalAmount:    b.total_amount || b.totalAmount,
-        advancePaid:    b.advance_paid || b.advancePaid,
-        advanceDueDate: b.advance_due_date || b.advanceDueDate,
-        paymentMethod:  b.payment_method || b.paymentMethod,
-        paymentNote:    b.payment_note || b.paymentNote,
-        timeSlot:       b.time_slot || b.timeSlot,
-        bankName:       b.bank_name || b.bankName,
-      };
+  const addonsByBooking = useMemo(() => {
+    return addonsArray.reduce((acc, a) => {
+      const key = a.bookingId ?? a.booking_id;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(a);
+      return acc;
+    }, {});
+  }, [addonsArray]);
+
+  const BOOKINGS = useMemo(() => {
+    return (Array.isArray(fetchedBookings) ? fetchedBookings : [])
+      .filter((b) => b.status?.toLowerCase() !== "cancelled")
+      .map((b) => {
+        const dateObj = new Date(b.date);
+        const month = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(dateObj.getUTCDate()).padStart(2, "0");
+        const year = dateObj.getUTCFullYear();
+        const hallChar =
+          b.venue?.toLowerCase().includes("hall a") ? "a" :
+          b.venue?.toLowerCase().includes("hall b") ? "b" : "a";
+        return {
+          id: b.id,
+          hall: hallChar,
+          date: `${year}-${month}-${day}`,
+          client: b.client,
+          rNo: b.r_no || b.rNo || "",
+          event: b.event,
+          package: b.package_name || b.package,
+          status: b.status,
+          phone: b.phone,
+          guests: b.guests,
+          totalAmount: b.total_amount || b.totalAmount,
+          advancePaid: b.advance_paid || b.advancePaid,
+          advanceDueDate: b.advance_due_date || b.advanceDueDate,
+          paymentMethod: b.payment_method || b.paymentMethod,
+          paymentNote: b.payment_note || b.paymentNote,
+          timeSlot: b.time_slot || b.timeSlot,
+          bankName: b.bank_name || b.bankName,
+          _raw: b,
+        };
+      });
+  }, [fetchedBookings]);
+
+  const bookings = useMemo(
+    () => (Array.isArray(fetchedBookings) ? fetchedBookings : []).map(normalizeBooking),
+    [fetchedBookings]
+  );
+
+  const dailyExpenses = Array.isArray(allDailyExpenses)
+    ? allDailyExpenses
+    : allDailyExpenses?.dailyExpenses || [];
+  const monthlyExpenses = Array.isArray(allMonthlyExpenses) ? allMonthlyExpenses : [];
+  const rawMonthlyExpenses = expensesQuery.data;
+  const standardExpenses = Array.isArray(rawMonthlyExpenses)
+    ? rawMonthlyExpenses
+    : rawMonthlyExpenses?.data || [];
+
+  const bMap = useMemo(() => {
+    const map = {};
+    BOOKINGS.forEach((b) => {
+      const d = new Date(b.date);
+      if (d.getFullYear() !== yr || d.getMonth() !== mo) return;
+      if (view !== "both" && b.hall !== view) return;
+      const day = d.getDate();
+      if (!map[day]) map[day] = [];
+      map[day].push(b);
     });
-
-  const yr = current.getFullYear();
-  const mo = current.getMonth();
-
-  const bMap = {};
-  BOOKINGS.forEach((b) => {
-    const d = new Date(b.date);
-    if (d.getFullYear() !== yr || d.getMonth() !== mo) return;
-    if (view !== "both" && b.hall !== view) return;
-    const day = d.getDate();
-    if (!bMap[day]) bMap[day] = [];
-    bMap[day].push(b);
-  });
+    return map;
+  }, [BOOKINGS, yr, mo, view]);
 
   const firstDayOfMonth = new Date(yr, mo, 1).getDay();
-  const daysInMonth     = new Date(yr, mo + 1, 0).getDate();
-  const today           = new Date();
-  const isCurrentMonth  = today.getFullYear() === yr && today.getMonth() === mo;
-
+  const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === yr && today.getMonth() === mo;
   const cells = [
     ...Array(firstDayOfMonth).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-
   const selectedBookings = selectedDay ? (bMap[selectedDay] || []) : [];
 
-  const tabBase = "px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer transition-all";
-  function tabClass(key) {
-    if (key === "both")
-      return view === "both"
-        ? `${tabBase} bg-gray-100 text-gray-900 border-gray-400`
-        : `${tabBase} bg-white text-gray-500 border-gray-300 hover:bg-gray-50`;
-    if (key === "a")
-      return view === "a"
-        ? `${tabBase} bg-red-50 text-red-700 border-red-300`
-        : `${tabBase} bg-white text-gray-500 border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200`;
-    return view === "b"
-      ? `${tabBase} bg-blue-50 text-blue-700 border-blue-300`
-      : `${tabBase} bg-white text-gray-500 border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200`;
+  const filteredDailyExpenses = useMemo(() => {
+    return dailyExpenses.filter((e) => {
+      const d = new Date(e.date);
+      const yearMatch = d.getFullYear() === selectedYear;
+      const monthMatch = selectedMonth === "all" || d.getMonth() === MONTHS.indexOf(selectedMonth);
+      return yearMatch && monthMatch;
+    });
+  }, [dailyExpenses, selectedYear, selectedMonth]);
+
+  const searchedDailyExpenses = useMemo(
+    () => filteredDailyExpenses.filter((e) => matches(dailySearch, e.label, e.category)),
+    [filteredDailyExpenses, dailySearch]
+  );
+
+  const drinkAndFuelStats = useMemo(() => {
+    const result = {
+      pepsi: { crates: 0, paid: 0 },
+      coke: { crates: 0, paid: 0 },
+      diesel: { liters: 0, paid: 0, count: 0 },
+    };
+    filteredDailyExpenses.forEach((e) => {
+      const amount = Number(e.amount || 0);
+      const crates = extractCrates(e.label);
+      if (isPepsi(e.label, e.category)) {
+        result.pepsi.crates += crates;
+        result.pepsi.paid += amount;
+      }
+      if (isCoke(e.label, e.category)) {
+        result.coke.crates += crates;
+        result.coke.paid += amount;
+      }
+      if (isDiesel(e.label, e.category)) {
+  result.diesel.liters += extractLiters(e.label);
+  result.diesel.paid += amount;
+  result.diesel.count += 1;
+}
+    });
+    monthlyExpenses.forEach((e) => {
+      if (e.year !== selectedYear) return;
+      if (selectedMonth !== "all" && e.month !== MONTHS.indexOf(selectedMonth) + 1) return;
+      if (isDiesel(e.label, e.category) || e.category === "Diesel") {
+        result.diesel.liters += extractLiters(e.label);
+        result.diesel.paid += Number(e.amount || 0);
+        result.diesel.count += 1;
+      }
+    });
+    return result;
+  }, [filteredDailyExpenses, monthlyExpenses, selectedYear, selectedMonth]);
+
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      const d = new Date(b.date);
+      const yearMatch = d.getFullYear() === selectedYear;
+      const monthMatch = selectedMonth === "all" || d.getMonth() === MONTHS.indexOf(selectedMonth);
+      const hallMatch = hallFilter === "all" || b.hall === hallFilter;
+      const hasAddons = (addonsByBooking[b.id] || []).length > 0;
+      const searchMatch = matches(
+        bookingSearch, b.client, b.event, b.hall, b.r_no,
+        ...(addonsByBooking[b.id] || []).map((a) => a.service)
+      );
+      return yearMatch && monthMatch && hallMatch && hasAddons && searchMatch;
+    });
+  }, [bookings, selectedYear, selectedMonth, hallFilter, addonsByBooking, bookingSearch]);
+
+  const serviceBreakdown = useMemo(() => {
+    const map = {};
+    filteredBookings.forEach((b) => {
+      (addonsByBooking[b.id] || []).forEach((item) => {
+        if (DRINK_SERVICES.includes(item.service)) return;
+        if (!map[item.service]) map[item.service] = { service: item.service, count: 0, revenue: 0 };
+        map[item.service].count += 1;
+        map[item.service].revenue += Number(item.client_price || 0);
+      });
+    });
+    return Object.values(map).sort((a, b) => b.revenue - a.revenue);
+  }, [filteredBookings, addonsByBooking]);
+
+  const searchedServiceBreakdown = useMemo(
+    () => serviceBreakdown.filter((s) => matches(serviceSearch, s.service)),
+    [serviceBreakdown, serviceSearch]
+  );
+
+  const totalClientRevenue = serviceBreakdown.reduce((s, x) => s + x.revenue, 0);
+  const totalItemsSold = serviceBreakdown.reduce((s, x) => s + x.count, 0);
+
+  const filteredMonthlyExpenses = useMemo(() => {
+    return monthlyExpenses.filter((e) => {
+      const yearMatch = e.year === selectedYear;
+      const monthMatch = selectedMonth === "all" || e.month === MONTHS.indexOf(selectedMonth) + 1;
+      return yearMatch && monthMatch;
+    });
+  }, [monthlyExpenses, selectedYear, selectedMonth]);
+
+  const searchedMonthlyExpenses = useMemo(
+    () => filteredMonthlyExpenses.filter((e) => matches(monthlySearch, e.label, e.category)),
+    [filteredMonthlyExpenses, monthlySearch]
+  );
+
+  const totalMonthlyOverhead = filteredMonthlyExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+
+  const monthlyByCategory = useMemo(() => {
+    const map = {};
+    filteredMonthlyExpenses.forEach((e) => {
+      map[e.category] = (map[e.category] || 0) + Number(e.amount || 0);
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [filteredMonthlyExpenses]);
+
+  const monthlyExpensesByMonth = useMemo(() => {
+    const map = {};
+    searchedMonthlyExpenses.forEach((e) => {
+      if (!map[e.month]) map[e.month] = [];
+      map[e.month].push(e);
+    });
+    return map;
+  }, [searchedMonthlyExpenses]);
+
+  const filteredStandardExpenses = useMemo(() => {
+    return standardExpenses.filter((e) => {
+      if (!e.created_at) return false;
+      const d = new Date(e.created_at);
+      const yearMatch = d.getFullYear() === selectedYear;
+      const monthMatch = selectedMonth === "all" || d.getMonth() === MONTHS.indexOf(selectedMonth);
+      return yearMatch && monthMatch;
+    });
+  }, [standardExpenses, selectedYear, selectedMonth]);
+
+  const searchedStandardExpenses = useMemo(() => {
+    return filteredStandardExpenses.filter((e) => {
+      const linkedBooking = bookings.find((b) => b.id === e.bookingId);
+      return matches(standardSearch, e.label, e.category, linkedBooking?.client, linkedBooking?.event);
+    });
+  }, [filteredStandardExpenses, standardSearch, bookings]);
+
+  const totalDailyExpense = filteredDailyExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+  function openEditModal(booking) {
+    setIsNewBooking(false);
+    setEditingBooking(booking._raw ?? booking);
   }
 
-  if (isLoading) {
+  function openNewBookingModal() {
+    setIsNewBooking(true);
+    const seedDate = selectedDay
+      ? `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`
+      : "";
+    setEditingBooking({
+      client: "", phone: "", rNo: "", date: seedDate, event: "Wedding", status: "Pending",
+      guests: "", venue: "Hall A", totalAmount: "", advanceAmount: "", advancePaid: "",
+      advanceDueDate: "", paymentMethod: "Cash", paymentNote: "", package: "Standard",
+    });
+  }
+
+  function closeBookingModal() {
+    setEditingBooking(null);
+    setIsNewBooking(false);
+  }
+
+  function handleSaveBooking(bookingData) {
+    if (isNewBooking) {
+      createBookingMutation.mutate(bookingData, { onSuccess: closeBookingModal });
+    } else {
+      updateBookingMutation.mutate({ ...bookingData, id: editingBooking.id }, { onSuccess: closeBookingModal });
+    }
+  }
+
+  function addMonthlyExpense() {
+    if (!newMonthly.label || !newMonthly.amount) return;
+    createMonthlyExpenseMutation.mutate({
+      category: newMonthly.category,
+      label: newMonthly.label,
+      amount: Number(newMonthly.amount || 0),
+      month: newMonthly.month,
+      year: newMonthly.year,
+    });
+    setNewMonthly({
+      category: MONTHLY_EXPENSE_CATEGORIES?.[0] ?? "Electric Bill",
+      label: "", amount: "", month: new Date().getMonth() + 1, year: CURRENT_YEAR,
+    });
+    setAddingMonthly(false);
+  }
+
+  function deleteMonthlyExpense(id) {
+    deleteMonthlyExpenseMutation.mutate(id);
+  }
+
+  const tabBase = "px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer transition-all";
+  function hallTabClass(key) {
+    if (key === "both")
+      return view === "both" ? `${tabBase} bg-gray-100 text-gray-900 border-gray-400` : `${tabBase} bg-white text-gray-500 border-gray-300 hover:bg-gray-50`;
+    if (key === "a")
+      return view === "a" ? `${tabBase} bg-blue-50 text-blue-700 border-blue-300` : `${tabBase} bg-white text-gray-500 border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200`;
+    return view === "b" ? `${tabBase} bg-red-50 text-red-700 border-red-300` : `${tabBase} bg-white text-gray-500 border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200`;
+  }
+
+  if (bookingsLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-slate-400 text-sm">Loading calendar…</p>
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-3 text-stone-500">
+          <Loader2 size={32} className="animate-spin" style={{ color: GOLD }} />
+          <p className="text-sm font-medium">Loading hall data…</p>
         </div>
       </div>
     );
@@ -250,202 +734,681 @@ export default function CalendarView() {
   }
 
   return (
-    <div className="p-4 xl:p-8">
+    <div className="min-h-screen bg-stone-50 text-stone-900 p-4 md:p-6 lg:p-8 antialiased">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .fade-up { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .fade-in { animation: fadeIn 0.35s ease-out both; }
+        @media (prefers-reduced-motion: reduce) { .fade-up, .fade-in { animation: none !important; } }
+      `}</style>
 
-      {/* ── Top navigation ── */}
-      <div className="flex flex-col gap-3 mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-
-        {/* Title + Islamic Date */}
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: easeOut }}
+        className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 mb-6 pb-5 border-b border-stone-200"
+      >
         <div>
-          <h1 className="font-mono text-2xl xl:text-[28px] font-bold text-gray-900">Hall Bookings</h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-slate-400 text-xs">Visual overview of booked dates by hall</p>
-            <span className="text-slate-300">•</span>
+          <h1 className="text-2xl xl:text-[28px] font-bold tracking-tight text-stone-900">Hall Bookings & Services</h1>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <p className="text-stone-400 text-xs">Calendar · Add-ons · Beverages · Overheads</p>
+            <span className="text-stone-300">•</span>
             <p className="text-emerald-700 bg-emerald-50 border border-emerald-100 text-[11px] font-semibold px-2 py-0.5 rounded-md">
-               {getTodayIslamicDate()}
+              {getTodayIslamicDate()}
             </p>
           </div>
         </div>
-
-        {/* Hall tabs + month nav row */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Hall tabs */}
+        <div className="flex flex-wrap gap-2 items-center">
           <div className="flex gap-1.5">
-            {[
-              { key: "both", label: "Both" },
-              { key: "a",    label: "Hall A" },
-              { key: "b",    label: "Hall B" },
-            ].map(({ key, label }) => (
-              <button key={key} className={tabClass(key)} onClick={() => { setView(key); setSelectedDay(null); setShowPanel(false); }}>
+            {[{ key: "both", label: "Both" }, { key: "a", label: "Hall A" }, { key: "b", label: "Hall B" }].map(({ key, label }) => (
+              <button key={key} className={hallTabClass(key)} onClick={() => { setView(key); setSelectedDay(null); setShowPanel(false); }}>
                 {label}
               </button>
             ))}
           </div>
-          
-
-          {/* Month navigator */}
-          <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
-            
-            <button
-              className="w-8 h-8 rounded-xl border border-green-100 bg-white flex items-center justify-center hover:bg-green-50 transition-colors cursor-pointer"
-              onClick={() => { setCurrent(new Date(yr, mo - 1, 1)); setSelectedDay(null); setShowPanel(false); }}
-            >‹</button>
-            <span className="font-semibold text-sm w-36 text-center text-gray-800">
-              {MONTH_NAMES[mo]} {yr}
-            </span>
-            
-            <button
-              className="w-8 h-8 rounded-xl border border-green-100 bg-white flex items-center justify-center hover:bg-green-50 transition-colors cursor-pointer"
-              onClick={() => { setCurrent(new Date(yr, mo + 1, 1)); setSelectedDay(null); setShowPanel(false); }}
-            >›</button>
+          <button onClick={openNewBookingModal} className="px-3 py-1.5 rounded-xl border border-green-300 bg-green-50 text-green-700 text-xs font-semibold cursor-pointer hover:bg-green-100">
+            + New Booking
+          </button>
+          <div className="flex items-center gap-1.5">
+            <button className="w-8 h-8 rounded-xl border border-stone-200 bg-white flex items-center justify-center hover:bg-stone-50 cursor-pointer"
+              onClick={() => { setCurrent(new Date(yr, mo - 1, 1)); setSelectedDay(null); setShowPanel(false); }}>‹</button>
+            <span className="font-semibold text-sm w-32 text-center text-stone-800">{MONTH_NAMES[mo]} {yr}</span>
+            <button className="w-8 h-8 rounded-xl border border-stone-200 bg-white flex items-center justify-center hover:bg-stone-50 cursor-pointer"
+              onClick={() => { setCurrent(new Date(yr, mo + 1, 1)); setSelectedDay(null); setShowPanel(false); }}>›</button>
           </div>
         </div>
-        
-      </div>
-      
+      </motion.div>
 
-      {/* ── Legend ── */}
-      <div className="flex gap-4 mb-4">
-        {(view === "both" || view === "a") && (
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-blue-300 inline-block" />Hall A
-          </div>
-        )}
-        {(view === "both" || view === "b") && (
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-red-300 inline-block" />Hall B
-          </div>
-        )}
-        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-          <span className="w-2.5 h-2.5 rounded-[3px] bg-amber-300 inline-block" />Pending
-        </div>
-      </div>
+      {/* KPIs */}
+      <motion.div
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
+      >
+        <KpiCard label="Add-on Revenue" value={totalClientRevenue} sub="Other services (excl. drinks)" icon={Wallet} tone="revenue" />
+        <KpiCard label="Items Sold" value={totalItemsSold} sub="Add-on services" icon={Layers} />
+        <KpiCard label="Monthly Overhead" value={totalMonthlyOverhead} sub="Electric · Diesel · fixed" icon={Zap} tone="spend" />
+        <KpiCard label="Daily Spend" value={totalDailyExpense} sub="Incl. Pepsi · Coke · misc" icon={Receipt} tone="spend" />
+      </motion.div>
 
-      {/* ── Main layout ── */}
-      <div className="xl:grid xl:grid-cols-[1fr_300px] xl:gap-5">
+      {/* Tabs */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15, ease: easeOut }}
+        className="flex gap-1 mb-6 bg-stone-100 p-1 rounded-lg border border-stone-200 overflow-x-auto"
+      >
+        {[
+          { id: "overview", label: "Overview", icon: Calendar },
+          { id: "bookings", label: "Bookings + Add-ons", icon: PlusCircle },
+          { id: "services", label: "Service Performance", icon: Layers },
+          { id: "expenses", label: "Expenses", icon: Receipt },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveSection(tab.id)}
+            className={`px-4 py-2 rounded-md text-[13px] font-semibold transition-all duration-200 flex items-center gap-2 whitespace-nowrap
+              ${activeSection === tab.id ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"}`}
+          >
+            <tab.icon size={14} style={{ color: activeSection === tab.id ? GOLD : "#a8a29e" }} />
+            {tab.label}
+          </button>
+        ))}
+      </motion.div>
 
-        {/* Calendar card */}
-        <div className="bg-white rounded-2xl border border-green-100 overflow-hidden mb-4 xl:mb-0">
-
-          {/* Day headers */}
-          <div className="grid grid-cols-7 bg-green-50">
-            {DAY_NAMES.map((d) => (
-              <div key={d} className="py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wide">
-                {d}
+      {/* ═══ OVERVIEW ═══ */}
+      <AnimatePresence mode="wait">
+      {activeSection === "overview" && (
+        <motion.div
+          key="overview"
+          variants={tabPanel}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          className="space-y-6"
+        >
+          <div className="xl:grid xl:grid-cols-[1fr_300px] xl:gap-5">
+            <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden mb-4 xl:mb-0">
+              <div className="flex gap-4 px-4 py-2.5 border-b border-stone-100 bg-stone-50/50">
+                {(view === "both" || view === "a") && <div className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="w-2.5 h-2.5 rounded-[3px] bg-blue-300 inline-block" />Hall A</div>}
+                {(view === "both" || view === "b") && <div className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="w-2.5 h-2.5 rounded-[3px] bg-red-300 inline-block" />Hall B</div>}
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="w-2.5 h-2.5 rounded-[3px] bg-amber-300 inline-block" />Pending</div>
               </div>
-            ))}
+              <div className="grid grid-cols-7 bg-stone-50">
+                {DAY_NAMES.map((d) => (
+                  <div key={d} className="py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wide">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {cells.map((day, idx) => {
+                  if (!day) return <div key={`empty-${idx}`} className="min-h-[60px] xl:min-h-[84px] border-b border-r border-stone-50" />;
+                  const dayBookings = bMap[day] || [];
+                  const isToday = isCurrentMonth && today.getDate() === day;
+                  const isSel = selectedDay === day;
+                  return (
+                    <div
+                      key={day}
+                      onClick={() => { setSelectedDay(day === selectedDay ? null : day); setShowPanel(true); }}
+                      className={`min-h-[60px] xl:min-h-[84px] p-1.5 xl:p-2 border-b border-r border-stone-50 cursor-pointer transition-colors ${isSel ? "bg-emerald-50" : "hover:bg-stone-50"}`}
+                    >
+                      {isToday ? (
+                        <div className="w-5 h-5 xl:w-6 xl:h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold mb-1">{day}</div>
+                      ) : (
+                        <div className={`text-[11px] xl:text-[13px] font-medium mb-1 leading-none ${isSel ? "text-emerald-600 font-bold" : "text-slate-500"}`}>{day}</div>
+                      )}
+                      <div className="hidden sm:block">
+                        {dayBookings.slice(0, 2).map((b) => {
+                          const isPending = b.status?.toLowerCase() === "pending";
+                          return (
+                            <div key={b.id} className={`text-[9px] xl:text-[10px] px-1 py-0.5 mb-0.5 rounded font-semibold truncate ${
+                              isPending ? "bg-amber-200 text-amber-900" : b.hall === "a" ? "bg-blue-200 text-blue-900" : "bg-red-200 text-red-900"
+                            }`}>{b.client.split("&")[0].trim()}</div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex gap-0.5 sm:hidden flex-wrap">
+                        {dayBookings.slice(0, 3).map((b) => {
+                          const isPending = b.status?.toLowerCase() === "pending";
+                          return <span key={b.id} className={`w-1.5 h-1.5 rounded-full ${isPending ? "bg-amber-400" : b.hall === "a" ? "bg-blue-400" : "bg-red-400"}`} />;
+                        })}
+                      </div>
+                      {dayBookings.length > 2 && <div className="text-[9px] text-slate-400 hidden sm:block">+{dayBookings.length - 2}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className={`bg-white rounded-2xl border border-stone-200 p-4 xl:block ${showPanel || selectedDay ? "block" : "hidden xl:block"}`}>
+              <div className="flex items-center justify-between mb-4">
+                <p className="font-semibold text-sm text-stone-800">
+                  {selectedDay ? `${MONTH_NAMES[mo]} ${selectedDay}, ${yr}` : "Select a date"}
+                </p>
+                {showPanel && (
+                  <button className="xl:hidden text-slate-400 hover:text-slate-600 text-lg leading-none"
+                    onClick={() => { setShowPanel(false); setSelectedDay(null); }}>✕</button>
+                )}
+              </div>
+              {!selectedDay && <p className="text-xs text-slate-400 text-center pt-8">Click any date to see its bookings</p>}
+              {selectedDay && selectedBookings.length === 0 && <p className="text-xs text-slate-400 text-center pt-8">No bookings for this date</p>}
+              <div className="overflow-y-auto max-h-[400px] xl:max-h-[520px]">
+                {selectedBookings.map((b) => (
+                  <BookingChip key={b.id} booking={b} addons={addonsByBooking[b.id] || []} onEdit={openEditModal} />
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Date cells */}
-          <div className="grid grid-cols-7">
-            {cells.map((day, idx) => {
-              if (!day) return <div key={`empty-${idx}`} className="min-h-[60px] xl:min-h-[84px] border-b border-r border-green-50" />;
+          {/* Pepsi / Coke / Diesel */}
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          >
+            <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" />
+            <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" />
+            <DieselCard
+              liters={drinkAndFuelStats.diesel.liters}
+              count={drinkAndFuelStats.diesel.count}
+              paid={drinkAndFuelStats.diesel.paid}
+            />
+          </motion.div>
 
-              const bookings = bMap[day] || [];
-              const isToday  = isCurrentMonth && today.getDate() === day;
-              const isSel    = selectedDay === day;
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="bg-white rounded-2xl border border-stone-200 p-4">
+              <p className="font-semibold text-sm text-stone-800 mb-3">Daily Expenses</p>
+              <DailyExpensesPanel
+                allDailyExpenses={allDailyExpenses}
+                addingDaily={addingDaily} setAddingDaily={setAddingDaily}
+                newDaily={newDaily} setNewDaily={setNewDaily}
+                createDailyExpenseMutation={createDailyExpenseMutation}
+                deleteDailyExpenseMutation={deleteDailyExpenseMutation}
+              />
+            </div>
+            <div className="bg-white rounded-2xl border border-stone-200 p-4">
+              <p className="font-semibold text-sm text-stone-800 mb-3">Monthly Overheads</p>
+              <MonthlyOverheadPanel
+                allMonthlyExpenses={allMonthlyExpenses}
+                selectedYear={yr} selectedMonth={mo}
+                addingMonthly={addingMonthly} setAddingMonthly={setAddingMonthly}
+                newMonthly={newMonthly} setNewMonthly={setNewMonthly}
+                createMonthlyExpenseMutation={createMonthlyExpenseMutation}
+                deleteMonthlyExpenseMutation={deleteMonthlyExpenseMutation}
+              />
+            </div>
+          </div>
+        </motion.div>
+      )}
 
-              return (
-                <div
-                  key={day}
-                  onClick={() => {
-                    setSelectedDay(day === selectedDay ? null : day);
-                    setShowPanel(true);
-                  }}
-                  className={`min-h-[60px] xl:min-h-[84px] p-1.5 xl:p-2 border-b border-r border-green-50 cursor-pointer transition-colors
-                    ${isSel ? "bg-green-50" : "hover:bg-slate-50"}`}
-                >
-                  {/* Day number */}
-                  {isToday ? (
-                    <div className="w-5 h-5 xl:w-6 xl:h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold mb-1">
-                      {day}
-                    </div>
+      {/* ═══ BOOKINGS ═══ */}
+      {activeSection === "bookings" && (
+        <motion.div
+          key="bookings"
+          variants={tabPanel}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          className={`grid gap-6 items-start ${selectedBooking ? "lg:grid-cols-[1fr_360px]" : ""}`}
+        >
+          <div className="lg:col-span-full flex flex-wrap gap-3 items-center mb-2">
+            <div className="bg-stone-100 p-1 rounded-lg flex gap-0.5 border border-stone-200">
+              {["all", "Hall A", "Hall B"].map((h) => (
+                <button key={h} onClick={() => setHallFilter(h)}
+                  className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all ${hallFilter === h ? "bg-white text-stone-900 shadow-sm font-semibold" : "text-stone-500 hover:text-stone-800"}`}>
+                  {h === "all" ? "Both Halls" : h}
+                </button>
+              ))}
+            </div>
+            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-stone-200 rounded-lg text-[12px] font-medium text-stone-700 outline-none cursor-pointer">
+              {YEARS.map((y) => <option key={y}>{y}</option>)}
+            </select>
+            <div className="bg-stone-100 p-1 rounded-lg flex gap-0.5 border border-stone-200 overflow-x-auto">
+              <button onClick={() => setSelectedMonth("all")}
+                className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${selectedMonth === "all" ? "bg-stone-900 text-white shadow-sm font-semibold" : "text-stone-500 hover:text-stone-800"}`}>
+                All Months
+              </button>
+              {MONTHS.map((m) => (
+                <button key={m} onClick={() => setSelectedMonth(m)}
+                  className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${selectedMonth === m ? "bg-stone-900 text-white shadow-sm font-semibold" : "text-stone-500 hover:text-stone-800"}`}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+            <SectionHeader title="Bookings with Add-ons" sub="Click a row for service breakdown">
+              <SearchBar value={bookingSearch} onChange={setBookingSearch} placeholder="Search client, event, service..." />
+            </SectionHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-100">
+                    {["R.No", "Client", "Hall", "Event", "Date", "Items", "Revenue", ""].map((h) => (
+                      <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {filteredBookings.length === 0 ? (
+                    <EmptyRow colSpan={8} text="No bookings match your filters." />
                   ) : (
-                    <div className={`text-[11px] xl:text-[13px] font-medium mb-1 leading-none ${isSel ? "text-green-600 font-bold" : "text-slate-500"}`}>
-                      {day}
-                    </div>
-                  )}
-
-                  {/* Pills — hidden on very small, shown on sm+ */}
-                  <div className="hidden sm:block">
-                    {bookings.slice(0, 2).map((b) => {
-                      const isPending = b.status?.toLowerCase() === "pending";
+                    filteredBookings.map((b) => {
+                      const items = (addonsByBooking[b.id] || []).filter((i) => !DRINK_SERVICES.includes(i.service));
+                      const rev = items.reduce((s, x) => s + Number(x.client_price || 0), 0);
+                      const isSel = selectedBooking?.id === b.id;
                       return (
-                        <div
-                          key={b.id}
-                          className={`text-[9px] xl:text-[10px] px-1 py-0.5 mb-0.5 rounded font-semibold truncate ${
-                            isPending 
-                              ? "bg-amber-200 text-amber-900" 
-                              : b.hall === "a" 
-                              ? "bg-blue-200 text-blue-900" 
-                              : "bg-red-200 text-red-900"
-                          }`}
-                        >
-                          {b.client.split("&")[0].trim()}
+                        <tr key={b.id} onClick={() => setSelectedBooking(isSel ? null : b)}
+                          className={`cursor-pointer transition-colors ${isSel ? "bg-stone-50" : "hover:bg-stone-50"}`}>
+                          <td className="px-5 py-3.5 text-[12px] font-mono font-medium text-stone-600">{b.r_no ? `#${b.r_no}` : `#${b.id}`}</td>
+                          <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{b.client}</td>
+                          <td className="px-5 py-3.5 text-[11px] font-medium text-stone-500">{b.hall}</td>
+                          <td className="px-5 py-3.5 text-[12px] text-stone-500">{b.event}</td>
+                          <td className="px-5 py-3.5 text-[12px] text-stone-400">
+                            {new Date(b.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                          </td>
+                          <td className="px-5 py-3.5 text-[12px] text-stone-500">{items.length}</td>
+                          <td className="px-5 py-3.5 text-[13px] font-semibold" style={{ color: TEAL }}>{currency(rev)}</td>
+                          <td className="px-5 py-3.5 text-right">
+                            <ChevronRight size={16} className={`text-stone-400 inline transition-transform duration-200 ${isSel ? "rotate-90 text-stone-900" : ""}`} />
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {selectedBooking && (
+            <DetailSidebar
+              title="ADD-ON BREAKDOWN"
+              subtitle={<span>{selectedBooking.client}<span className="block text-[11px] font-mono text-stone-400 mt-0.5">R.No. {selectedBooking.r_no || selectedBooking.id}</span></span>}
+              onClose={() => setSelectedBooking(null)}
+            >
+              <div className="flex flex-col gap-3">
+                {(addonsByBooking[selectedBooking.id] || [])
+                  .filter((i) => !DRINK_SERVICES.includes(i.service))
+                  .map((item) => (
+                    <div key={item.id} className="bg-stone-50 p-3.5 rounded-xl border border-stone-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-stone-900 text-[13px]">{item.service}</span>
+                        <span className="text-[13px] font-semibold" style={{ color: TEAL }}>{currency(item.client_price)}</span>
+                      </div>
+                      {item.description && <p className="text-[12px] text-stone-500">{item.description}</p>}
+                    </div>
+                  ))}
+              </div>
+            </DetailSidebar>
+          )}
+        </motion.div>
+      )}
+
+      {/* ═══ SERVICES ═══ */}
+      {activeSection === "services" && (
+        <motion.div
+          key="services"
+          variants={tabPanel}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          className="space-y-6"
+        >
+          <div className="flex flex-wrap gap-3 items-center">
+            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-stone-200 rounded-lg text-[12px] font-medium text-stone-700 outline-none cursor-pointer">
+              {YEARS.map((y) => <option key={y}>{y}</option>)}
+            </select>
+            <div className="bg-stone-100 p-1 rounded-lg flex gap-0.5 border border-stone-200 overflow-x-auto">
+              <button onClick={() => setSelectedMonth("all")}
+                className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${selectedMonth === "all" ? "bg-stone-900 text-white shadow-sm font-semibold" : "text-stone-500 hover:text-stone-800"}`}>All Months</button>
+              {MONTHS.map((m) => (
+                <button key={m} onClick={() => setSelectedMonth(m)}
+                  className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${selectedMonth === m ? "bg-stone-900 text-white shadow-sm font-semibold" : "text-stone-500 hover:text-stone-800"}`}>{m}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+            <div className="xl:col-span-3 bg-white border border-stone-200 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h2 className="text-[14px] font-semibold text-stone-900 flex items-center gap-2">
+                    <Layers size={15} style={{ color: TEAL }} /> Service Performance
+                  </h2>
+                  <p className="text-[11px] text-stone-400 mt-0.5">Revenue from add-on services (drinks shown separately)</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <SearchBar value={serviceSearch} onChange={setServiceSearch} placeholder="Filter services..." />
+                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full border"
+                    style={{ backgroundColor: TEAL_SOFT, color: TEAL, borderColor: "#99f6e4" }}>
+                    {searchedServiceBreakdown.length} services
+                  </span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-stone-50 border-b border-stone-100">
+                      {["Service", "Sold", "Revenue"].map((h) => (
+                        <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {searchedServiceBreakdown.length === 0 ? (
+                      <EmptyRow colSpan={3} text="No services for these filters." />
+                    ) : (
+                      searchedServiceBreakdown.map((s) => (
+                        <tr key={s.service} className="hover:bg-stone-50 transition-colors">
+                          <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{s.service}</td>
+                          <td className="px-5 py-3.5 text-[12px] text-stone-500">{s.count}×</td>
+                          <td className="px-5 py-3.5 text-[13px] font-semibold" style={{ color: TEAL }}>{currency(s.revenue)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="xl:col-span-2 flex flex-col gap-4">
+              <div className="bg-white border border-stone-200 rounded-2xl p-5 flex-1">
+                <h2 className="text-[14px] font-semibold text-stone-900">Revenue Share</h2>
+                <p className="text-[11px] text-stone-400 mt-0.5 mb-4">Top performing services</p>
+                {serviceBreakdown.length === 0 ? (
+                  <div className="h-48 flex items-center justify-center text-stone-400 text-[13px]"><Inbox size={22} className="text-stone-200" /></div>
+                ) : (
+                  <div className="h-52">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={serviceBreakdown.slice(0, 8)} dataKey="revenue" nameKey="service" cx="50%" cy="50%"
+                          innerRadius={55} outerRadius={80} paddingAngle={3} stroke="#fff" strokeWidth={2}>
+                          {serviceBreakdown.slice(0, 8).map((_, index) => (
+                            <Cell key={index} fill={[TEAL, "#0d9488", "#14b8a6", "#2dd4bf", "#5eead4", "#99f6e4", "#ccfbf1", "#f0fdfa"][index % 8]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0].payload;
+                          return (
+                            <div className="bg-white border border-stone-200 rounded-xl shadow-lg px-3 py-2">
+                              <p className="text-[12px] font-semibold text-stone-900">{d.service}</p>
+                              <p className="text-[12px] font-medium" style={{ color: TEAL }}>{currency(d.revenue)}</p>
+                            </div>
+                          );
+                        }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+              <div className="bg-white border border-stone-200 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Droplet size={14} style={{ color: GOLD }} />
+                  <h2 className="text-[14px] font-semibold text-stone-900">Beverages (from daily log)</h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" />
+                  <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ═══ EXPENSES ═══ */}
+      {activeSection === "expenses" && (
+        <motion.div
+          key="expenses"
+          variants={tabPanel}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          className="space-y-6"
+        >
+          <div className="flex flex-wrap gap-3 items-center">
+            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-stone-200 rounded-lg text-[12px] font-medium text-stone-700 outline-none cursor-pointer">
+              {YEARS.map((y) => <option key={y}>{y}</option>)}
+            </select>
+            <div className="bg-stone-100 p-1 rounded-lg flex gap-0.5 border border-stone-200 overflow-x-auto">
+              <button onClick={() => setSelectedMonth("all")}
+                className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${selectedMonth === "all" ? "bg-stone-900 text-white shadow-sm font-semibold" : "text-stone-500 hover:text-stone-800"}`}>All Months</button>
+              {MONTHS.map((m) => (
+                <button key={m} onClick={() => setSelectedMonth(m)}
+                  className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${selectedMonth === m ? "bg-stone-900 text-white shadow-sm font-semibold" : "text-stone-500 hover:text-stone-800"}`}>{m}</button>
+              ))}
+            </div>
+          </div>
+
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          >
+            <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" />
+            <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" />
+            <DieselCard
+              liters={drinkAndFuelStats.diesel.liters}
+              count={drinkAndFuelStats.diesel.count}
+              paid={drinkAndFuelStats.diesel.paid}
+            />
+          </motion.div>
+
+          <div className="bg-white rounded-xl border border-stone-200 p-5">
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-[13px] font-semibold text-stone-900">Monthly Overhead</p>
+                <p className="text-[11px] text-stone-400 mt-0.5">
+                  {currency(totalMonthlyOverhead)} · {selectedMonth === "all" ? selectedYear : `${selectedMonth} ${selectedYear}`}
+                </p>
+              </div>
+              {!addingMonthly && (
+                <button onClick={() => setAddingMonthly(true)}
+                  className="text-[11px] font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-white"
+                  style={{ backgroundColor: GOLD }}>
+                  <Plus size={12} /> Add Expense
+                </button>
+              )}
+            </div>
+            {addingMonthly && (
+              <div className="fade-in flex flex-col gap-2 pt-4 mt-4 border-t border-stone-100">
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={newMonthly.month} onChange={(e) => setNewMonthly({ ...newMonthly, month: Number(e.target.value) })}
+                    className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none">
+                    {MONTHS.map((m, idx) => <option key={m} value={idx + 1}>{m}</option>)}
+                  </select>
+                  <select value={newMonthly.year} onChange={(e) => setNewMonthly({ ...newMonthly, year: Number(e.target.value) })}
+                    className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none">
+                    {YEARS.map((y) => <option key={y}>{y}</option>)}
+                  </select>
+                </div>
+                <select value={newMonthly.category} onChange={(e) => setNewMonthly({ ...newMonthly, category: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none">
+                  {(MONTHLY_EXPENSE_CATEGORIES || ["Electric Bill", "Diesel"]).map((c) => <option key={c}>{c}</option>)}
+                </select>
+                <input value={newMonthly.label} onChange={(e) => setNewMonthly({ ...newMonthly, label: e.target.value })}
+                  placeholder="Description" className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none" />
+                <input type="number" value={newMonthly.amount} onChange={(e) => setNewMonthly({ ...newMonthly, amount: e.target.value })}
+                  placeholder="Amount (₨)" className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-[12px] outline-none" />
+                <div className="flex gap-2 mt-1">
+                  <button onClick={addMonthlyExpense} className="flex-1 py-1.5 text-white text-[12px] font-medium rounded-lg" style={{ backgroundColor: GOLD }}>Add</button>
+                  <button onClick={() => setAddingMonthly(false)} className="px-3 py-1.5 bg-white text-stone-600 border border-stone-200 text-[12px] font-medium rounded-lg">Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid lg:grid-cols-[1fr_280px] gap-6">
+            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+              <SectionHeader title="Logged Monthly Entries" sub={currency(totalMonthlyOverhead)}>
+                <SearchBar value={monthlySearch} onChange={setMonthlySearch} placeholder="Search entries..." />
+              </SectionHeader>
+              <div className="px-5 py-4">
+                {Object.keys(monthlyExpensesByMonth).length === 0 ? (
+                  <div className="text-center py-12 text-stone-400 text-[13px]">
+                    <Inbox size={26} className="mx-auto mb-2 text-stone-200" />No monthly expenses.
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {Object.keys(monthlyExpensesByMonth).sort((a, b) => Number(a) - Number(b)).map((monthNum) => {
+                      const entries = monthlyExpensesByMonth[monthNum];
+                      const monthTotal = entries.reduce((s, e) => s + Number(e.amount || 0), 0);
+                      return (
+                        <div key={monthNum}>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-[11px] font-semibold text-stone-400">{MONTHS[Number(monthNum) - 1]} {selectedYear}</p>
+                            <span className="text-[11px] font-semibold text-stone-600">{currency(monthTotal)}</span>
+                          </div>
+                          <div className="space-y-2">
+                            {entries.map((e) => (
+                              <div key={e.id} className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-stone-50 border border-stone-100 group">
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[13px] font-medium text-stone-800 block truncate">{e.label}</span>
+                                  <span className="text-[10px] text-stone-400">{e.category}</span>
+                                </div>
+                                <span className="text-[13px] font-semibold text-stone-900">{currency(e.amount)}</span>
+                                <button onClick={() => deleteMonthlyExpense(e.id)}
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-stone-300 hover:text-rose-600 transition-opacity">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-
-                  {/* Dot indicators on mobile */}
-                  <div className="flex gap-0.5 sm:hidden flex-wrap">
-                    {bookings.slice(0, 3).map((b) => {
-                      const isPending = b.status?.toLowerCase() === "pending";
-                      return (
-                        <span 
-                          key={b.id} 
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            isPending 
-                              ? "bg-amber-400" 
-                              : b.hall === "a" 
-                              ? "bg-blue-400" 
-                              : "bg-red-400"
-                          }`} 
-                        />
-                      );
-                    })}
-                  </div>
-
-                  {bookings.length > 2 && (
-                    <div className="text-[9px] text-slate-400 hidden sm:block">+{bookings.length - 2}</div>
-                  )}
+                )}
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-stone-200 p-5">
+              <h2 className="text-[14px] font-semibold text-stone-900 mb-4">By Category</h2>
+              {monthlyByCategory.length === 0 ? (
+                <p className="text-center py-10 text-stone-400 text-[13px]">No data</p>
+              ) : (
+                <div className="space-y-4">
+                  {monthlyByCategory.map(([cat, amt]) => {
+                    const p = totalMonthlyOverhead ? Math.round((amt / totalMonthlyOverhead) * 100) : 0;
+                    return <CategoryBar key={cat} label={cat} percent={p} amount={amt} color={/diesel|fuel/i.test(cat) ? DIESEL_AMBER : GOLD} />;
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Side panel ── */}
-        <div className={`bg-white rounded-2xl border border-green-100 p-4 xl:block ${showPanel || selectedDay ? "block" : "hidden xl:block"}`}>
-          <div className="flex items-center justify-between mb-4">
-            <p className="font-semibold text-sm text-gray-800">
-              {selectedDay ? `${MONTH_NAMES[mo]} ${selectedDay}, ${yr}` : "Select a date"}
-            </p>
-            {/* Close button on mobile */}
-            {showPanel && (
-              <button
-                className="xl:hidden text-slate-400 hover:text-slate-600 text-lg leading-none"
-                onClick={() => { setShowPanel(false); setSelectedDay(null); }}
-              >✕</button>
-            )}
+              )}
+            </div>
           </div>
 
-          {!selectedDay && (
-            <p className="text-xs text-slate-400 text-center pt-8">Click any date to see its bookings</p>
-          )}
+          {/* <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+            <SectionHeader title="Standard Expenses">
+              <SearchBar value={standardSearch} onChange={setStandardSearch} placeholder="Search expenses..." />
+            </SectionHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-100">
+                    {["Date", "Category", "Event / Client", "Hall", "Description", "Amount"].map((h) => (
+                      <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {searchedStandardExpenses.length === 0 ? (
+                    <EmptyRow colSpan={6} text="No standard expenses." />
+                  ) : (
+                    searchedStandardExpenses.map((expense) => {
+                      const linkedBooking = bookings.find((b) => b.id === expense.bookingId);
+                      return (
+                        <tr key={expense.id} className="hover:bg-stone-50">
+                          <td className="px-5 py-3.5 text-[12px] text-stone-400">
+                            {new Date(expense.created_at).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
+                          </td>
+                          <td className="px-5 py-3.5 text-[11px] font-medium text-stone-500">{expense.category}</td>
+                          <td className="px-5 py-3.5">
+                            {linkedBooking ? (
+                              <div>
+                                <span className="text-[13px] font-medium text-stone-900 block">{linkedBooking.client}</span>
+                                <span className="text-[11px] text-stone-400">{linkedBooking.event}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[12px] text-stone-400 italic">General Overhead</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 text-[11px] text-stone-500">{linkedBooking ? linkedBooking.hall : "—"}</td>
+                          <td className="px-5 py-3.5 text-[12px] text-stone-500">{expense.label}</td>
+                          <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(expense.amount)}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div> */}
 
-          {selectedDay && selectedBookings.length === 0 && (
-            <p className="text-xs text-slate-400 text-center pt-8">No bookings for this date</p>
-          )}
-
-          <div className="overflow-y-auto max-h-[400px] xl:max-h-[520px]">
-            {selectedBookings.map((b) => (
-  <BookingChip key={b.id} booking={b} addons={addonsByBooking[b.id] || []} />
-))}
+          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+            <SectionHeader title="Daily Expense Log" sub="Pepsi · Coca-Cola crates & payments · Diesel · misc">
+              <SearchBar value={dailySearch} onChange={setDailySearch} placeholder="Search expenses..." />
+            </SectionHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-100">
+                    {["Date", "Description", "Category", "Amount"].map((h) => (
+                      <th key={h} className="px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {searchedDailyExpenses.length === 0 ? (
+                    <EmptyRow colSpan={4} text="No daily expenses." />
+                  ) : (
+                    searchedDailyExpenses.map((expense) => {
+                      const pepsi = isPepsi(expense.label, expense.category);
+                      const coke = isCoke(expense.label, expense.category);
+                      const diesel = isDiesel(expense.label, expense.category);
+                      return (
+                        <tr key={expense.id} className="hover:bg-stone-50">
+                          <td className="px-5 py-3.5 text-[12px] text-stone-400">
+                            {new Date(expense?.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                          </td>
+                          <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{expense?.label}</td>
+                          <td className="px-5 py-3.5 text-[11px] font-medium">
+                            <span style={{ color: pepsi ? PEPSI_BLUE : coke ? COKE_RED : diesel ? DIESEL_AMBER : GOLD }}>
+                              {expense?.category}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(expense?.amount)}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
-      </div>
+      {editingBooking && (
+        <BookingModal
+          booking={editingBooking}
+          onClose={closeBookingModal}
+          onSave={handleSaveBooking}
+          isNew={isNewBooking}
+          isLoading={bookingModalLoading}
+        />
+      )}
     </div>
   );
 }

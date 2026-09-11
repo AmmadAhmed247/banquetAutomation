@@ -21,8 +21,8 @@ export default function DashboardPage() {
     { name: "Calendar", path: "calendar", icon: Calendar, desc: "Manage your studio" },
     { name: "Bookings", path: "bookings", icon: CalendarCheck, desc: "Manage your studio" },
     { name: "Receipt", path: "recipt", icon: ReceiptIcon, desc: "Manage your studio" },
-    { name: "Management System", path: "management", icon: FolderKanban, desc: "Manage your studio" },
-    { name: "Add-ons", path: "addons", icon: BanknoteArrowDown, desc: "Manage your studio" },
+    // { name: "Management System", path: "management", icon: FolderKanban, desc: "Manage your studio" },
+    // { name: "Add-ons", path: "addons", icon: BanknoteArrowDown, desc: "Manage your studio" },
     { name: "Cash Flow", path: "cash-flow", icon: DollarSign, desc: "Manage your studio" },
   ];
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { MONTHS, YEARS, MONTHLY_EXPENSE_CATEGORIES, currency } from "./ManagementUtils.js";
 
@@ -12,9 +13,15 @@ export function MonthlyOverheadPanel({
   createMonthlyExpenseMutation,
   deleteMonthlyExpenseMutation,
 }) {
+  // NEW: local toggle for showing the full list vs. the recent 5
+  const [showAll, setShowAll] = useState(false);
+
   const visible = allMonthlyExpenses.filter(
     me => me.year === selectedYear && (selectedMonth === null || (me.month - 1) === selectedMonth)
   );
+
+  // NEW: only slice for display — `visible` itself stays the full filtered list
+  const displayed = showAll ? visible : visible.slice(0, 5);
 
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
@@ -27,7 +34,7 @@ export function MonthlyOverheadPanel({
         )}
       </div>
       <div className="space-y-2 mb-2">
-        {visible.map(me => (
+        {displayed.map(me => (
           <div key={me.id} className="flex justify-between items-center bg-stone-50 p-2.5 rounded-xl border border-stone-100 group">
             <div>
               <p className="text-[12px] font-semibold text-stone-800">{me.label}</p>
@@ -42,6 +49,17 @@ export function MonthlyOverheadPanel({
           </div>
         ))}
       </div>
+
+      {/* NEW: only show the toggle when there's actually more than 5 to hide */}
+      {visible.length > 5 && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="w-full text-center text-[11px] font-semibold text-amber-700 hover:text-amber-900 py-1.5 mb-2 transition-colors"
+        >
+          {showAll ? "Show less" : `Show ${visible.length - 5} more`}
+        </button>
+      )}
+
       {addingMonthly && (
         <div className="flex flex-col gap-2 pt-3 border-t border-stone-100">
           <div className="grid grid-cols-2 gap-2">
