@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { DAILY_EXPENSE_CATEGORIES, currency } from "./ManagementUtils.js";
 
-const QUANTITY_CATEGORIES = ["Pepsi Co.", "Coca Cola Co." , "Diesel"];
+const QUANTITY_CATEGORIES = ["Pepsi Co.", "Coca Cola Co." , "Diesel" , "Water Bottles"];
 
 function isTodayPKT(dateInput) {
   if (!dateInput) return false;
