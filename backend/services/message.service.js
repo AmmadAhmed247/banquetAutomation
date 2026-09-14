@@ -12,46 +12,59 @@ const { getUserByPhone, isWithinWindow } = require("./session.service");
 const { waitForDeliveryStatus } = require("./messageStatus.service");
 
 const PRICING = {
-  1: [ // January
-    { start: 1, end: 10, price: 350000 },
-    { start: 11, end: 31, price: 240000 },
-  ],
-  2: [ // February
-    { start: 1, end: 28, price: 140000 },
-  ],
-  3: [ // March (only 13-31 specified)
-    { start: 13, end: 31, price: 240000 },
-  ],
-  4: [ // April
-    { start: 1, end: 30, price: 240000 },
-  ],
-  5: [ // May
-    { start: 1, end: 16, price: 150000 },
-    { start: 17, end: 31, price: 250000 },
-  ],
-  6: [ // June
-    { start: 1, end: 10, price: 250000 },
-    { start: 11, end: 30, price: 160000 },
-  ],
-  7: [ // July
-    { start: 1, end: 31, priceMin: 200000, priceMax: 250000 },
-  ],
-  8: [ // August
-    { start: 1, end: 31, priceMin: 200000, priceMax: 250000 },
-  ],
-  9: [ // September
-    { start: 1, end: 30, priceMin: 200000, priceMax: 250000 },
-  ],
-  10: [ // October
-    { start: 1, end: 31, priceMin: 200000, priceMax: 250000 },
-  ],
-  11: [ // November
-    { start: 1, end: 30, priceMin: 200000, priceMax: 250000 },
-  ],
-  12: [ // December
-    { start: 1, end: 19, price: 250000 },
-    { start: 20, end: 31, price: 350000 },
-  ],
+  "Hall A": {
+    1: [ // January
+      { start: 1, end: 10, price: 350000 },
+      { start: 11, end: 31, price: 240000 },
+    ],
+    2: [{ start: 1, end: 28, price: 140000 }], // February
+    3: [{ start: 13, end: 31, price: 240000 }], // March
+    4: [{ start: 1, end: 30, price: 240000 }], // April
+    5: [ // May
+      { start: 1, end: 16, price: 150000 },
+      { start: 17, end: 31, price: 250000 },
+    ],
+    6: [ // June
+      { start: 1, end: 10, price: 250000 },
+      { start: 11, end: 30, price: 160000 },
+    ],
+    7: [{ start: 1, end: 31, priceMin: 200000, priceMax: 250000 }],  // July (estimated)
+    8: [{ start: 1, end: 31, priceMin: 200000, priceMax: 250000 }],  // August (estimated)
+    9: [{ start: 1, end: 30, priceMin: 200000, priceMax: 250000 }],  // September (estimated)
+    10: [{ start: 1, end: 31, priceMin: 200000, priceMax: 250000 }], // October (estimated)
+    11: [{ start: 1, end: 30, priceMin: 200000, priceMax: 250000 }], // November (estimated)
+    12: [ // December
+      { start: 1, end: 19, price: 250000 },
+      { start: 20, end: 31, price: 350000 },
+    ],
+  },
+
+  "Hall B": {
+    1: [ // January
+      { start: 1, end: 10, price: 350000 },
+      { start: 11, end: 31, price: 65000 },
+    ],
+    2: [{ start: 1, end: 28, price: 50000 }], // February
+    3: [{ start: 13, end: 31, price: 60000 }], // March
+    4: [{ start: 1, end: 30, price: 60000 }], // April
+    5: [ // May
+      { start: 1, end: 16, price: 50000 },
+      { start: 17, end: 31, price: 75000 },
+    ],
+    6: [ // June
+      { start: 1, end: 10, price: 65000 },
+      { start: 11, end: 30, price: 50000 },
+    ],
+    7: [{ start: 1, end: 31, priceMin: 35000, priceMax: 50000 }],  // July (estimated)
+    8: [{ start: 1, end: 31, priceMin: 35000, priceMax: 50000 }],  // August (estimated)
+    9: [{ start: 1, end: 30, price: 35000 }],  // September
+    10: [{ start: 1, end: 31, price: 50000 }], // October
+    11: [{ start: 1, end: 30, price: 60000 }], // November
+    12: [ // December
+      { start: 1, end: 19, price: 60000 },
+      { start: 20, end: 31, price: 70000 },
+    ],
+  },
 };
 
 const monthNames = [
@@ -60,12 +73,10 @@ const monthNames = [
 ];
 
 function formatRangeLine(r) {
-  const dateLabel = r.start === r.end ? `${r.start}` : `${r.start}–${r.end}`;
-
   if (r.priceMin != null && r.priceMax != null) {
-    return `• ${dateLabel}: Starting from Rs. ${r.priceMin.toLocaleString("en-PK")}/-`;
+    return `- Starting from Rs. ${r.priceMin.toLocaleString("en-PK")}/- onwards`;
   }
-  return `• ${dateLabel}: Starting From Rs. ${r.price.toLocaleString("en-PK")}/- onwards`;
+  return `- Starting from Rs. ${r.price.toLocaleString("en-PK")}/- onwards`;
 }
 
 function capitalize(str) {
@@ -73,28 +84,51 @@ function capitalize(str) {
 }
 
 
-function getMonthPriceMessage(month) {
-  const ranges = PRICING[month];
+function getMonthPriceMessage(hall, month) {
+  const ranges = PRICING[hall]?.[month];
   const monthName = capitalize(monthNames[month - 1]);
 
   if (!ranges || ranges.length === 0) {
     return (
-      `💰 *Pricing for ${monthName}*\n` +
+      `💰 *Pricing for ${monthName} (${hall})*\n` +
       `Please contact us for pricing details for this month.\n\n` +
-      `Type *HELP* to show the menu or *SWITCH* to change halls.`
+      `Type *MENU* to return to the main menu.`
     );
   }
 
-  const allPrices = ranges.map((r) =>
-    r.priceMin != null ? r.priceMin : r.price
-  );
+  const allPrices = ranges.map((r) => (r.priceMin != null ? r.priceMin : r.price));
   const lowestPrice = Math.min(...allPrices);
 
   return (
-    `*Pricing for ${monthName}*\n` +
+    `*Pricing for ${monthName} (${hall})*\n` +
     `- Starting from Rs. ${lowestPrice.toLocaleString("en-PK")}/- onwards\n\n` +
-    `Type *HELP* to show the menu or *SWITCH* to change halls.`
+    `Type *MENU* to return to the main menu.`
   );
+}
+
+function parseMonthYearInput(input) {
+  const cleaned = input.trim().toLowerCase();
+  const parts = cleaned.split(/\s+/);
+
+  let monthNum = null;
+  let yearNum = null;
+
+  for (const part of parts) {
+    const asNumber = parseInt(part, 10);
+
+    if (!isNaN(asNumber)) {
+      if (asNumber >= 1 && asNumber <= 12 && monthNum === null && parts.length === 1) {
+        monthNum = asNumber;
+      } else if (asNumber >= 1900 && asNumber <= 2100) {
+        yearNum = asNumber;
+      }
+    } else {
+      const idx = monthNames.indexOf(part);
+      if (idx !== -1) monthNum = idx + 1;
+    }
+  }
+
+  return { monthNum, yearNum };
 }
 
 async function getHelpMessage() {
@@ -161,7 +195,7 @@ async function getReceiptMessage(phone, data) {
 async function getCalendarMessage(phone, hall, year, month) {
   try {
     const { url } = await generateCalendarImage(year, month, hall);
-    const priceMessage = getMonthPriceMessage(month);
+    const priceMessage = getMonthPriceMessage(hall, month);
 
     const caption = [
       `Here is ${hall}'s availability!`,
@@ -172,8 +206,11 @@ async function getCalendarMessage(phone, hall, year, month) {
     ].join("\n");
 
     await sendMediaMessage(phone, caption, url);
+    await sleep(10000);
+    return
   } catch (error) {
     console.log("An Error Occurred: ", error);
+    return sendMessage(phone, "Please choose a valid option.");
   }
 }
 
@@ -207,4 +244,5 @@ module.exports = {
   getCalendarMessage,
   getReceiptMessage,
   getMonthPriceMessage,
+  parseMonthYearInput
 };
