@@ -1387,7 +1387,19 @@ export default function CalendarAddonsPage() {
                               {expense?.category}
                             </span>
                           </td>
-                          <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(expense?.amount)}</td>
+                          <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">
+                            <div className="flex items-center justify-between gap-3">
+                              <span>{currency(expense?.amount)}</span>
+                              <button
+                                type="button"
+                                onClick={() => deleteDailyExpenseMutation.mutate(expense.id)}
+                                className="p-1.5 text-stone-300 hover:text-rose-600 transition-colors"
+                                aria-label={`Delete ${expense?.label || 'daily expense'}`}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })

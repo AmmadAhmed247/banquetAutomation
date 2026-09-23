@@ -1,34 +1,34 @@
-import React from 'react';
-import Earth from '@/components/globe';
-import { Sparkles } from '@/components/sparkles';
-function index() {
+import React, { useRef } from "react";
+import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
+
+export default function SpotlightCard({ children, className = "" }) {
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  function handleMouseMove({ currentTarget, clientX, clientY }) {
+    let { left, top } = currentTarget.getBoundingClientRect();
+    mouseX.set(clientX - left);
+    mouseY.set(clientY - top);
+  }
+
   return (
-    <>
-      <div className="h-screen overflow-hidden bg-black text-white">
-        <article className="grid gap-4 text-center relative z-10 pt-10">
-          <span className="inline-block text-sm border p-1 px-3 w-fit mx-auto rounded-full border-[#3273ff] bg-[#0f1c35]">
-            Get Access
-          </span>
-          <h1 className="text-4xl  font-semibold bg-linear-to-b from-[#edeffd] to-[#7b9cda] bg-clip-text text-transparent leading-[100%] tracking-tighter">
-            Design with a Global
-            <br />
-            Perspective, Innovate with Ease.
-          </h1>
-          <Earth />
-        </article>
-        <div className="relative -mt-32 h-80 w-screen overflow-hidden mask-[radial-gradient(50%_50%,white,transparent)] before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_bottom_center,#3273ff,transparent_90%)] before:opacity-40 after:absolute after:-left-1/2 after:top-1/2 after:aspect-[1/0.7] after:w-[200%] after:rounded-[10%] after:border-t after:border-[#163474] after:bg-[#08132b]">
-          <Sparkles
-            density={800}
-            speed={1.2}
-            size={1.2}
-            direction="top"
-            opacitySpeed={2}
-            color="#32A7FF"
-            className="absolute inset-x-0 bottom-0 h-full w-full "
-          />
-        </div>
-      </div>
-    </>
+    <div
+      onMouseMove={handleMouseMove}
+      className={`group relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm ${className}`}
+    >
+      <motion.div
+        className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 transition duration-300 group-hover:opacity-100"
+        style={{
+          background: useMotionTemplate`
+            radial-gradient(
+              650px circle at ${mouseX}px ${mouseY}px,
+              rgba(16, 185, 129, 0.1),
+              transparent 80%
+            )
+          `,
+        }}
+      />
+      {children}
+    </div>
   );
 }
-export default index;

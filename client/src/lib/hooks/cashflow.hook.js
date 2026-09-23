@@ -24,5 +24,5 @@ export function useFinanceSummary({ start = "", end = "", range = "all" } = {}) 
   });
 }
 
-// Keep old name for backward compatibility (optional)
+
 export const useGetCashflow = useFinanceSummary;

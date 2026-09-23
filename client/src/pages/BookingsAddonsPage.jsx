@@ -6,7 +6,7 @@ import {
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllAddons } from "../lib/hooks/addon.hook";
 import { getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense } from "../lib/hooks/monthlyExpense.hook";
-import { getAllDailyExpenses } from "../lib/hooks/dailyExpense.hook";
+import { getAllDailyExpenses, useDeleteDailyExpense } from "../lib/hooks/dailyExpense.hook";
 import { getAllExpenses } from "../lib/hooks/expense.hook";
 import {
   ResponsiveContainer,
@@ -263,6 +263,7 @@ export default function BookingsAddonsPage() {
   const bookings = useMemo(() => rawBookings.map(normalizeBooking), [rawBookings]);
   const createMonthlyExpenseMutation = useCreateMonthlyExpense();
   const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense();
+  const deleteDailyExpenseMutation = useDeleteDailyExpense();
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState("all");
@@ -1044,7 +1045,19 @@ const drinkStats = useMemo(() => {
                       </td>
                       <td className="px-5 py-3.5 text-[13px] font-medium text-stone-900">{expense?.label}</td>
                       <td className="px-5 py-3.5 text-[11px] font-medium" style={{ color: GOLD }}>{expense?.category}</td>
-                      <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">{currency(expense?.amount)}</td>
+                      <td className="px-5 py-3.5 text-[13px] font-semibold text-stone-800">
+                        <div className="flex items-center justify-between gap-3">
+                          <span>{currency(expense?.amount)}</span>
+                          <button
+                            type="button"
+                            onClick={() => deleteDailyExpenseMutation.mutate(expense.id)}
+                            className="p-1.5 text-stone-300 hover:text-rose-600 transition-colors"
+                            aria-label={`Delete ${expense?.label || 'daily expense'}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
