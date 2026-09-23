@@ -97,6 +97,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
   let totalIn = 0;
   let cashIn = 0;
   let totalOut = 0;
+  let cashOut = 0; // only outflows paid in Cash
   const byMethod = {};
 
   // ── Business Metrics ────────────────────────────────────────────────────
@@ -134,6 +135,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
     if (amount <= 0) return;
     const m = (method || "Cash").trim() || "Cash";
     totalOut += amount;
+    if (m.toLowerCase() === "cash") cashOut += amount;
     activity.push({ id, time, flow: "OUT", category, note, who, method: m, amount, ...extra });
   };
 
@@ -310,7 +312,12 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
   const [endYearStr, endMonthStr] = effectiveEndQ.split("-");
   const startMonthIndex = Number(startYearStr) * 12 + Number(startMonthStr) - 1;
   const endMonthIndex = Number(endYearStr) * 12 + Number(endMonthStr) - 1;
-  const isSingleDayView = range === "today" || (range === "custom" && startQ && endQ && startQ === endQ);
+
+  // Single-day view: derived from the dates themselves, so callers
+  // (dashboard, WhatsApp report, cron) can't forget to pass the flag.
+  // In this mode only monthly overhead rows CREATED on that day are counted.
+  const isSingleDayView =
+    range !== "all" && (range === "today" || effectiveStartQ === effectiveEndQ);
 
   rangeMonthlyExpenses.forEach((m) => {
     const expenseMonthIndex = Number(m.year) * 12 + Number(m.month) - 1;
@@ -349,7 +356,9 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
     totalOut,
     net: totalIn - totalOut,
     bankIn: totalIn - cashIn,
-    cashInHand: totalIn - totalOut - (totalIn - cashIn),
+    cashIn,
+    cashOut,
+    cashInHand: cashIn - cashOut,   // cash received minus cash paid out
     byMethod,
     activity,
 

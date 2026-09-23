@@ -40,6 +40,8 @@ function karachiDateString(date) {
   }).format(date);
 }
 
+// Height of the "Cash in Hand" block (card + spacing) added under the KPI row
+const CASH_BLOCK_EXTRA = 70;
 
 /**
  * Renders a single booking card directly on the canvas context.
@@ -181,7 +183,7 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
   const maxRows = Math.min(cashflowData.activity.length, 12);
 
   let contentHeight = 90;
-  contentHeight += 40 + 80 + 30;
+  contentHeight += 40 + 80 + 30 + CASH_BLOCK_EXTRA;
   const methodsCount = Object.keys(cashflowData.byMethod).length;
   contentHeight += (methodsCount === 0 ? 1 : methodsCount) * 20 + 30;
   contentHeight += 40;
@@ -266,7 +268,40 @@ async function generateCombinedSummaryImage({ cashflowData, todayBookings, nextD
     text(k.value, x + 16, y + 56, { size: 18, weight: "bold", color: k.color });
   });
 
-  y += 110;
+  // ── Cash in Hand (today's cash received minus cash paid out) ────────────
+  y += 96;
+  const cashInHand = Number(cashflowData.cashInHand || 0);
+  const cashPositive = cashInHand >= 0;
+
+  ctx.save();
+  ctx.fillStyle = cashPositive ? "#f0fdf4" : "#fff1f2";
+  ctx.strokeStyle = cashPositive ? "#bbf7d0" : "#fecdd3";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(40, y, W - 80, 56, 10);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  text("CASH IN HAND (TODAY)", 56, y + 24, {
+    size: 11,
+    weight: "bold",
+    color: cashPositive ? "#15803d" : "#be123c",
+  });
+  text(
+    `Cash in ${currency(cashflowData.cashIn)}  -  Cash out ${currency(cashflowData.cashOut)}`,
+    56,
+    y + 42,
+    { size: 10, color: "#6b7280" }
+  );
+  text((cashPositive ? "" : "-") + currency(Math.abs(cashInHand)), W - 56, y + 35, {
+    size: 20,
+    weight: "bold",
+    color: cashPositive ? "#15803d" : "#e11d48",
+    align: "right",
+  });
+
+  y += 56 + 24;
 
   text("Money In by Method", 40, y, { size: 13, weight: "bold", color: "#0f172a" });
   y += 22;
@@ -378,11 +413,6 @@ async function sendDailySummaryReport(phone) {
   const { start: startToday, end: endToday } = getKarachiDayBounds(0);
   const { start: startTomorrow, end: endTomorrow } = getKarachiDayBounds(1);
 
-
-  // console.log("[REPORT] nowKhi:", nowKhi.toISOString());
-  // console.log("[REPORT] startToday:", startToday.toISOString(), "| endToday:", endToday.toISOString());
-  // console.log("[REPORT] startTomorrow:", startTomorrow.toISOString(), "| endTomorrow:", endTomorrow.toISOString());
-
   const label = startToday.toLocaleDateString("en-PK", {
     weekday: "long",
     day: "numeric",
@@ -390,11 +420,14 @@ async function sendDailySummaryReport(phone) {
     year: "numeric",
     timeZone: "Asia/Karachi",
   });
-  // 2. Fetch Cashflow Data for TODAY — matches the label shown on the report
+
+  // 2. Fetch Cashflow Data for TODAY — matches the label shown on the report.
+  // range: "today" makes monthly overhead count only rows created today.
   const cashflowData = await computeCashflowSummary(startToday, endToday, {
-  startQ: karachiDateString(startToday),
-  endQ: karachiDateString(endToday),
-});
+    startQ: karachiDateString(startToday),
+    endQ: karachiDateString(endToday),
+    range: "today",
+  });
 
   // 3a. TODAY'S BOOKINGS = bookings CREATED today (new sign-ups today),
   // regardless of when the actual event happens.
