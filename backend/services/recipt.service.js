@@ -47,7 +47,7 @@ const cleanPhone = (phone = "") => {
 
 async function generateReceipt(data = {}) {
   const W = 794;
-  const H = 920;
+  const H = 960;
 
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext("2d");
@@ -118,7 +118,7 @@ async function generateReceipt(data = {}) {
   line(128, 332, 370, 332);
   const whatsappNum = data.whatsapp || "03008207221";
   centeredText(cleanPhone(whatsappNum), 128, 370, 328, { size: 14 });
-  
+
   text('Phone.', 390, 328, { size: 14, weight: 'bold' });
   line(448, 332, W - 42, 332);
   const phoneNum = data.phone || "03002319171"; // Updated default phone
@@ -155,9 +155,15 @@ async function generateReceipt(data = {}) {
   line(payStartX, 504, payEndX, 504);
   if (data.advance) centeredText(data.advance, payStartX, payEndX, 500, { size: 14 });
 
+  // Payment Method
+  const payMethodStartX = 160;
+  text('Payment Method', 42, 540, { size: 14, weight: 'bold' });
+  line(payMethodStartX, 544, payEndX, 544);
+  if (data.paymentMethod) centeredText(data.paymentMethod, payMethodStartX, payEndX, 540, { size: 14 });
+
   // Balance & Manager Block
-  const rowY = 538;
-  
+  const rowY = 578;
+
   // Balance Row
   text('Balance', 42, rowY, { size: 14, weight: 'bold' });
   line(payStartX, rowY + 4, payEndX, rowY + 4);
@@ -173,7 +179,7 @@ async function generateReceipt(data = {}) {
     const signatureImg = await loadImage(signaturePath);
     const sigW = 140;
     const sigH = sigW * (signatureImg.height / signatureImg.width);
-    const sigY = lineY - sigH + 16; 
+    const sigY = lineY - sigH + 16;
     const sigX = W - 200 + ((W - 42 - (W - 200)) - sigW) / 2;
     ctx.drawImage(signatureImg, sigX, sigY, sigW, sigH);
   } catch (err) {
@@ -181,7 +187,7 @@ async function generateReceipt(data = {}) {
   }
 
   // Terms & Conditions
-  const tcY = 578;
+  const tcY = 618;
   ctx.save();
   ctx.fillStyle = '#c0392b';
   const pillW = 220, pillH = 28, pillX = (W - pillW) / 2, pillR = 14;

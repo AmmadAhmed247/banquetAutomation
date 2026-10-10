@@ -18,6 +18,7 @@ async function SendReceiptMessage(req, res) {
       lumpSum,
       advance,
       balance,
+      paymentMethod
     } = req.body;
 
     // Use reservationDate if provided, otherwise fall back to reservedFor
@@ -37,6 +38,7 @@ async function SendReceiptMessage(req, res) {
       lumpSum,
       advance,
       balance,
+      paymentMethod
     ];
 
     if (fields.some((f) => f === undefined || f === null || f === "")) {
@@ -64,6 +66,7 @@ async function SendReceiptMessage(req, res) {
       lumpSum,
       advance,
       balance,
+      paymentMethod
     });
 
     if (!receipt.success) {

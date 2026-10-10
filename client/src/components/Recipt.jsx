@@ -4,16 +4,17 @@ import { Printer, RotateCcw, User, Phone, MessageCircle, MapPin, CalendarDays, U
 import receiptService from "../services/receipt.service";
 import bookingService from "../services/booking.service"; // Added booking service import
 import toast from "react-hot-toast";
+import { ADDON_PAYMENT_METHODS } from "../components/Management/ManagementUtils"
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
   const dateObj = new Date(dateStr);
   if (isNaN(dateObj.getTime())) return dateStr;
-  
+
   const day = String(dateObj.getDate()).padStart(2, "0");
   const month = String(dateObj.getMonth() + 1).padStart(2, "0");
   const year = dateObj.getFullYear();
-  
+
   return `${day}-${month}-${year}`;
 };
 
@@ -36,8 +37,8 @@ const defaultForm = {
 };
 
 const isValidPhoneLength = (number) => {
-  if (!number) return true; 
-  const digits = number.replace(/\D/g, ""); 
+  if (!number) return true;
+  const digits = number.replace(/\D/g, "");
 
   if (digits.startsWith("92")) {
     return digits.length === 12;
@@ -45,12 +46,12 @@ const isValidPhoneLength = (number) => {
   if (digits.startsWith("0")) {
     return digits.length === 11;
   }
-  return false; 
+  return false;
 };
 
 const HALLS = ["Hall A", "Hall B", "Hall A & B"];
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const FUNCS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate" , "Barat and Valima" , "Nikah"];
+const FUNCS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate", "Barat and Valima", "Nikah"];
 
 function Field({ label, icon: Icon, children }) {
   return (
@@ -95,7 +96,7 @@ function ReceiptPreview({ data }) {
       </svg>
 
       <FanLogo />
-      
+
       <div className="text-center mb-4">
         <div className="text-[34px] font-bold text-[#c0392b] tracking-wide leading-none" style={{ fontFamily: "Arial, sans-serif" }}>DARBAR BANQUET</div>
       </div>
@@ -184,19 +185,28 @@ function ReceiptPreview({ data }) {
         </div>
       </div>
 
+      <div className="flex items-end gap-2 mb-2">
+        <span className="text-[13px] font-bold whitespace-nowrap">Payment Method</span>
+        <div className="w-56 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.paymentMethod && <span className="text-[13px]">{data.paymentMethod}</span>}
+        </div>
+      </div>
+
       {/* Balance & Signature Layout */}
-      <div className="flex items-end justify-between gap-4 mb-3">
-        <div className="flex items-end gap-2 flex-1">
+       <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="flex items-end gap-2 flex-1 min-w-0 mt-5.5">
           <span className="text-[13px] font-bold whitespace-nowrap">Balance</span>
-          <div className="w-56 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          <div className="flex-1 min-w-0 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
             {balance && <span className="text-[13px]">{balance}</span>}
           </div>
         </div>
 
-        <div className="flex flex-col items-center min-w-[130px]">
-          <div className="relative h-9 w-28 flex items-end justify-center">
-            <img className="absolute bottom-0 w-28 object-contain z-10 pointer-events-none" src="/manager-signature.png" alt="Manager Signature" />
-          </div>
+        <div className="flex flex-col items-center w-[120px] shrink-0">
+          <img
+            className="h-10 w-28 object-contain object-bottom pointer-events-none"
+            src="/manager-signature.png"
+            alt="Manager Signature"
+          />
           <div className="w-full border-b border-[#1a237e]" style={{ minHeight: 1 }}></div>
           <span className="text-[13px] font-bold mt-0.5">Manager</span>
         </div>
@@ -230,13 +240,13 @@ function ReceiptPreview({ data }) {
       {/* Footer Split Layout with Updated Single Phone Number */}
       <div className="grid grid-cols-2 relative pt-1 pb-1">
         <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1px] bg-[#e2d9d2]"></div>
-        
+
         <div className="pr-2">
           <div className="text-[9.5px] font-bold text-[#c0392b] mb-0.5">📍 LOCATION</div>
           <div className="text-[11px] font-bold text-[#1a237e] leading-tight">D-16, Block "N" Near Sakhi Hassan,</div>
           <div className="text-[11px] font-bold text-[#1a237e] leading-tight">North Nazimabad, Karachi.</div>
         </div>
-        
+
         <div className="pl-3">
           <div className="text-[9.5px] font-bold text-[#c0392b] mb-0.5">📞 CONTACT US</div>
           <div className="text-[10px] font-bold text-[#1a237e] leading-tight">WhatsApp: 0300 8207221</div>
@@ -265,7 +275,7 @@ const formatWhatsAppNumber = (phone) => {
 export default function DarbarReceiptForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
-  
+
   const { register, handleSubmit, watch, reset, setValue } = useForm({
     defaultValues: defaultForm,
   });
@@ -290,7 +300,7 @@ export default function DarbarReceiptForm() {
     const a = parseFloat(String(formData.advance).replace(/,/g, "")) || 0;
     if (l && a) setValue("balance", (l - a).toLocaleString());
   };
-  
+
   const onError = (errors) => {
     const firstKey = Object.keys(errors)[0];
     const message = errors[firstKey]?.message;
@@ -304,86 +314,87 @@ export default function DarbarReceiptForm() {
   };
 
   const onSubmit = async (data) => {
-  if (isSubmitting) return;
-  setIsSubmitting(true);
-  try {
-    const fixedData = {
-      rNo: data.rNo,
-      date: formatDate(data.date),
-      clientName: data.clientName,
-      resident: data.resident,
-      whatsapp: data.whatsapp,
-      phone: !data.phone || data.phone === "-" ? "" : data.phone,
-      reservationDate: formatDate(data.reservationDate),
-      day: data.day,
-      functionName: data.functionName,
-      noOfGuests: data.noOfGuests,
-      lumpSum: data.lumpSum,
-      advance: data.advance,
-      balance: data.balance,
-    };
-
-    const formattedData = {
-      ...fixedData,
-      whatsapp: formatWhatsAppNumber(fixedData.whatsapp),
-    };
-
-    const bookingPayload = {
-      rNo: data.rNo || "1",
-      client: data.clientName || "Walk-in Client",
-      phone: data.phone || data.whatsapp || "03000000000",
-      event: data.functionName || "Wedding",
-      package: data.package || "Standard",
-      venue: data.venue || "Hall A",
-      date: data.reservationDate ? new Date(data.reservationDate).toISOString() : new Date().toISOString(),
-      totalAmount: Number(data.lumpSum) || 0,
-      advanceAmount: Number(data.advance) || 0,
-      // `advance_paid` in DB is numeric (amount). Send numeric paid amount here.
-      advancePaid: Number(data.advance) || 0,
-      paymentMethod: "Cash",
-      timeSlot: "Night",
-      status: "Confirmed",
-      guests: Number(data.noOfGuests) || 0,
-    };
-
-    // 1. Create the booking FIRST — the receipt should only go out once this succeeds.
-    const bookingResult = await bookingService.createBooking(bookingPayload);
-
-    if (bookingResult?.success === false) {
-      // Backend responded but flagged failure explicitly — show its actual reason.
-      toast.error(bookingResult.message || "Failed to create booking");
-      return; // stop here — do not send the receipt for a booking that wasn't created
-    }
-
-    // 2. Booking confirmed — now send the receipt.
-    let receiptResult;
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
-      receiptResult = await receiptService.sendReceipt(formattedData);
-    } catch (receiptError) {
-      // Booking succeeded but the receipt failed — say so specifically, don't call it a booking failure.
-      const receiptMessage = receiptError?.response?.data?.message || receiptError?.message || "Receipt failed to send";
-      toast.error(`Booking created, but receipt failed: ${receiptMessage}`);
-      return;
-    }
+      const fixedData = {
+        rNo: data.rNo,
+        date: formatDate(data.date),
+        clientName: data.clientName,
+        resident: data.resident,
+        whatsapp: data.whatsapp,
+        phone: !data.phone || data.phone === "-" ? "" : data.phone,
+        reservationDate: formatDate(data.reservationDate),
+        day: data.day,
+        functionName: data.functionName,
+        noOfGuests: data.noOfGuests,
+        lumpSum: data.lumpSum,
+        advance: data.advance,
+        balance: data.balance,
+        paymentMethod: data.paymentMethod,
+      };
 
-    if (receiptResult?.success === true) {
-      toast.success("Receipt Sent & Booking Created!");
-    } else {
-      toast.success("Booking created! Receipt processed.");
+      const formattedData = {
+        ...fixedData,
+        whatsapp: formatWhatsAppNumber(fixedData.whatsapp),
+      };
+
+      const bookingPayload = {
+        rNo: data.rNo || "1",
+        client: data.clientName || "Walk-in Client",
+        phone: data.phone || data.whatsapp || "03000000000",
+        event: data.functionName || "Wedding",
+        package: data.package || "Standard",
+        venue: data.venue || "Hall A",
+        date: data.reservationDate ? new Date(data.reservationDate).toISOString() : new Date().toISOString(),
+        totalAmount: Number(data.lumpSum) || 0,
+        advanceAmount: Number(data.advance) || 0,
+        // `advance_paid` in DB is numeric (amount). Send numeric paid amount here.
+        advancePaid: Number(data.advance) || 0,
+        paymentMethod: data.paymentMethod,
+        timeSlot: "Night",
+        status: "Confirmed",
+        guests: Number(data.noOfGuests) || 0,
+      };
+
+      // 1. Create the booking FIRST — the receipt should only go out once this succeeds.
+      const bookingResult = await bookingService.createBooking(bookingPayload);
+
+      if (bookingResult?.success === false) {
+        // Backend responded but flagged failure explicitly — show its actual reason.
+        toast.error(bookingResult.message || "Failed to create booking");
+        return; // stop here — do not send the receipt for a booking that wasn't created
+      }
+
+      // 2. Booking confirmed — now send the receipt.
+      let receiptResult;
+      try {
+        receiptResult = await receiptService.sendReceipt(formattedData);
+      } catch (receiptError) {
+        // Booking succeeded but the receipt failed — say so specifically, don't call it a booking failure.
+        const receiptMessage = receiptError?.response?.data?.message || receiptError?.message || "Receipt failed to send";
+        toast.error(`Booking created, but receipt failed: ${receiptMessage}`);
+        return;
+      }
+
+      if (receiptResult?.success === true) {
+        toast.success("Receipt Sent & Booking Created!");
+      } else {
+        toast.success("Booking created! Receipt processed.");
+      }
+    } catch (error) {
+      // Covers createBooking throwing (network error, validation error, DB constraint, etc.)
+      // Surface whatever the backend actually said instead of a generic message.
+      console.error("An error occurred: ", error);
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to create booking. Please try again.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    // Covers createBooking throwing (network error, validation error, DB constraint, etc.)
-    // Surface whatever the backend actually said instead of a generic message.
-    console.error("An error occurred: ", error);
-    const message =
-      error?.response?.data?.message ||
-      error?.message ||
-      "Failed to create booking. Please try again.";
-    toast.error(message);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50 p-4 sm:p-6">
@@ -459,9 +470,9 @@ export default function DarbarReceiptForm() {
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Event Details</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Reserved For Date" icon={CalendarDays}>
-                  <input 
-                    type="date" 
-                    className={inp} 
+                  <input
+                    type="date"
+                    className={inp}
                     {...register("reservationDate", { required: true })}
                     onChange={handleReservationDateChange}
                   />
@@ -509,6 +520,25 @@ export default function DarbarReceiptForm() {
                     {...register("advance", { required: true })}
                     onBlur={autoBalance}
                   />
+                </Field>
+                <Field label="Payment Method" icon={Wallet}>
+                  <select
+                    className={inp}
+                    defaultValue=""
+                    {...register("paymentMethod", {
+                      required: true,
+                      onChange: autoBalance,
+                    })}
+                  >
+                    <option value="" disabled>
+                      Select payment method
+                    </option>
+                    {ADDON_PAYMENT_METHODS.map((method) => (
+                      <option key={method} value={method}>
+                        {method}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
                 <div className="col-span-1 sm:col-span-2">
                   <Field label="Balance (Rs.)" icon={PiggyBank}>
