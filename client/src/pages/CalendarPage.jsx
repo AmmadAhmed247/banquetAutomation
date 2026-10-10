@@ -232,7 +232,7 @@ function KpiCard({ label, value, sub, icon: Icon, tone = "neutral" }) {
   );
 }
 
-function DrinkCard({ name, crates, paid, brand }) {
+function DrinkCard({ name, crates, paid, brand, onClick }) {
   const isP = brand === "pepsi";
   const accent = isP ? PEPSI_BLUE : COKE_RED;
   const soft = isP ? "#E8F1FB" : "#FDE8E9";
@@ -240,9 +240,14 @@ function DrinkCard({ name, crates, paid, brand }) {
     <motion.div
       variants={scaleIn}
       whileHover={{ y: -4, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 360, damping: 26 }}
-      className="rounded-xl border p-4 flex flex-col gap-2"
+      onClick={onClick}
+      className="rounded-xl border p-4 flex flex-col gap-2 cursor-pointer select-none"
       style={{ borderColor: soft, background: soft }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick?.(); }}
     >
       <div className="flex items-center justify-between">
         <span className="text-[13px] font-bold" style={{ color: accent }}>{name}</span>
@@ -255,20 +260,25 @@ function DrinkCard({ name, crates, paid, brand }) {
         </div>
         <div className="text-right">
           <p className="text-[14px] font-semibold" style={{ color: GOLD }}>{currency(paid)}</p>
-          <p className="text-[11px] text-stone-500">spent</p>
+          <p className="text-[11px] text-stone-500">spent · tap details</p>
         </div>
       </div>
     </motion.div>
   );
 }
 
-function DieselCard({ liters, count, paid }) {
+function DieselCard({ liters, count, paid, onClick }) {
   return (
     <motion.div
       variants={scaleIn}
       whileHover={{ y: -4, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 360, damping: 26 }}
-      className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex flex-col gap-2"
+      onClick={onClick}
+      className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex flex-col gap-2 cursor-pointer select-none"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick?.(); }}
     >
       <div className="flex items-center justify-between">
         <span className="text-[13px] font-bold text-amber-800">Diesel / Fuel</span>
@@ -282,11 +292,101 @@ function DieselCard({ liters, count, paid }) {
         <div className="text-right">
           <p className="text-[14px] font-semibold" style={{ color: GOLD }}>{currency(paid)}</p>
           <p className="text-[11px] text-stone-500">
-            spent{count ? ` · ${count} entries` : ""}
+            spent{count ? ` · ${count} entries` : ""} · tap details
           </p>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+/** Popup listing every matching Pepsi / Coke / Diesel transaction */
+function CategoryTransactionsModal({ open, kind, rows, periodLabel, onClose, onDeleteDaily }) {
+  if (!open) return null;
+
+  const title =
+    kind === "pepsi" ? "Pepsi Co. transactions" :
+    kind === "coke" ? "Coca Cola Co. transactions" :
+    "Diesel / Fuel transactions";
+  const accent =
+    kind === "pepsi" ? PEPSI_BLUE :
+    kind === "coke" ? COKE_RED :
+    DIESEL_AMBER;
+  const totalPaid = rows.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const totalQty = rows.reduce((s, r) => s + Number(r.qty || 0), 0);
+  const qtyUnit = kind === "diesel" ? "liters" : "crates";
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-stone-900/40 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 18, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 10, scale: 0.98 }}
+        transition={{ duration: 0.28, ease: easeOut }}
+        className="relative w-full max-w-lg bg-white rounded-2xl border border-stone-200 shadow-2xl overflow-hidden max-h-[min(80vh,640px)] flex flex-col"
+      >
+        <div className="px-5 py-4 border-b border-stone-100 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-medium text-stone-400">{periodLabel}</p>
+            <h3 className="text-[15px] font-semibold text-stone-900 mt-0.5" style={{ color: accent }}>{title}</h3>
+            <p className="text-[12px] text-stone-500 mt-1">
+              {rows.length} entries · {totalQty} {qtyUnit} · {currency(totalPaid)}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-stone-400 hover:text-stone-900 rounded-lg hover:bg-stone-100 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 py-3">
+          {rows.length === 0 ? (
+            <div className="text-center py-14 text-stone-400 text-[13px]">
+              <Inbox size={26} className="mx-auto mb-2 text-stone-200" />
+              No transactions in this period.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {rows.map((r) => (
+                <li
+                  key={`${r.source}-${r.id}`}
+                  className="flex items-start gap-3 px-3 py-2.5 rounded-xl bg-stone-50 border border-stone-100"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium text-stone-900 truncate">{r.label || "—"}</p>
+                    <p className="text-[11px] text-stone-400 mt-0.5">
+                      {r.dateLabel}
+                      {r.category ? ` · ${r.category}` : ""}
+                      {r.source === "monthly" ? " · monthly" : ""}
+                      {r.qty ? ` · ${r.qty} ${qtyUnit}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[13px] font-semibold text-stone-800">{currency(r.amount)}</span>
+                    {r.source === "daily" && onDeleteDaily && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteDaily(r.id)}
+                        className="p-1.5 text-stone-300 hover:text-rose-600 transition-colors"
+                        aria-label="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -421,6 +521,9 @@ export default function CalendarAddonsPage() {
   const [monthlySearch, setMonthlySearch] = useState("");
   const [standardSearch, setStandardSearch] = useState("");
   const [selectedBooking, setSelectedBooking] = useState(null);
+  // Pepsi / Coke / Diesel: period filter + detail popup
+  const [statPeriod, setStatPeriod] = useState("month"); // "month" | "overall"
+  const [statPopup, setStatPopup] = useState(null); // null | "pepsi" | "coke" | "diesel"
 
   const { data: fetchedBookings = [], isLoading: bookingsLoading, error } = getAllBookings();
   const { data: fetchedAddons = [] } = getAllAddons();
@@ -533,13 +636,34 @@ export default function CalendarAddonsPage() {
     [filteredDailyExpenses, dailySearch]
   );
 
+  // Daily expenses for Pepsi/Coke/Diesel cards + popup (respects statPeriod)
+  const periodDailyExpenses = useMemo(() => {
+    const now = new Date();
+    return dailyExpenses.filter((e) => {
+      const d = new Date(e.date);
+      if (Number.isNaN(d.getTime())) return false;
+      if (statPeriod === "overall") return true;
+      // "month" = current calendar month
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+  }, [dailyExpenses, statPeriod]);
+
+  const periodMonthlyDiesel = useMemo(() => {
+    const now = new Date();
+    return monthlyExpenses.filter((e) => {
+      if (!(isDiesel(e.label, e.category) || e.category === "Diesel")) return false;
+      if (statPeriod === "overall") return true;
+      return Number(e.year) === now.getFullYear() && Number(e.month) === now.getMonth() + 1;
+    });
+  }, [monthlyExpenses, statPeriod]);
+
   const drinkAndFuelStats = useMemo(() => {
     const result = {
       pepsi: { crates: 0, paid: 0 },
       coke: { crates: 0, paid: 0 },
       diesel: { liters: 0, paid: 0, count: 0 },
     };
-    filteredDailyExpenses.forEach((e) => {
+    periodDailyExpenses.forEach((e) => {
       const amount = Number(e.amount || 0);
       const crates = extractCrates(e.label);
       if (isPepsi(e.label, e.category)) {
@@ -551,22 +675,66 @@ export default function CalendarAddonsPage() {
         result.coke.paid += amount;
       }
       if (isDiesel(e.label, e.category)) {
-  result.diesel.liters += extractLiters(e.label);
-  result.diesel.paid += amount;
-  result.diesel.count += 1;
-}
-    });
-    monthlyExpenses.forEach((e) => {
-      if (e.year !== selectedYear) return;
-      if (selectedMonth !== "all" && e.month !== MONTHS.indexOf(selectedMonth) + 1) return;
-      if (isDiesel(e.label, e.category) || e.category === "Diesel") {
         result.diesel.liters += extractLiters(e.label);
-        result.diesel.paid += Number(e.amount || 0);
+        result.diesel.paid += amount;
         result.diesel.count += 1;
       }
     });
+    periodMonthlyDiesel.forEach((e) => {
+      result.diesel.liters += extractLiters(e.label);
+      result.diesel.paid += Number(e.amount || 0);
+      result.diesel.count += 1;
+    });
     return result;
-  }, [filteredDailyExpenses, monthlyExpenses, selectedYear, selectedMonth]);
+  }, [periodDailyExpenses, periodMonthlyDiesel]);
+
+  const formatExpenseDate = (raw) => {
+    if (!raw) return "—";
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return String(raw);
+    return d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  const statPopupRows = useMemo(() => {
+    if (!statPopup) return [];
+    const rows = [];
+    periodDailyExpenses.forEach((e) => {
+      const match =
+        (statPopup === "pepsi" && isPepsi(e.label, e.category)) ||
+        (statPopup === "coke" && isCoke(e.label, e.category)) ||
+        (statPopup === "diesel" && isDiesel(e.label, e.category));
+      if (!match) return;
+      rows.push({
+        id: e.id,
+        source: "daily",
+        label: e.label,
+        category: e.category,
+        amount: e.amount,
+        dateLabel: formatExpenseDate(e.date),
+        qty: statPopup === "diesel" ? extractLiters(e.label) : extractCrates(e.label),
+      });
+    });
+    if (statPopup === "diesel") {
+      periodMonthlyDiesel.forEach((e) => {
+        const monthName = MONTHS[(Number(e.month) || 1) - 1] || "";
+        rows.push({
+          id: e.id,
+          source: "monthly",
+          label: e.label,
+          category: e.category,
+          amount: e.amount,
+          dateLabel: `${monthName} ${e.year}`,
+          qty: extractLiters(e.label),
+        });
+      });
+    }
+    return rows;
+  }, [statPopup, periodDailyExpenses, periodMonthlyDiesel]);
+
+  const statPeriodLabel =
+    statPeriod === "overall"
+      ? "All time"
+      : `This month · ${MONTH_NAMES[new Date().getMonth()]} ${new Date().getFullYear()}`;
 
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
@@ -904,21 +1072,50 @@ export default function CalendarAddonsPage() {
             </div>
           </div>
 
-          {/* Pepsi / Coke / Diesel */}
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            animate="show"
-            className="grid grid-cols-1 md:grid-cols-3 gap-4"
-          >
-            <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" />
-            <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" />
-            <DieselCard
-              liters={drinkAndFuelStats.diesel.liters}
-              count={drinkAndFuelStats.diesel.count}
-              paid={drinkAndFuelStats.diesel.paid}
-            />
-          </motion.div>
+          {/* Pepsi / Coke / Diesel + period filter */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[12px] font-medium text-stone-500">Beverages & fuel · tap a card for every transaction</p>
+              <div className="relative">
+                <select
+                  value={statPeriod}
+                  onChange={(e) => setStatPeriod(e.target.value)}
+                  className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-stone-200 rounded-lg text-[12px] font-medium text-stone-700 outline-none cursor-pointer"
+                >
+                  <option value="month">This month</option>
+                  <option value="overall">Overall</option>
+                </select>
+                <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+              </div>
+            </div>
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
+              <DrinkCard
+                name="Pepsi Co."
+                crates={drinkAndFuelStats.pepsi.crates}
+                paid={drinkAndFuelStats.pepsi.paid}
+                brand="pepsi"
+                onClick={() => setStatPopup("pepsi")}
+              />
+              <DrinkCard
+                name="Coca Cola Co."
+                crates={drinkAndFuelStats.coke.crates}
+                paid={drinkAndFuelStats.coke.paid}
+                brand="coke"
+                onClick={() => setStatPopup("coke")}
+              />
+              <DieselCard
+                liters={drinkAndFuelStats.diesel.liters}
+                count={drinkAndFuelStats.diesel.count}
+                paid={drinkAndFuelStats.diesel.paid}
+                onClick={() => setStatPopup("diesel")}
+              />
+            </motion.div>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="bg-white rounded-2xl border border-stone-200 p-4">
@@ -1157,8 +1354,8 @@ export default function CalendarAddonsPage() {
                   <h2 className="text-[14px] font-semibold text-stone-900">Beverages (from daily log)</h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" />
-                  <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" />
+                  <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" onClick={() => setStatPopup("pepsi")} />
+                  <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" onClick={() => setStatPopup("coke")} />
                 </div>
               </div>
             </div>
@@ -1191,20 +1388,37 @@ export default function CalendarAddonsPage() {
             </div>
           </div>
 
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            animate="show"
-            className="grid grid-cols-1 md:grid-cols-3 gap-4"
-          >
-            <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" />
-            <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" />
-            <DieselCard
-              liters={drinkAndFuelStats.diesel.liters}
-              count={drinkAndFuelStats.diesel.count}
-              paid={drinkAndFuelStats.diesel.paid}
-            />
-          </motion.div>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[12px] font-medium text-stone-500">Beverages & fuel · tap a card for every transaction</p>
+              <div className="relative">
+                <select
+                  value={statPeriod}
+                  onChange={(e) => setStatPeriod(e.target.value)}
+                  className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-stone-200 rounded-lg text-[12px] font-medium text-stone-700 outline-none cursor-pointer"
+                >
+                  <option value="month">This month</option>
+                  <option value="overall">Overall</option>
+                </select>
+                <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+              </div>
+            </div>
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
+              <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" onClick={() => setStatPopup("pepsi")} />
+              <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" onClick={() => setStatPopup("coke")} />
+              <DieselCard
+                liters={drinkAndFuelStats.diesel.liters}
+                count={drinkAndFuelStats.diesel.count}
+                paid={drinkAndFuelStats.diesel.paid}
+                onClick={() => setStatPopup("diesel")}
+              />
+            </motion.div>
+          </div>
 
           <div className="bg-white rounded-xl border border-stone-200 p-5">
             <div className="flex items-start justify-between flex-wrap gap-3">
@@ -1410,6 +1624,19 @@ export default function CalendarAddonsPage() {
           </div>
         </motion.div>
       )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {statPopup && (
+          <CategoryTransactionsModal
+            open={!!statPopup}
+            kind={statPopup}
+            rows={statPopupRows}
+            periodLabel={statPeriodLabel}
+            onClose={() => setStatPopup(null)}
+            onDeleteDaily={(id) => deleteDailyExpenseMutation.mutate(id)}
+          />
+        )}
       </AnimatePresence>
 
       {editingBooking && (

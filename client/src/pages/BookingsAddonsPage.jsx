@@ -221,7 +221,7 @@ function CategoryBar({ label, percent, amount }) {
 
 function DetailSidebar({ title, subtitle, children, onClose }) {
   return (
-    <div className="fade-up bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden sticky top-6">
+    <div className="fade-up bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden sticky top-6 w-full min-w-0 max-w-full">
       <div className="p-5 border-b border-stone-100 flex items-start justify-between">
         <div>
           <span className="text-[10px] font-medium text-stone-400">{title}</span>
@@ -482,7 +482,8 @@ const drinkStats = useMemo(() => {
   
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 p-6 md:p-8 antialiased">
+    <div className="min-h-screen w-full overflow-x-hidden bg-stone-50 text-stone-900 p-6 md:p-8 antialiased">
+      <div className="mx-auto w-full max-w-[1600px] min-w-0">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         * { font-family: 'Inter', sans-serif; }
@@ -741,14 +742,14 @@ const drinkStats = useMemo(() => {
 
       {/* ── Bookings ──────────────────────────────────────────────────────── */}
       {activeTab === "bookings" && (
-        <div key="bookings" className={`fade-in grid gap-6 items-start ${selectedBooking ? "lg:grid-cols-[1fr_360px]" : ""}`}>
-          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+        <div key="bookings" className={`fade-in grid w-full min-w-0 gap-6 items-start ${selectedBooking ? "lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]" : ""}`}>
+          <div className="min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-white">
             <SectionHeader title="Bookings with Add-ons" sub="Click a row for details">
               <SearchBar value={bookingSearch} onChange={setBookingSearch} placeholder="Search client, event, service..." />
             </SectionHeader>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+            <div className="min-w-0 overflow-x-auto">
+              <table className="w-full min-w-0 text-left">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-100">
                     {["R.No", "Client", "Hall", "Event", "Date", "Items", "Revenue", ""].map((h) => (
@@ -1066,6 +1067,7 @@ const drinkStats = useMemo(() => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -246,8 +246,21 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
   }, [booking]);
 
   const f = (key, val) => setForm(p => ({ ...p, [key]: val }));
-  const remaining = Number(form.totalAmount || 0) - Number(form.advancePaid || 0);
-  const pct = form.totalAmount ? Math.min(100, Math.round((Number(form.advancePaid || 0) / Number(form.totalAmount)) * 100)) : 0;
+  const remaining =
+  form.status === "Finished"
+    ? 0
+    : Number(form.totalAmount || 0) - Number(form.advancePaid || 0);
+  const pct =
+  form.status === "Finished"
+    ? 100
+    : form.totalAmount
+      ? Math.min(
+          100,
+          Math.round(
+            (Number(form.advancePaid || 0) / Number(form.totalAmount)) * 100
+          )
+        )
+      : 0;
 
   const isBankMethod = (method) => method && method !== "Cash";
 

@@ -100,8 +100,8 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
   let cashOut = 0; // only outflows paid in Cash
   const byMethod = {};
 
-  // ── Business Metrics ────────────────────────────────────────────────────
-  let grossRevenue = 0;       // Everything the business earned
+  // ── Business Metrics 
+  let grossRevenue = 0;       
   let addonCommission = 0;
   let monthlyExpense = 0;
   let dailyExpense = 0;
@@ -307,7 +307,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
     }
   });
 
-  // ── 6. Monthly Expenses ─────────────────────────────────────────────────
+  // ── 6. Monthly Expenses 
   const [startYearStr, startMonthStr] = effectiveStartQ.split("-");
   const [endYearStr, endMonthStr] = effectiveEndQ.split("-");
   const startMonthIndex = Number(startYearStr) * 12 + Number(startMonthStr) - 1;
