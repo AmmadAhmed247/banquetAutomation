@@ -27,10 +27,12 @@ export const useCreateBooking = () => {
   return useMutation({
     mutationFn: async (form) => await bookingService.createBooking(form),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
     },
   });
 };
+
 
 export const useUpdateBooking = () => {
   const queryClient = useQueryClient();
@@ -38,7 +40,8 @@ export const useUpdateBooking = () => {
   return useMutation({
     mutationFn: async (form) => await bookingService.updateBooking(form),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
     },
   });
 };

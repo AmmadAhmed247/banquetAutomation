@@ -57,8 +57,10 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
     allBookings,
   ] = await Promise.all([
     db.select().from(b.payments)
-      .where(and(gte(b.payments.created_at, startDate), lte(b.payments.created_at, endDate)))
-      .orderBy(sql`${b.payments.created_at} DESC`),
+      .where(sql`COALESCE(${b.payments.payment_date}, ${b.payments.created_at}) >= ${startDate.toISOString()}::timestamp
+           AND COALESCE(${b.payments.payment_date}, ${b.payments.created_at}) <= ${endDate.toISOString()}::timestamp`)
+      .orderBy(sql`COALESCE(${b.payments.payment_date}, ${b.payments.created_at}) DESC`),
+
 
     db.select({ bookingId: b.payments.bookingId }).from(b.payments),
 
@@ -78,6 +80,8 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
 
     db.select().from(b.booking),
   ]);
+
+  console.log("rangePayments:", rangePayments.map((p) => p.id), startDate, endDate);
 
   const relatedBookingIds = [
     ...rangeAddons.map((a) => a.bookingId),
@@ -101,7 +105,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
   const byMethod = {};
 
   // ── Business Metrics 
-  let grossRevenue = 0;       
+  let grossRevenue = 0;
   let addonCommission = 0;
   let monthlyExpense = 0;
   let dailyExpense = 0;
@@ -149,7 +153,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
 
     addInflow(
       `payment-${p.id}`,
-      p.created_at,
+      p.payment_date || p.created_at,
       isAddonPayment ? "Addon" : p.category || "Payment",
       isAddonPayment ? addonService || "Addon Payment" : p.note || `Payment Received`,
       booking?.client || p.who || null,

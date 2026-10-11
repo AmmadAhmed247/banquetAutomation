@@ -125,6 +125,7 @@ const payments = pgTable("payments", {
   note: varchar("note", { length: 255 }),
   bookingId: integer("booking_id")
     .references(() => booking.id, { onDelete: "cascade" }), 
+  payment_date: timestamp("payment_date"),
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 

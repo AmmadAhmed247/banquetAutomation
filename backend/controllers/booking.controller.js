@@ -27,6 +27,7 @@ async function CreateUserBooking(req, res) {
       status,
       timeSlot,
       bankName,
+      payments
     } = req.body;
 
     console.log("Create Booking Request body:", req.body);
@@ -47,14 +48,15 @@ async function CreateUserBooking(req, res) {
       guests: guests || 0,
       venue,
       totalAmount: totalAmount || 0,
-      totalAdvanceAmount: advanceAmount || 0,
-      advancePaid: advancePaid || 0,
+      advanceAmount: advanceAmount || 0,   // was totalAdvanceAmount
+      advancePaid: advancePaid || 0,       // legacy fallback, keep
       advanceDueDate: advanceDueDate || null,
       paymentMethod: paymentMethod || "Cash",
       paymentNote: paymentNote || "",
       status: status || "Pending",
       timeSlot: timeSlot || "Night",
       bankName: bankName || null,
+      payments,                            // NEW
     });
 
     if (!result?.success) {
@@ -122,6 +124,7 @@ async function UpdateUserBooking(req, res) {
       timeSlot,
       bankName,
       rNo,
+      payments
     } = req.body;
 
     if (!id) {
@@ -154,6 +157,7 @@ async function UpdateUserBooking(req, res) {
       rNo: rNo || null,
       settlementPaymentMethod: settlementPaymentMethod || "Cash",
       settlementBankName: settlementBankName || null,
+      payments
     });
 
     console.log("Update Result:", result);
