@@ -1,4 +1,13 @@
 import api from "../api/api";
+
+function getBookingResult(response, fallbackMessage) {
+  if (response.data?.success === false) {
+    throw new Error(response.data.message || fallbackMessage);
+  }
+
+  return response.data;
+}
+
 const bookingService = {
 
   getAllBookings: async () => {
@@ -36,7 +45,7 @@ const bookingService = {
         status: form.status,
         payments: form.payments,   // NEW
       });
-      return res.data;
+      return getBookingResult(res, "Failed to create booking");
     } catch (error) {
       console.error("Error creating booking:", error);
       throw error;
@@ -67,7 +76,7 @@ const bookingService = {
         settlementBankName: form.settlementBankName,
         payments: form.payments,   // NEW
       });
-      return res.data;
+      return getBookingResult(res, "Failed to update booking");
     } catch (error) {
       console.error("Error updating booking:", error);
       throw error;

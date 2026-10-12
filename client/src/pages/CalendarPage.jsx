@@ -32,7 +32,7 @@ const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HIJRI_MONTHS = [
   "Muharram", "Safar", "Rabbi Ul Awwal", "Rabbi Ul Akhir",
   "Jumada Al Ula", "Jumada Al Akhirah", "Rajab", "Sha'ban",
@@ -612,7 +612,9 @@ export default function CalendarAddonsPage() {
     return map;
   }, [BOOKINGS, yr, mo, view]);
 
-  const firstDayOfMonth = new Date(yr, mo, 1).getDay();
+  // Week starts Monday (Mon=0 … Sun=6). JS getDay() is Sun=0 … Sat=6.
+  const jsWeekday = new Date(yr, mo, 1).getDay();
+  const firstDayOfMonth = jsWeekday === 0 ? 6 : jsWeekday - 1;
   const daysInMonth = new Date(yr, mo + 1, 0).getDate();
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === yr && today.getMonth() === mo;

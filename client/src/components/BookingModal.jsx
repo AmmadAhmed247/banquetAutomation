@@ -32,10 +32,6 @@ function makePaymentId() {
   return `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function isBankMethod(method) {
-  return !!(method && method !== "Cash");
-}
-
 function buildPaymentsFromBooking(booking) {
   if (!booking) return [];
 
@@ -97,6 +93,28 @@ function Field({ label, children }) {
   );
 }
 
+function SectionTitle({ icon: Icon, children }) {
+  return (
+    <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+      <Icon size={12} /> {children}
+    </p>
+  );
+}
+
+function SelectBox({ children, ...props }) {
+  return (
+    <div className="relative">
+      <select {...props} className={selectCls}>
+        {children}
+      </select>
+      <ChevronDown
+        size={14}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none"
+      />
+    </div>
+  );
+}
+
 const inputCls =
   "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm text-green-900 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 placeholder-green-300";
 const selectCls =
@@ -120,6 +138,8 @@ const ADDON_SERVICES = [
 const emptyAddon = { service: "", description: "", client_price: "", vendor_cost: "" };
 
 function AddonPopup({ draft, setDraft, onSubmit, onClose, isLoading }) {
+  const set = (key) => (e) => setDraft((d) => ({ ...d, [key]: e.target.value }));
+
   return (
     <div className="fixed inset-0 bg-green-950/50 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
@@ -128,7 +148,7 @@ function AddonPopup({ draft, setDraft, onSubmit, onClose, isLoading }) {
             <div className="bg-green-100 p-2 rounded-xl">
               <CreditCard size={16} className="text-green-600" />
             </div>
-            <h3 className="text-[15px] font-bold text-green-900">Add Add-on</h3>
+            <h3 className="text-[15px] font-bold text-green-900">Add-on</h3>
           </div>
           <button
             type="button"
@@ -141,33 +161,21 @@ function AddonPopup({ draft, setDraft, onSubmit, onClose, isLoading }) {
 
         <div className="space-y-3">
           <Field label="Service">
-            <div className="relative">
-              <select
-                value={draft.service}
-                onChange={(e) => setDraft((d) => ({ ...d, service: e.target.value }))}
-                className={selectCls}
-                disabled={isLoading}
-              >
-                <option value="" disabled>
-                  Select service...
-                </option>
-                {ADDON_SERVICES.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-              <ChevronDown
-                size={14}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none"
-              />
-            </div>
+            <SelectBox value={draft.service} onChange={set("service")} disabled={isLoading}>
+              <option value="" disabled>
+                Select
+              </option>
+              {ADDON_SERVICES.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </SelectBox>
           </Field>
 
-          <Field label="Description / Notes">
+          <Field label="Notes">
             <input
               type="text"
-              placeholder="Description / Notes"
               value={draft.description}
-              onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+              onChange={set("description")}
               className={inputCls}
               disabled={isLoading}
             />
@@ -177,9 +185,8 @@ function AddonPopup({ draft, setDraft, onSubmit, onClose, isLoading }) {
             <Field label="Client Price">
               <input
                 type="number"
-                placeholder="Client Price"
                 value={draft.client_price}
-                onChange={(e) => setDraft((d) => ({ ...d, client_price: e.target.value }))}
+                onChange={set("client_price")}
                 className={inputCls}
                 disabled={isLoading}
               />
@@ -187,9 +194,8 @@ function AddonPopup({ draft, setDraft, onSubmit, onClose, isLoading }) {
             <Field label="Vendor Cost">
               <input
                 type="number"
-                placeholder="Vendor Cost"
                 value={draft.vendor_cost}
-                onChange={(e) => setDraft((d) => ({ ...d, vendor_cost: e.target.value }))}
+                onChange={set("vendor_cost")}
                 className={inputCls}
                 disabled={isLoading}
               />
@@ -211,7 +217,7 @@ function AddonPopup({ draft, setDraft, onSubmit, onClose, isLoading }) {
             disabled={isLoading || !draft.service}
             className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-3 rounded-xl cursor-pointer border-none disabled:opacity-50"
           >
-            Add Add-on
+            Add
           </button>
         </div>
       </div>
@@ -254,28 +260,21 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
   const payments = Array.isArray(form.payments) ? form.payments : [];
   const paidTotal = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
   const totalAmount = Number(form.totalAmount || 0);
-  const remaining =
-    form.status === "Finished" ? 0 : Math.max(0, totalAmount - paidTotal);
-  const pct =
-    form.status === "Finished"
-      ? 100
-      : totalAmount
-        ? Math.min(100, Math.round((paidTotal / totalAmount) * 100))
-        : 0;
+  const advanceAmount = Number(form.advanceAmount || 0);
+  const advanceLeft = Math.max(0, advanceAmount - paidTotal);
+  const balanceDue = Math.max(0, totalAmount - paidTotal);
+  const isFullyPaid = balanceDue <= 0;
+  const pct = isFullyPaid
+    ? 100
+    : Math.min(100, Math.round((paidTotal / totalAmount) * 100));
+  const showSettle = form.status === "Finished" && balanceDue > 0;
 
   function addPayment() {
     setForm((p) => ({
       ...p,
       payments: [
         ...(p.payments || []),
-        {
-          id: makePaymentId(),
-          amount: "",
-          method: "Cash",
-          bankName: "",
-          note: "",
-          date: todayString(),
-        },
+        { id: makePaymentId(), amount: "", method: "Cash", bankName: "", note: "", date: todayString() },
       ],
     }));
   }
@@ -283,14 +282,9 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
   function updatePayment(id, key, value) {
     setForm((p) => ({
       ...p,
-      payments: (p.payments || []).map((row) => {
-        if (row.id !== id) return row;
-        const next = { ...row, [key]: value };
-        if (key === "method" && value === "Cash") {
-          next.bankName = "";
-        }
-        return next;
-      }),
+      payments: (p.payments || []).map((row) =>
+        row.id === id ? { ...row, [key]: value } : row
+      ),
     }));
   }
 
@@ -298,6 +292,24 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
     setForm((p) => ({
       ...p,
       payments: (p.payments || []).filter((row) => row.id !== id),
+    }));
+  }
+
+  function settleRemaining(method) {
+    if (balanceDue <= 0) return;
+    setForm((p) => ({
+      ...p,
+      payments: [
+        ...(p.payments || []),
+        {
+          id: makePaymentId(),
+          amount: String(balanceDue),
+          method: method || "Cash",
+          bankName: "",
+          note: "Final settlement",
+          date: todayString(),
+        },
+      ],
     }));
   }
 
@@ -320,7 +332,10 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
       ...form,
       payments: cleanPayments,
       advancePaid: paid,
-      advanceAmount: form.advanceAmount || paid,
+      advanceAmount:
+        form.advanceAmount !== "" && form.advanceAmount != null
+          ? Number(form.advanceAmount)
+          : paid,
       paymentMethod: primary?.method || form.paymentMethod || "Cash",
       bankName: primary?.bankName || form.bankName || "",
       paymentNote: primary?.note || form.paymentNote || "",
@@ -379,11 +394,9 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
               >
                 {isNew ? "New Booking" : "Edit Booking"}
               </h2>
-              <p className="text-xs text-green-400">
-                {isNew
-                  ? "Fill in all reservation details"
-                  : `Editing: ${booking?.client || ""}`}
-              </p>
+              {!isNew && booking?.client && (
+                <p className="text-xs text-green-400">{booking.client}</p>
+              )}
             </div>
           </div>
           <button
@@ -398,44 +411,13 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
 
         <div className="px-8 py-6 space-y-6">
           <section>
-            <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <Pencil size={12} /> Receipt Info
-            </p>
-            <Field label="R. No.">
-              <input
-                type="text"
-                placeholder="e.g. 730"
-                value={form.rNo || ""}
-                onChange={(e) => f("rNo", e.target.value)}
-                className={inputCls}
-                disabled={isLoading}
-              />
-            </Field>
-          </section>
-
-          <section>
-            <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <Users size={12} /> Client Information
-            </p>
+            <SectionTitle icon={Users}>Client</SectionTitle>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Field label="Client Name *">
-                  <input
-                    type="text"
-                    placeholder="e.g. Ayesha & Bilal"
-                    value={form.client || ""}
-                    onChange={(e) => f("client", e.target.value)}
-                    className={inputCls}
-                    disabled={isLoading}
-                  />
-                </Field>
-              </div>
-              <Field label="Phone *">
+              <Field label="R. No.">
                 <input
                   type="text"
-                  placeholder="+92 300 0000000"
-                  value={form.phone || ""}
-                  onChange={(e) => f("phone", e.target.value)}
+                  value={form.rNo || ""}
+                  onChange={(e) => f("rNo", e.target.value)}
                   className={inputCls}
                   disabled={isLoading}
                 />
@@ -443,9 +425,27 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
               <Field label="Guests">
                 <input
                   type="number"
-                  placeholder="250"
                   value={form.guests || ""}
                   onChange={(e) => f("guests", e.target.value)}
+                  className={inputCls}
+                  disabled={isLoading}
+                />
+              </Field>
+              <Field label="Name *">
+                <input
+                  type="text"
+                  value={form.client || ""}
+                  onChange={(e) => f("client", e.target.value)}
+                  className={inputCls}
+                  disabled={isLoading}
+                />
+              </Field>
+              <Field label="Phone *">
+                <input
+                  type="text"
+                  placeholder="+92"
+                  value={form.phone || ""}
+                  onChange={(e) => f("phone", e.target.value)}
                   className={inputCls}
                   disabled={isLoading}
                 />
@@ -454,37 +454,28 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
           </section>
 
           <section>
-            <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <CalendarDays size={12} /> Event Details
-            </p>
+            <SectionTitle icon={CalendarDays}>Event</SectionTitle>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { label: "Event Type", key: "event", options: EVENTS },
+                { label: "Type", key: "event", options: EVENTS },
                 { label: "Venue", key: "venue", options: VENUES },
-                { label: "Time Slot", key: "timeSlot", options: TIME_SLOTS },
+                { label: "Time", key: "timeSlot", options: TIME_SLOTS },
                 { label: "Status", key: "status", options: STATUSES },
               ].map((fi) => (
                 <Field key={fi.key} label={fi.label}>
-                  <div className="relative">
-                    <select
-                      value={form[fi.key] || fi.options[0]}
-                      onChange={(e) => f(fi.key, e.target.value)}
-                      className={selectCls}
-                      disabled={isLoading}
-                    >
-                      {fi.options.map((o) => (
-                        <option key={o}>{o}</option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={14}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none"
-                    />
-                  </div>
+                  <SelectBox
+                    value={form[fi.key] || fi.options[0]}
+                    onChange={(e) => f(fi.key, e.target.value)}
+                    disabled={isLoading}
+                  >
+                    {fi.options.map((o) => (
+                      <option key={o}>{o}</option>
+                    ))}
+                  </SelectBox>
                 </Field>
               ))}
               <div className="col-span-2">
-                <Field label="Event Date *">
+                <Field label="Date *">
                   <input
                     type="date"
                     value={form.date || ""}
@@ -498,178 +489,28 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
           </section>
 
           <section>
-            <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <CreditCard size={12} /> Payment Details
-            </p>
+            <SectionTitle icon={CreditCard}>Payment</SectionTitle>
 
-            <div className="mb-4">
-              <Field label="Total Amount (PKR)">
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <Field label="Total (PKR)">
                 <input
                   type="number"
-                  placeholder="e.g. 50000"
                   value={form.totalAmount || ""}
                   onChange={(e) => f("totalAmount", e.target.value)}
                   className={inputCls}
                   disabled={isLoading}
                 />
               </Field>
-            </div>
-
-            <div className="border border-green-200 rounded-2xl overflow-hidden bg-green-50/40">
-              <div className="px-4 py-3 border-b border-green-100 flex items-center justify-between bg-green-50">
-                <span className="text-xs font-semibold text-green-700">
-                  Money received — add each payment separately
-                </span>
-                <button
-                  type="button"
-                  onClick={addPayment}
+              <Field label="Advance (PKR)">
+                <input
+                  type="number"
+                  value={form.advanceAmount || ""}
+                  onChange={(e) => f("advanceAmount", e.target.value)}
+                  className={inputCls}
                   disabled={isLoading}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-green-700 border border-green-300 bg-white px-3 py-1.5 rounded-lg hover:bg-green-50 cursor-pointer disabled:opacity-50"
-                >
-                  <Plus size={13} /> Add payment
-                </button>
-              </div>
-
-              {payments.length === 0 ? (
-                <p className="text-xs text-green-500 text-center py-8 px-4">
-                  No payments yet. Example: 30,000 Cash + 20,000 JazzCash → add two lines.
-                </p>
-              ) : (
-                <div className="divide-y divide-green-100">
-                  {payments.map((row, idx) => (
-                    <div key={row.id} className="p-4 space-y-3 bg-white/80">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-green-600">
-                          Payment {idx + 1}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removePayment(row.id)}
-                          disabled={isLoading}
-                          className="text-green-300 hover:text-red-500 p-1 cursor-pointer border-none bg-transparent"
-                          aria-label="Remove payment"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <Field label="Amount (PKR)">
-                          <input
-                            type="number"
-                            placeholder="e.g. 30000"
-                            value={row.amount}
-                            onChange={(e) =>
-                              updatePayment(row.id, "amount", e.target.value)
-                            }
-                            className={inputCls}
-                            disabled={isLoading}
-                          />
-                        </Field>
-                        <Field label="Method">
-                          <div className="relative">
-                            <select
-                              value={row.method || "Cash"}
-                              onChange={(e) =>
-                                updatePayment(row.id, "method", e.target.value)
-                              }
-                              className={selectCls}
-                              disabled={isLoading}
-                            >
-                              {PAYMENT_METHODS.map((m) => (
-                                <option key={m} value={m}>
-                                  {m}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown
-                              size={14}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none"
-                            />
-                          </div>
-                        </Field>
-                      </div>
-
-                      {isBankMethod(row.method) && (
-                        <Field label="Bank / wallet note (optional)">
-                          <input
-                            type="text"
-                            placeholder="Account name or reference"
-                            value={row.bankName || ""}
-                            onChange={(e) =>
-                              updatePayment(row.id, "bankName", e.target.value)
-                            }
-                            className={inputCls}
-                            disabled={isLoading}
-                          />
-                        </Field>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <Field label="Date">
-                          <input
-                            type="date"
-                            value={row.date || ""}
-                            onChange={(e) =>
-                              updatePayment(row.id, "date", e.target.value)
-                            }
-                            className={inputCls}
-                            disabled={isLoading}
-                          />
-                        </Field>
-                        <Field label="Note (optional)">
-                          <input
-                            type="text"
-                            placeholder="e.g. Token"
-                            value={row.note || ""}
-                            onChange={(e) =>
-                              updatePayment(row.id, "note", e.target.value)
-                            }
-                            className={inputCls}
-                            disabled={isLoading}
-                          />
-                        </Field>
-                      </div>
-
-                      <p className="text-[11px] text-green-500">
-                        Method:{" "}
-                        <span className="font-semibold text-green-800">{row.method}</span>
-                        {Number(row.amount) > 0 ? ` · ${formatPKR(row.amount)}` : ""}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {totalAmount > 0 && (
-              <div className="mt-4 bg-green-50 rounded-2xl p-4 border border-green-100">
-                <div className="flex justify-between text-xs font-semibold text-green-700 mb-1">
-                  <span>Total: {formatPKR(totalAmount)}</span>
-                  <span className={remaining > 0 ? "text-red-400" : "text-green-700"}>
-                    Remaining: {formatPKR(remaining)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs text-green-600 mb-2">
-                  <span>Paid: {formatPKR(paidTotal)}</span>
-                  <span className="font-bold">{pct}% paid</span>
-                </div>
-                <div className="w-full bg-green-200 rounded-full h-2.5">
-                  <div
-                    className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                {form.status === "Finished" && (
-                  <p className="text-[11px] text-green-600 mt-1.5 font-medium">
-                    Status Finished — marked 100% paid
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="mt-4">
-              <Field label="Advance Due Date">
+                />
+              </Field>
+              <Field label="Advance Due">
                 <input
                   type="date"
                   value={form.advanceDueDate || ""}
@@ -679,18 +520,145 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
                 />
               </Field>
             </div>
+
+            <div className="border border-green-200 rounded-2xl overflow-hidden bg-green-50/40">
+              <div className="px-4 py-3 border-b border-green-100 flex items-center justify-between bg-green-50">
+                <span className="text-xs font-semibold text-green-700">Payments received</span>
+                <button
+                  type="button"
+                  onClick={addPayment}
+                  disabled={isLoading}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-green-700 border border-green-300 bg-white px-3 py-1.5 rounded-lg hover:bg-green-50 cursor-pointer disabled:opacity-50"
+                >
+                  <Plus size={13} /> Add
+                </button>
+              </div>
+
+              {payments.length === 0 ? (
+                <p className="text-xs text-green-500 text-center py-6 px-4">No payments yet</p>
+              ) : (
+                <div className="divide-y divide-green-100">
+                  {payments.map((row) => (
+                    <div key={row.id} className="p-4 bg-white/80 flex items-end gap-3">
+                      <div className="flex-1 grid grid-cols-3 gap-3">
+                        <Field label="Amount">
+                          <input
+                            type="number"
+                            value={row.amount}
+                            onChange={(e) => updatePayment(row.id, "amount", e.target.value)}
+                            className={inputCls}
+                            disabled={isLoading}
+                          />
+                        </Field>
+                        <Field label="Method">
+                          <SelectBox
+                            value={row.method || "Cash"}
+                            onChange={(e) => updatePayment(row.id, "method", e.target.value)}
+                            disabled={isLoading}
+                          >
+                            {PAYMENT_METHODS.map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </SelectBox>
+                        </Field>
+                        <Field label="Date">
+                          <input
+                            type="date"
+                            value={row.date || ""}
+                            onChange={(e) => updatePayment(row.id, "date", e.target.value)}
+                            className={inputCls}
+                            disabled={isLoading}
+                          />
+                        </Field>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removePayment(row.id)}
+                        disabled={isLoading}
+                        className="text-green-300 hover:text-red-500 p-2 mb-0.5 cursor-pointer border-none bg-transparent"
+                        aria-label="Remove payment"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {showSettle && (
+              <div className="mt-4 border-2 border-green-400 bg-green-50 rounded-2xl p-4">
+                <p className="text-sm font-bold text-green-900 mb-3">
+                  Settle {formatPKR(balanceDue)}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {PAYMENT_METHODS.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => settleRemaining(m)}
+                      disabled={isLoading}
+                      className="px-3 py-2 rounded-xl text-xs font-semibold border border-green-300 bg-white text-green-800 hover:bg-green-600 hover:text-white hover:border-green-600 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(totalAmount > 0 || advanceAmount > 0 || paidTotal > 0) && (
+              <div className="mt-4 bg-green-50 rounded-2xl p-4 border border-green-100">
+                <div className="grid grid-cols-4 gap-2 text-xs text-green-600 mb-3">
+                  <div>
+                    <p>Total</p>
+                    <p className="text-sm font-bold text-green-800">{formatPKR(totalAmount)}</p>
+                  </div>
+                  <div>
+                    <p>Paid ({pct}%)</p>
+                    <p className="text-sm font-bold text-green-800">{formatPKR(paidTotal)}</p>
+                  </div>
+                  <div>
+                    <p>Advance left</p>
+                    <p
+                      className={`text-sm font-bold ${
+                        advanceLeft > 0 ? "text-amber-600" : "text-green-800"
+                      }`}
+                    >
+                      {advanceAmount > 0 ? formatPKR(advanceLeft) : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p>Remaining</p>
+                    <p
+                      className={`text-sm font-bold ${
+                        balanceDue > 0 ? "text-red-400" : "text-green-800"
+                      }`}
+                    >
+                      {formatPKR(balanceDue)}
+                    </p>
+                  </div>
+                </div>
+                <div className="w-full bg-green-200 rounded-full h-2.5">
+                  <div
+                    className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </section>
 
           <section>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-bold text-green-600 uppercase tracking-widest flex items-center gap-2">
-                <CreditCard size={12} /> Add-ons
-              </p>
+              <SectionTitle icon={CreditCard}>Add-ons</SectionTitle>
               <button
                 type="button"
                 onClick={() => setShowAddonPopup(true)}
                 disabled={isNew || !booking?.id || isLoading}
-                className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 rounded-lg px-3 py-1.5 hover:bg-green-50 cursor-pointer bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 rounded-lg px-3 py-1.5 mb-3 hover:bg-green-50 cursor-pointer bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <PlusCircle size={13} /> Add
               </button>
@@ -698,8 +666,7 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
 
             {!booking?.id ? (
               <div className="text-xs text-green-500 bg-green-50 border border-green-100 rounded-xl p-4 text-center">
-                Save this booking first — add-ons are linked to a specific booking and can be
-                added once it&apos;s created.
+                Save the booking to add add-ons.
               </div>
             ) : addonRows.length > 0 ? (
               <div className="border border-green-100 rounded-xl p-3 bg-green-50/30 divide-y divide-stone-100">
@@ -716,7 +683,7 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-green-400 text-center py-3">No add-ons yet</p>
+              <p className="text-xs text-green-400 text-center py-3">No add-ons</p>
             )}
           </section>
 
@@ -753,7 +720,7 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
             ) : (
               <Save size={15} />
             )}
-            {isLoading ? "Saving..." : isNew ? "Save Booking" : "Update Booking"}
+            {isLoading ? "Saving..." : isNew ? "Save Booking" : "Save Changes"}
           </button>
         </div>
       </div>
