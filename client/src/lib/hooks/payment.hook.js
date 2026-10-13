@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import paymentService from "../../services/payment.service";
 
 export function getAllPayments() {
@@ -17,3 +17,25 @@ export function getAllPayments() {
     },
   });
 }
+
+export const useCreatePayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => await paymentService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+};
+
+export const useRemovePayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => await paymentService.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+};
