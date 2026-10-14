@@ -2,6 +2,10 @@ const { db } = require("../config/db");
 const b = require("../model/schema");
 const { gte, lte, and, inArray, sql } = require("drizzle-orm");
 
+// ── CUTOFF: is date se pehle ka koi data cashflow mein nahi aayega (PKT) ──
+const CASHFLOW_CUTOFF_STR = "2026-10-01";
+const CASHFLOW_CUTOFF = new Date(`${CASHFLOW_CUTOFF_STR}T00:00:00.000+05:00`);
+
 /**
  * Computes a full cashflow + finance summary.
  * Shared by /api/cashflow, WhatsApp cron, Expense & Profit page,
@@ -43,9 +47,16 @@ function isCoke(label = "", category = "") {
 }
 
 async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range } = {}) {
+  // Cutoff: service ke andar bhi clamp, taake cron / WhatsApp / dusre callers bhi cover hon
+  if (startDate < CASHFLOW_CUTOFF) startDate = CASHFLOW_CUTOFF;
+
   const todayStr = karachiDateString(new Date());
-  const effectiveStartQ = range === "all" ? "2000-01-01" : (startQ || karachiDateString(startDate));
-  const effectiveEndQ = range === "all" ? "2100-12-31" : (endQ || karachiDateString(endDate));
+
+  const rawStartQ = range === "all" ? "2000-01-01" : (startQ || karachiDateString(startDate));
+  const rawEndQ = range === "all" ? "2100-12-31" : (endQ || karachiDateString(endDate));
+
+  const effectiveStartQ = rawStartQ < CASHFLOW_CUTOFF_STR ? CASHFLOW_CUTOFF_STR : rawStartQ;
+  const effectiveEndQ = rawEndQ;
 
   const [
     rangePayments,
@@ -166,6 +177,10 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
 
   // ── 2. Bookings Revenue (for Gross Revenue) ─────────────────────────────
   allBookings.forEach((bk) => {
+    // Cutoff se pehle bani booking ko bilkul ignore karo
+    // (na gross revenue, na fallback inflow)
+    if (!bk.created_at || bk.created_at < CASHFLOW_CUTOFF) return;
+
     const status = (bk.status || "").toLowerCase();
     const totalAmt = Number(bk.total_amount || 0);
     const advancePaid = Number(bk.advance_paid || 0);
