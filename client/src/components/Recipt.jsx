@@ -339,6 +339,8 @@ export default function DarbarReceiptForm() {
         whatsapp: formatWhatsAppNumber(fixedData.whatsapp),
       };
 
+      const advanceNum = Number(data.advance) || 0
+
       const bookingPayload = {
         rNo: data.rNo || "1",
         client: data.clientName || "Walk-in Client",
@@ -350,7 +352,10 @@ export default function DarbarReceiptForm() {
         totalAmount: Number(data.lumpSum) || 0,
         advanceAmount: Number(data.advance) || 0,
         // `advance_paid` in DB is numeric (amount). Send numeric paid amount here.
-        advancePaid: Number(data.advance) || 0,
+        payments:
+        advanceNum > 0
+          ? [{ amount: advanceNum, method: data.paymentMethod, bankName: null, note: "Advance at booking" }]
+          : [],
         paymentMethod: data.paymentMethod,
         timeSlot: "Night",
         status: "Confirmed",
