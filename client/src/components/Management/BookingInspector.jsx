@@ -14,7 +14,6 @@ export function BookingInspector({
   deleteExpenseMutation,
   deleteAddonMutation,
   updateAddonMutation,
-  handleMarkReceived,
   addingTo,
   setAddingTo,
   mode,
@@ -81,7 +80,7 @@ export function BookingInspector({
                 { label: "Gross Rev", value: currency(selGrossRev), cls: "text-stone-800" },
                 { label: "Total Costs", value: currency(selGrossExp), cls: "text-rose-600" },
                 { label: "Net Profit", value: currency(selGrossRev - selGrossExp), cls: selGrossRev - selGrossExp >= 0 ? "text-emerald-700" : "text-rose-600" },
-                { label: "Comm.", value: currency(selAddons.reduce((s, a) => a.received ? s + (Number(a.client_price) - Number(a.vendor_cost)) : s, 0)), cls: "text-violet-700" },
+                { label: "Comm.", value: currency(selAddons.reduce((s, a) => s + (Number(a.client_price) - Number(a.vendor_cost)), 0)), cls: "text-violet-700" },
               ].map(k => (
                 <div key={k.label} className="bg-white rounded-xl p-2.5 border border-stone-100 shadow-sm">
                   <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-1 font-semibold">{k.label}</p>
@@ -173,7 +172,6 @@ export function BookingInspector({
                       addon={a}
                       onDelete={id => deleteAddonMutation.mutate(id)}
                       onUpdate={(id, data) => updateAddonMutation.mutate({ id, data })}
-                      onMarkReceived={handleMarkReceived}
                     />
                   ))}
                 </div>

@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 // Hooks
 import { getAllBookings } from "../lib/hooks/booking.hook";
 import { getAllExpenses, useCreateExpense, useDeleteExpense } from "../lib/hooks/expense.hook";
-import { getAllAddons, useCreateAddon, useDeleteAddon, useMarkAddonReceived, useUpdateAddon } from "../lib/hooks/addon.hook";
+import { useAllAddons, useCreateAddon, useDeleteAddon, useUpdateAddon } from "../lib/hooks/addon.hook";
 import { getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense } from "../lib/hooks/monthlyExpense.hook";
 import { getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense } from "../lib/hooks/dailyExpense.hook";
 
@@ -27,7 +27,7 @@ export default function Management() {
   const expensesQuery = getAllExpenses() || {};
   const { data: rawExpenses } = expensesQuery;
   const expenses = Array.isArray(rawExpenses) ? rawExpenses : (rawExpenses?.data || []);
-  const addonsQuery = getAllAddons() || {};
+  const addonsQuery = useAllAddons() || {};
   const { data: rawAddons } = addonsQuery;
   const addons = Array.isArray(rawAddons) ? rawAddons : (rawAddons?.data || []);
   const monthlyExpensesQuery = getAllMonthlyExpenses() || {};
@@ -56,7 +56,6 @@ export default function Management() {
   const createDailyExpenseMutation = useCreateDailyExpense();
   const deleteDailyExpenseMutation = useDeleteDailyExpense();
   const updateAddonMutation = useUpdateAddon();
-  const markReceived = useMarkAddonReceived();
 
   // ── UI state ──
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
@@ -126,27 +125,6 @@ export default function Management() {
     );
   };
 
-  const handleMarkReceived = (id, payloadOrMethod) => {
-    console.log("handleMarkReceived called with ID:", id, "Payload/Method:", payloadOrMethod);
-
-    if (typeof payloadOrMethod === 'object' && payloadOrMethod !== null) {
-      console.log("Mutating with object payload:", { id, ...payloadOrMethod });
-      markReceived.mutate({ id, ...payloadOrMethod });
-      return;
-    }
-
-    const method = payloadOrMethod;
-    const isBank = method !== "Cash" && method !== "JazzCash" && method !== "EasyPaisa";
-    const payload = {
-      id,
-      payment_method: isBank ? "Bank Transfer" : method,
-      bank_name: isBank ? method : null,
-      received: true
-    };
-
-    console.log("Mutating with payment payload:", payload);
-    markReceived.mutate(payload);
-  };
   if (isLoading) {
     return (
       <div className="min-h-screen bg-stone-50 text-stone-900 flex items-center justify-center p-6">
@@ -227,7 +205,6 @@ export default function Management() {
             deleteExpenseMutation={deleteExpenseMutation}
             deleteAddonMutation={deleteAddonMutation}
             updateAddonMutation={updateAddonMutation}
-            handleMarkReceived={handleMarkReceived}
             addingTo={addingTo}
             setAddingTo={setAddingTo}
             mode={mode}

@@ -4,7 +4,7 @@ import {
   Layers, Zap, Trash2, Plus, Loader2, ClipboardList, Receipt, Search, Droplet,
 } from "lucide-react";
 import { getAllBookings } from "../lib/hooks/booking.hook";
-import { getAllAddons } from "../lib/hooks/addon.hook";
+import { useAllAddons } from "../lib/hooks/addon.hook";
 import { getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense } from "../lib/hooks/monthlyExpense.hook";
 import { getAllDailyExpenses, useDeleteDailyExpense } from "../lib/hooks/dailyExpense.hook";
 import { getAllExpenses } from "../lib/hooks/expense.hook";
@@ -239,7 +239,7 @@ function DetailSidebar({ title, subtitle, children, onClose }) {
 }
 
 export default function BookingsAddonsPage() {
-  const addonsQuery = getAllAddons();
+  const addonsQuery = useAllAddons();
   const bookingsQuery = getAllBookings() || {};
   const monthlyExpensesQuery = getAllMonthlyExpenses();
   const dailyExpensesQuery = getAllDailyExpenses();

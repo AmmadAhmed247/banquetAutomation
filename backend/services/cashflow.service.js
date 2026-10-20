@@ -156,22 +156,18 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
 
   // ── 1. Payments (real money that came in) ───────────────────────────────
   rangePayments.forEach((p) => {
-    const isAddonPayment = (p.category || "").toLowerCase() === "addon";
     const booking = bookingById.get(p.bookingId);
-    const addonService = isAddonPayment
-      ? (p.note || "").replace(/^Add-on #\d+:\s*/i, "")
-      : null;
 
     addInflow(
       `payment-${p.id}`,
       p.payment_date || p.created_at,
-      isAddonPayment ? "Addon" : p.category || "Payment",
-      isAddonPayment ? addonService || "Addon Payment" : p.note || `Payment Received`,
+      p.category || "Payment",
+      p.note || `Payment Received`,
       booking?.client || p.who || null,
       p.payment_method || "Cash",
       Number(p.amount || 0),
       p.bank_name,
-      { receiptNo: booking?.rNo || null, addonService }
+      { receiptNo: booking?.rNo || null }
     );
   });
 
@@ -236,51 +232,22 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
     }
   });
 
-  // ── 3. Addons ───────────────────────────────────────────────────────────
+  // ── 3. Add-on vendor costs ──────────────────────────────────────────────
   rangeAddons.forEach((a) => {
-    if (!a.received) return;
-
     const clientPrice = Number(a.client_price || 0);
     const vendorCost = Number(a.vendor_cost || 0);
     const booking = bookingById.get(a.bookingId);
 
-    // Avoid double counting if payment already exists
-    const hasPayment = rangePayments.some(
-      (p) =>
-        p.bookingId === a.bookingId &&
-        (p.category || "").toLowerCase() === "addon" &&
-        Number(p.amount || 0) === clientPrice
-    );
+    addonCommission += clientPrice - vendorCost;
 
-    if (clientPrice > 0) {
-      // Gross Revenue always includes received addons
-      grossRevenue += clientPrice;
-      addonCommission += clientPrice - vendorCost;
-
-      if (!hasPayment) {
-        addInflow(
-          `addon-${a.id}`,
-          a.received_at || a.created_at,
-          "Addon",
-          a.service || "Addon Service",
-          booking?.client || "Unknown Client",
-          a.payment_method || "Cash",
-          clientPrice,
-          a.bank_name,
-          { receiptNo: booking?.rNo || null, addonService: a.service || null }
-        );
-      }
-    }
-
-    // Vendor payout (Cost)
     if (vendorCost > 0) {
       addOutflow(
         `addon-vendor-${a.id}`,
-        a.received_at || a.created_at,
+        a.created_at,
         "Vendor Payout",
         a.service || "Addon Service",
         booking?.client || "Unknown Client",
-        a.payment_method || "Cash",
+        "Cash",
         vendorCost,
         { receiptNo: booking?.rNo || null, addonService: a.service || null }
       );
@@ -382,7 +349,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
     activity,
 
     // Unified Finance (used by all pages)
-    grossRevenue,                    // Bookings (by status rule) + received addons
+    grossRevenue,                    // Booking totals include add-on amounts
     totalCosts: totalOut,            // Vendor + Standard + Daily + Monthly
     netProfit: grossRevenue - totalOut,
     addonCommission,

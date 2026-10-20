@@ -1,6 +1,6 @@
 const { eq, and, ne, sql } = require("drizzle-orm");
 const { db } = require("../config/db");
-const { booking, payments } = require("../model/schema");
+const { booking, payments, addons } = require("../model/schema");
 const { sendMessage } = require("./meta.service.");
 const { getOrCreateUser } = require("./user.service");
 const paymentService = require("./payment.service");
@@ -79,14 +79,20 @@ async function syncAdvancePayments(tx, saved, incoming, { client, rNo, event }) 
   return paymentService.syncBookingAdvanceTotal(tx, saved.id);
 }
 
-function mapBooking(b, paymentList) {
+function mapBooking(b, paymentList, addonTotal = 0, settlementRows = []) {
+  const settlementPaid = settlementRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
   return {
     ...b,
     userId: b.user_id || b.userId,
     package: b.package_name,
     totalAmount: b.total_amount !== undefined ? Number(b.total_amount) : undefined,
+    baseAmount: b.total_amount !== undefined ? Number(b.total_amount) - addonTotal : undefined,
     advanceAmount: b.advance_amount !== undefined ? Number(b.advance_amount) : undefined,
     advancePaid: b.advance_paid !== undefined ? Number(b.advance_paid) : undefined,
+    settlementPaid,
+    totalReceived: (Number(b.advance_paid || 0) || 0) + settlementPaid,
+    settlementPaymentMethod: settlementRows[0]?.payment_method || b.payment_method,
+    settlementBankName: settlementRows[0]?.bank_name || "",
     advanceDueDate: b.advance_due_date,
     paymentMethod: b.payment_method,
     paymentNote: b.payment_note,
@@ -98,7 +104,7 @@ function mapBooking(b, paymentList) {
 }
 
 async function loadBookingsWithPayments() {
-  const [bookings, advanceRows] = await Promise.all([
+  const [bookings, advanceRows, settlementRows, addonTotals] = await Promise.all([
     db.select().from(booking),
     db
       .select()
@@ -107,6 +113,21 @@ async function loadBookingsWithPayments() {
       .orderBy(
         sql`COALESCE(${payments.payment_date}, ${payments.created_at}) ASC, ${payments.id} ASC`
       ),
+    db
+      .select()
+      .from(payments)
+      .where(and(
+        eq(payments.category, SETTLEMENT),
+        eq(payments.flow, "IN")
+      ))
+      .orderBy(sql`${payments.created_at} DESC`),
+    db
+      .select({
+        bookingId: addons.bookingId,
+        total: sql`COALESCE(SUM(${addons.client_price}), 0)`,
+      })
+      .from(addons)
+      .groupBy(addons.bookingId),
   ]);
 
   const byBooking = new Map();
@@ -122,7 +143,24 @@ async function loadBookingsWithPayments() {
     });
   }
 
-  return bookings.map((b) => mapBooking(b, byBooking.get(b.id)));
+  const settlementsByBooking = new Map();
+  for (const payment of settlementRows) {
+    if (!settlementsByBooking.has(payment.bookingId)) settlementsByBooking.set(payment.bookingId, []);
+    settlementsByBooking.get(payment.bookingId).push(payment);
+  }
+
+  const addonTotalsByBooking = new Map(
+    addonTotals.map((row) => [row.bookingId, Number(row.total || 0)])
+  );
+
+  return bookings.map((b) =>
+    mapBooking(
+      b,
+      byBooking.get(b.id),
+      addonTotalsByBooking.get(b.id) || 0,
+      settlementsByBooking.get(b.id) || []
+    )
+  );
 }
 
 function handleUniqueViolation(error) {
@@ -407,23 +445,36 @@ async function UpdateBooking(bookingId, bookingData) {
 
       const saved = updatedBooking[0];
 
-      let newAdvance;
       if (incoming) {
-        newAdvance = await syncAdvancePayments(tx, saved, incoming, { client, rNo, event });
-      } else {
-        newAdvance = Number(saved.advance_paid || 0);
+        await syncAdvancePayments(tx, saved, incoming, { client, rNo, event });
       }
 
-      // "Event Final Settlement" row, using the NEW advance total
-      const [settlementPayment] = await tx
+      // Keep one settlement row equal to the outstanding balance.
+      const settlementPayments = await tx
         .select()
         .from(payments)
-        .where(and(eq(payments.bookingId, saved.id), eq(payments.category, SETTLEMENT)))
-        .orderBy(sql`${payments.created_at} DESC`)
-        .limit(1);
+        .where(and(
+          eq(payments.bookingId, saved.id),
+          eq(payments.category, SETTLEMENT),
+          eq(payments.flow, "IN")
+        ))
+        .orderBy(sql`${payments.created_at} DESC`);
 
       if (isNowFinished) {
-        const remaining = Number(totalAmount || 0) - newAdvance;
+        const [{ receivedBeforeSettlement }] = await tx
+          .select({
+            receivedBeforeSettlement: sql`COALESCE(SUM(${payments.amount}), 0)`,
+          })
+          .from(payments)
+          .where(and(
+            eq(payments.bookingId, saved.id),
+            eq(payments.flow, "IN"),
+            ne(payments.category, SETTLEMENT)
+          ));
+        const remaining = Math.max(
+          0,
+          Number(totalAmount || 0) - Number(receivedBeforeSettlement || 0)
+        );
         const settleMethod = settlementPaymentMethod || "Cash";
         const settleBank =
           settleMethod === "Cash" ? null : (settlementBankName || "").slice(0, 50) || null;
@@ -437,6 +488,7 @@ async function UpdateBooking(bookingId, bookingData) {
             note: `Final settlement for booking #${rNo || saved.id} (${event})`,
           };
 
+          const [settlementPayment, ...duplicateSettlements] = settlementPayments;
           if (settlementPayment) {
             await tx.update(payments).set(settleValues).where(eq(payments.id, settlementPayment.id));
           } else {
@@ -448,18 +500,24 @@ async function UpdateBooking(bookingId, bookingData) {
               payment_date: new Date(),
             });
           }
-        } else if (settlementPayment) {
-          // Fully paid by advances alone: no settlement owed
-          await tx.delete(payments).where(eq(payments.id, settlementPayment.id));
+          for (const duplicate of duplicateSettlements) {
+            await tx.delete(payments).where(eq(payments.id, duplicate.id));
+          }
+        } else {
+          for (const settlementPayment of settlementPayments) {
+            await tx.delete(payments).where(eq(payments.id, settlementPayment.id));
+          }
         }
 
         await tx
           .update(booking)
           .set({ payment_method: settleMethod, bank_name: settleBank })
           .where(eq(booking.id, saved.id));
-      } else if (settlementPayment) {
+      } else if (settlementPayments.length > 0) {
         // Status moved back from Finished: that settlement never happened
-        await tx.delete(payments).where(eq(payments.id, settlementPayment.id));
+        for (const settlementPayment of settlementPayments) {
+          await tx.delete(payments).where(eq(payments.id, settlementPayment.id));
+        }
       }
 
       const [fresh] = await tx.select().from(booking).where(eq(booking.id, saved.id));

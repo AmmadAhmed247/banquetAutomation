@@ -9,7 +9,7 @@ import {
 } from "recharts";
 
 import { getAllBookings, useCreateBooking, useUpdateBooking } from "../lib/hooks/booking.hook";
-import { getAllAddons } from "../lib/hooks/addon.hook";
+import { useAllAddons } from "../lib/hooks/addon.hook";
 import {
   getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense,
 } from "../lib/hooks/dailyExpense.hook";
@@ -526,7 +526,7 @@ export default function CalendarAddonsPage() {
   const [statPopup, setStatPopup] = useState(null); // null | "pepsi" | "coke" | "diesel"
 
   const { data: fetchedBookings = [], isLoading: bookingsLoading, error } = getAllBookings();
-  const { data: fetchedAddons = [] } = getAllAddons();
+  const { data: fetchedAddons = [] } = useAllAddons();
   const { data: allDailyExpenses = [] } = getAllDailyExpenses();
   const { data: allMonthlyExpenses = [] } = getAllMonthlyExpenses();
   const expensesQuery = getAllExpenses() || {};

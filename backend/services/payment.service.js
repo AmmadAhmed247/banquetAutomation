@@ -68,7 +68,8 @@ const recordPayment = async ({
     const [existingBooking] = await tx
       .select()
       .from(booking)
-      .where(eq(booking.id, id));
+      .where(eq(booking.id, id))
+      .for("update");
  
     if (!existingBooking) {
       throw new Error("BOOKING_NOT_FOUND");
@@ -77,6 +78,16 @@ const recordPayment = async ({
     const resolvedCategory =
       category || (isFinished ? SETTLEMENT : ADVANCE);
     const method = payment_method || "Cash";
+
+    const [{ received }] = await tx
+      .select({ received: sql`COALESCE(SUM(${payments.amount}), 0)` })
+      .from(payments)
+      .where(and(eq(payments.bookingId, id), eq(payments.flow, "IN")));
+    const total = Math.round((parseFloat(existingBooking.total_amount) || 0) * 100);
+    const alreadyReceived = Math.round(Number(received || 0) * 100);
+    if (total > 0 && alreadyReceived + Math.round(numericAmount * 100) > total) {
+      throw new Error("PAYMENT_EXCEEDS_TOTAL");
+    }
  
     const [newPayment] = await tx
       .insert(payments)
@@ -99,15 +110,14 @@ const recordPayment = async ({
     }
  
     // Total money received (advances + settlements) decides auto-finish
-    const [{ received }] = await tx
+    const [{ received: totalReceived }] = await tx
       .select({ received: sql`COALESCE(SUM(${payments.amount}), 0)` })
       .from(payments)
       .where(and(eq(payments.bookingId, id), eq(payments.flow, "IN")));
  
-    const total = parseFloat(existingBooking.total_amount) || 0;
     const updateData = { updated_at: new Date() };
  
-    if (isFinished || (total > 0 && Number(received) >= total)) {
+    if (isFinished || (total > 0 && Number(totalReceived) >= total / 100)) {
       updateData.status = "Finished";
       updateData.payment_method = method;
       updateData.bank_name = method === "Cash" ? null : (bank_name || "").slice(0, 50) || null;

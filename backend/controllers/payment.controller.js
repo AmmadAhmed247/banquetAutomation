@@ -41,6 +41,9 @@ const createPayment = async (req, res) => {
     if (error.message === "BOOKING_NOT_FOUND") {
       return res.status(404).json({ success: false, message: "Associated booking not found" });
     }
+    if (error.message === "PAYMENT_EXCEEDS_TOTAL") {
+      return res.status(400).json({ success: false, message: "Payment exceeds the booking balance" });
+    }
 
     return res.status(500).json({ success: false, message: "Failed to process payment transaction" });
   }
