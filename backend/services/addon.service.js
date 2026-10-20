@@ -1,25 +1,33 @@
 const { db } = require("../config/db");
-const { addons, payments } = require("../model/schema");
-const { eq, and } = require("drizzle-orm");
+const { addons, booking } = require("../model/schema");
+const { eq, sql } = require("drizzle-orm");
 
 async function addAddon({ bookingId, service, client_price, vendor_cost, description }) {
-  const commission = Number(client_price || 0) - Number(vendor_cost || 0);
+  const clientPrice = Number(client_price || 0);
+  const vendorCost = Number(vendor_cost || 0);
 
-  const [newAddon] = await db
-    .insert(addons)
-    .values({
-      bookingId,
-      service,
-      client_price: client_price || 0,
-      vendor_cost: vendor_cost || 0,
-      commission,
-      description: description || "",
-      received: false,
-      received_at: null
-    })
-    .returning();
+  return db.transaction(async (tx) => {
+    const [newAddon] = await tx
+      .insert(addons)
+      .values({
+        bookingId,
+        service,
+        client_price: clientPrice,
+        vendor_cost: vendorCost,
+        commission: clientPrice - vendorCost,
+        description: description || "",
+      })
+      .returning();
 
-  return newAddon;
+    await tx.update(booking)
+      .set({
+        total_amount: sql`${booking.total_amount} + ${clientPrice.toFixed(2)}`,
+        updated_at: new Date(),
+      })
+      .where(eq(booking.id, bookingId));
+
+    return newAddon;
+  });
 }
 
 async function GetAllAddons() {
@@ -29,116 +37,61 @@ async function GetAllAddons() {
 async function deleteAddon(id) {
   const addonId = Number(id);
 
-  // Fetch the addon first so we know its details for cleanup
-  const [existing] = await db.select().from(addons).where(eq(addons.id, addonId));
-  if (existing) {
-    // Remove the corresponding payment entry from cash flow if it exists
-    await db.delete(payments)
-      .where(
-        and(
-          eq(payments.bookingId, existing.bookingId),
-          eq(payments.note, `Add-on #${existing.id}: ${existing.service}`)
-        )
-      );
-  }
+  return db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(addons).where(eq(addons.id, addonId));
+    if (!existing) return tx.delete(addons).where(eq(addons.id, addonId));
 
-  return db.delete(addons).where(eq(addons.id, addonId));
+    const result = await tx.delete(addons).where(eq(addons.id, addonId));
+    await tx.update(booking)
+      .set({
+        total_amount: sql`${booking.total_amount} - ${Number(existing.client_price || 0).toFixed(2)}`,
+        updated_at: new Date(),
+      })
+      .where(eq(booking.id, existing.bookingId));
+
+    return result;
+  });
 }
 
 async function updateAddon(addonId, data) {
   const id = Number(addonId);
-  const { service, description, client_price, vendor_cost, received } = data;
+  const { service, description, client_price, vendor_cost } = data;
 
-  const updateFields = {};
-  if (service !== undefined) updateFields.service = service;
-  if (description !== undefined) updateFields.description = description;
-  if (client_price !== undefined) updateFields.client_price = client_price;
-  if (vendor_cost !== undefined) updateFields.vendor_cost = vendor_cost;
-  if (received !== undefined) updateFields.received = received;
-
-  if (client_price !== undefined || vendor_cost !== undefined) {
-    const [existing] = await db.select().from(addons).where(eq(addons.id, id));
+  return db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(addons).where(eq(addons.id, id));
     if (!existing) {
       const err = new Error("Addon not found");
       err.status = 404;
       throw err;
     }
+
     const newClientPrice = client_price !== undefined ? Number(client_price) : Number(existing.client_price);
     const newVendorCost = vendor_cost !== undefined ? Number(vendor_cost) : Number(existing.vendor_cost);
-    updateFields.commission = newClientPrice - newVendorCost;
-  }
+    const updateFields = {
+      commission: newClientPrice - newVendorCost,
+    };
+    if (service !== undefined) updateFields.service = service;
+    if (description !== undefined) updateFields.description = description;
+    if (client_price !== undefined) updateFields.client_price = newClientPrice;
+    if (vendor_cost !== undefined) updateFields.vendor_cost = newVendorCost;
 
-  const [updated] = await db.update(addons)
-    .set(updateFields)
-    .where(eq(addons.id, id))
-    .returning();
-
-  return updated;
-}
-
-async function markAddonReceived(addonId, payload = {}) {
-  const { received = true, payment_method = "Cash", bank_name = null } = payload;
-  const id = Number(addonId);
-
-  const [addon] = await db.select().from(addons).where(eq(addons.id, id));
-  if (!addon) {
-    const err = new Error("Addon not found");
-    err.status = 404;
-    throw err;
-  }
-
-  if (received === false) {
-    return await db.transaction(async (tx) => {
-      const [updated] = await tx.update(addons)
-        .set({
-          received: false,
-          received_at: null,
-          payment_method: "",
-          bank_name: null
-        })
-        .where(eq(addons.id, id))
-        .returning();
-
-      await tx.delete(payments)
-        .where(
-          and(
-            eq(payments.bookingId, addon.bookingId),
-            eq(payments.note, `Add-on #${addon.id}: ${addon.service}`)
-          )
-        );
-
-      return updated;
-    });
-  }
-
-  if (addon.received) return addon;
-
-  const paymentDate = new Date();
-
-  return await db.transaction(async (tx) => {
     const [updated] = await tx.update(addons)
-      .set({
-        received: true,
-        received_at: paymentDate,
-        payment_method,
-        bank_name
-      })
+      .set(updateFields)
       .where(eq(addons.id, id))
       .returning();
 
-    await tx.insert(payments).values({
-      bookingId: addon.bookingId,
-      amount: addon.client_price,
-      flow: "IN",
-      category: "Addon",
-      payment_method,
-      bank_name,
-      note: `Add-on #${addon.id}: ${addon.service}`,
-      created_at: paymentDate
-    });
+    const priceDelta = newClientPrice - Number(existing.client_price || 0);
+    if (priceDelta !== 0) {
+      await tx.update(booking)
+        .set({
+          total_amount: sql`${booking.total_amount} + ${priceDelta.toFixed(2)}`,
+          updated_at: new Date(),
+        })
+        .where(eq(booking.id, existing.bookingId));
+    }
 
     return updated;
   });
 }
 
-module.exports = { addAddon, deleteAddon, GetAllAddons, markAddonReceived, updateAddon };
+module.exports = { addAddon, deleteAddon, GetAllAddons, updateAddon };

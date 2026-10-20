@@ -3,7 +3,7 @@ import {
   CalendarDays, Users,
   PlusCircle, X, CreditCard, ChevronDown, Loader, Save, Pencil, Trash2, Plus,
 } from "lucide-react";
-import { getAllAddons, useCreateAddon, useDeleteAddon, useUpdateAddon, useMarkAddonReceived } from "../lib/hooks/addon.hook";
+import { useAllAddons, useCreateAddon, useDeleteAddon, useUpdateAddon } from "../lib/hooks/addon.hook";
 import { AddonRow } from "./Management/ManagementRows";
 
 function formatPKR(val) {
@@ -66,8 +66,22 @@ function buildPaymentsFromBooking(booking) {
 
 function normalizeBooking(booking) {
   if (!booking) return { payments: [] };
+  const savedSettlementMethod =
+    booking.settlementPaymentMethod ??
+    booking.settlement_payment_method ??
+    booking.payment_method ??
+    "Cash";
+  const savedSettlementBank =
+    booking.settlementBankName ??
+    booking.settlement_bank_name ??
+    (PAYMENT_METHODS.includes(savedSettlementMethod) &&
+    !["Cash", "JazzCash", "EasyPaisa"].includes(savedSettlementMethod)
+      ? savedSettlementMethod
+      : "");
+
   return {
     ...booking,
+    totalAmount: booking.baseAmount ?? booking.totalAmount ?? booking.total_amount ?? "",
     date: booking.date ? formatDateInput(booking.date) : "",
     advanceDueDate:
       booking.advanceDueDate ??
@@ -78,8 +92,10 @@ function normalizeBooking(booking) {
     paymentMethod: booking.paymentMethod ?? booking.payment_method ?? "Cash",
     paymentNote: booking.paymentNote ?? booking.payment_note ?? "",
     settlementPaymentMethod:
-      booking.settlementPaymentMethod ?? booking.payment_method ?? "Cash",
-    settlementBankName: booking.settlementBankName ?? booking.bank_name ?? "",
+      ["Cash", "JazzCash", "EasyPaisa"].includes(savedSettlementMethod)
+        ? savedSettlementMethod
+        : "Bank Transfer",
+    settlementBankName: savedSettlementBank,
     payments: buildPaymentsFromBooking(booking),
   };
 }
@@ -230,7 +246,7 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
   const [addonDraft, setAddonDraft] = useState(emptyAddon);
   const [showAddonPopup, setShowAddonPopup] = useState(false);
 
-  const addonQueryResult = getAllAddons();
+  const addonQueryResult = useAllAddons();
   const rawAddons =
     addonQueryResult?.data?.addons ?? addonQueryResult?.data ?? addonQueryResult ?? [];
   const allAddonsList = Array.isArray(rawAddons)
@@ -240,11 +256,6 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
   const createAddon = useCreateAddon();
   const deleteAddon = useDeleteAddon();
   const updateAddon = useUpdateAddon();
-  const markAddonReceived = useMarkAddonReceived?.() || {
-    mutate: (id, payload) => {
-      updateAddon.mutate({ id, data: payload });
-    },
-  };
 
   const addonRows =
     !isNew && booking?.id
@@ -258,16 +269,18 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
   const f = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
   const payments = Array.isArray(form.payments) ? form.payments : [];
-  const paidTotal = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
-  const totalAmount = Number(form.totalAmount || 0);
+  const advancePaidTotal = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const addonTotal = addonRows.reduce((sum, addon) => sum + Number(addon.client_price || 0), 0);
+  const totalAmount = Number(form.totalAmount || 0) + addonTotal;
+  const settlementAmount = Math.max(0, totalAmount - advancePaidTotal);
+  const paidTotal = form.status === "Finished" ? totalAmount : advancePaidTotal;
   const advanceAmount = Number(form.advanceAmount || 0);
-  const advanceLeft = Math.max(0, advanceAmount - paidTotal);
+  const advanceLeft = Math.max(0, advanceAmount - advancePaidTotal);
   const balanceDue = Math.max(0, totalAmount - paidTotal);
   const isFullyPaid = balanceDue <= 0;
   const pct = isFullyPaid
     ? 100
     : Math.min(100, Math.round((paidTotal / totalAmount) * 100));
-  const showSettle = form.status === "Finished" && balanceDue > 0;
 
   function addPayment() {
     setForm((p) => ({
@@ -295,21 +308,12 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
     }));
   }
 
-  function settleRemaining(method) {
-    if (balanceDue <= 0) return;
-    setForm((p) => ({
-      ...p,
-      payments: [
-        ...(p.payments || []),
-        {
-          id: makePaymentId(),
-          amount: String(balanceDue),
-          method: method || "Cash",
-          bankName: "",
-          note: "Final settlement",
-          date: todayString(),
-        },
-      ],
+  function chooseSettlementMethod(method) {
+    const isBank = !["Cash", "JazzCash", "EasyPaisa"].includes(method);
+    setForm((current) => ({
+      ...current,
+      settlementPaymentMethod: isBank ? "Bank Transfer" : method,
+      settlementBankName: isBank ? method : "",
     }));
   }
 
@@ -330,6 +334,7 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
 
     onSave({
       ...form,
+      totalAmount,
       payments: cleanPayments,
       advancePaid: paid,
       advanceAmount:
@@ -340,6 +345,10 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
       bankName: primary?.bankName || form.bankName || "",
       paymentNote: primary?.note || form.paymentNote || "",
     });
+  }
+
+  function handleSettle() {
+    if (form.status === "Finished") handleSave();
   }
 
   function submitAddon() {
@@ -369,10 +378,6 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
         vendor_cost: Number(updatedData.vendor_cost || 0),
       },
     });
-  }
-
-  function handleMarkReceived(id, payload) {
-    markAddonReceived.mutate({ id, ...payload });
   }
 
   return (
@@ -495,11 +500,12 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
               <Field label="Total (PKR)">
                 <input
                   type="number"
-                  value={form.totalAmount || ""}
-                  onChange={(e) => f("totalAmount", e.target.value)}
+                  value={totalAmount || ""}
+                  onChange={(e) => f("totalAmount", Math.max(0, Number(e.target.value || 0) - addonTotal))}
                   className={inputCls}
                   disabled={isLoading}
                 />
+                <span className="text-[10px] text-green-500">Includes booking and add-on amounts</span>
               </Field>
               <Field label="Advance (PKR)">
                 <input
@@ -527,7 +533,7 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
                 <button
                   type="button"
                   onClick={addPayment}
-                  disabled={isLoading}
+                  disabled={isLoading }
                   className="flex items-center gap-1.5 text-xs font-semibold text-green-700 border border-green-300 bg-white px-3 py-1.5 rounded-lg hover:bg-green-50 cursor-pointer disabled:opacity-50"
                 >
                   <Plus size={13} /> Add
@@ -588,24 +594,51 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
               )}
             </div>
 
-            {showSettle && (
-              <div className="mt-4 border-2 border-green-400 bg-green-50 rounded-2xl p-4">
-                <p className="text-sm font-bold text-green-900 mb-3">
-                  Settle {formatPKR(balanceDue)}
+            {form.status === "Finished" && (
+              <div className="mt-4 border border-green-200 bg-green-50 rounded-2xl p-4">
+                <p className="text-sm font-bold text-green-900">
+                  Settle {formatPKR(settlementAmount)}
+                </p>
+                <p className="text-xs text-green-700 mt-1 mb-3">
+                  Choose how the remaining amount was received. Saving again updates this settlement instead of adding another one.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {PAYMENT_METHODS.map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => settleRemaining(m)}
-                      disabled={isLoading}
-                      className="px-3 py-2 rounded-xl text-xs font-semibold border border-green-300 bg-white text-green-800 hover:bg-green-600 hover:text-white hover:border-green-600 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      {m}
-                    </button>
-                  ))}
+                  {PAYMENT_METHODS.map((method) => {
+                    const selected =
+                      method === "Cash" ||
+                      method === "JazzCash" ||
+                      method === "EasyPaisa"
+                        ? form.settlementPaymentMethod === method
+                        : form.settlementPaymentMethod === "Bank Transfer" &&
+                          form.settlementBankName === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => chooseSettlementMethod(method)}
+                        disabled={isLoading}
+                        className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors disabled:opacity-50 ${
+                          selected
+                            ? "border-green-600 bg-green-600 text-white"
+                            : "border-green-300 bg-white text-green-800 hover:bg-green-100"
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    );
+                  })}
                 </div>
+                <button
+                  type="button"
+                  onClick={handleSettle}
+                  disabled={isLoading}
+                  className="mt-3 w-full px-4 py-2.5 rounded-xl bg-green-700 text-white text-sm font-semibold hover:bg-green-800 disabled:opacity-50"
+                >
+                  Settle with{" "}
+                  {form.settlementPaymentMethod === "Bank Transfer"
+                    ? form.settlementBankName || "Bank Transfer"
+                    : form.settlementPaymentMethod || "Cash"}
+                </button>
               </div>
             )}
 
@@ -676,9 +709,7 @@ export default function BookingModal({ booking, onClose, onSave, isNew, isLoadin
                     addon={row}
                     onDelete={removeAddonRow}
                     onUpdate={handleUpdateAddon}
-                    onMarkReceived={handleMarkReceived}
                     ADDON_CATEGORIES={ADDON_SERVICES}
-                    ADDON_PAYMENT_METHODS={PAYMENT_METHODS}
                   />
                 ))}
               </div>

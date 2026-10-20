@@ -58,9 +58,8 @@ export function BookingLedger({
             {upcomingBookings.map(b => {
               const bA = addonsByBooking[b.id] || []; 
               const bE = expensesByBooking[b.id] || [];
-              const aR = bA.reduce((s, a) => s + (a.received ? Number(a.client_price) : 0), 0);
-              const vE = bA.reduce((s, a) => s + (a.received ? Number(a.vendor_cost) : 0), 0);
-              const tR = b.revenue + aR; 
+              const vE = bA.reduce((s, a) => s + Number(a.vendor_cost), 0);
+              const tR = b.revenue;
               const tE = bE.reduce((s, e) => s + Number(e.amount), 0) + vE;
               const isSelected = selectedBookingId === b.id;
 

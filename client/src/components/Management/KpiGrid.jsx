@@ -22,13 +22,13 @@ export function KpiGrid() {
       <KpiCard
         label="Gross Revenue"
         value={currency(totalRevenue)}
-        sub="Incl. received add-ons"
+        sub="Booking payments and settlements"
         icon={ArrowUpRight}
       />
       <KpiCard
         label="Total Costs"
         value={currency(totalExpense)}
-        sub="Std + Received Vendor + Overhead"
+        sub="Standard + add-on vendor + overhead"
         icon={Receipt}
       />
       <KpiCard
@@ -41,7 +41,7 @@ export function KpiGrid() {
       <KpiCard
         label="Add-on Commission"
         value={currency(totalAddonCommission)}
-        sub="From received services"
+        sub="Across all add-on services"
         icon={PlusCircle}
       />
     </div>

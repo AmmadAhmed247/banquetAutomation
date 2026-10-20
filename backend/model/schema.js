@@ -97,10 +97,6 @@ const addons = pgTable("addons", {
     commission: numeric("commission", { precision: 12, scale: 2 }).notNull().default("0"), // = client_price - vendor_cost
     created_at: timestamp("created_at").defaultNow(),
     description: text("description").notNull().default(""),
-    received: boolean("received").notNull().default(false),
-    received_at: timestamp("received_at"),
-    payment_method: varchar("payment_method", { length: 50 }),
-    bank_name: varchar("bank_name", { length: 50 }),
 });
 
 

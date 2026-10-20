@@ -99,6 +99,13 @@
       "when": 1791717346720,
       "tag": "0013_watery_donald_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792351510570,
+      "tag": "0014_combine_addons_with_booking_total",
+      "breakpoints": true
     }
   ]
 }
