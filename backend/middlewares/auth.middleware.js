@@ -1,5 +1,11 @@
 const jwt = require("jsonwebtoken");
 
+const adminOnly = (req,res,next) => {
+  const token = req.cookies.token;
+  if(!token) return res.status(401).json({message: "Unauthorized!"})
+  next();
+}
+
 const verifyToken = (req, res, next) => {
   const token = req.cookies.token; 
   if (!token) return res.status(401).json({ message: "Unauthorized" });
@@ -13,4 +19,7 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-module.exports = verifyToken;
+module.exports = {
+  adminOnly,
+  verifyToken
+};
