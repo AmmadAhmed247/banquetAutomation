@@ -18,9 +18,9 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  // if (!loading && !isAuthenticated) {
-  //   return <Navigate to="/login" replace />;
-  // }
+  if (!loading && !isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return children;
 };

@@ -1,7 +1,7 @@
 import axios from "axios"
 
 export default axios.create({
-    baseURL: "https://api.raabta.tech",
+    baseURL: import.meta.env.ENVIRONMENT == "production" ? import.meta.env.PROD_URL : import.meta.env.DEV_URL,
     withCredentials: true,
 })      
 
