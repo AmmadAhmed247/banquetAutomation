@@ -18,6 +18,12 @@ async function createExpense(req, res) {
     try {
         const { date, category, label, amount } = req.body
 
+        if (!date || !category || !label || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+            return res.status(400).json({
+                message: "Date, category, label, and a positive amount are required."
+            })
+        }
+
         const result = await createDailyExpense(date, category, label, amount)
 
         return res.status(200).json(result)

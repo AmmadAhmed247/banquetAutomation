@@ -278,7 +278,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
       d.category || "Daily Expense",
       d.label || "Daily Petty Cash",
       null,
-      "Cash",
+      d.payment_method || "Cash",
       amount
     );
 

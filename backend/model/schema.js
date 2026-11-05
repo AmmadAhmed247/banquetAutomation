@@ -76,7 +76,8 @@ const dailyExpenses = pgTable("daily_expenses", {
     date: date("date").notNull(),
     label: text("label").notNull(),
     category: text("category").notNull(),
-    amount: numeric("amount").notNull()
+    amount: numeric("amount").notNull(),
+    payment_method: varchar("payment_method", { length: 50 }).notNull().default("Cash")
 })
 
 const expenses = pgTable("expenses", {

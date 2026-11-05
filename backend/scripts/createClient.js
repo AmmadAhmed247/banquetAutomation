@@ -1,48 +1,53 @@
+require("dotenv").config({ path: require("path").resolve(__dirname, "..", ".env") });
+
+const bcrypt = require("bcrypt");
+const { eq } = require("drizzle-orm");
 const { db } = require("../config/db");
 const { clients } = require("../model/schema");
-const bcrypt =require('bcrypt')
-
-async function createNewClient(data) {
-    try {
-        const hashedPassword=await bcrypt.hash(data.passwordRaw , 10);
-
-
-        const [newClient]=await db.insert(clients).values({
-            name: data.name,
-        email: data.email,
-        phone: data.phone,
-        password: hashedPassword,
-        banquet_name: data.banquetName,
-        role: data.role || 'admin',
-        is_active: data.isActive !== undefined ? data.isActive : true,
-        }).returning();
-
-
-        console.log("client created ... " , newClient);
-
-        return newClient
-
-
-    } catch (error) {
-        console.log(error.message);
-        throw error;
-
-        
-    }
-}
-
 
 async function main() {
-  await createNewClient({
-    name: 'Ammad',
-    email: 'ammad@gmail.com',
-    phone: '03001234567',
-    passwordRaw: 'ammad123@',
-    banquetName: 'Royal Palace Banquet',
-  });
+  const { CLIENT_NAME, CLIENT_EMAIL, CLIENT_PHONE, CLIENT_PASSWORD, BANQUET_NAME } = process.env;
+  const missing = [
+    ["CLIENT_NAME", CLIENT_NAME],
+    ["CLIENT_EMAIL", CLIENT_EMAIL],
+    ["CLIENT_PHONE", CLIENT_PHONE],
+    ["CLIENT_PASSWORD", CLIENT_PASSWORD],
+    ["BANQUET_NAME", BANQUET_NAME],
+  ].filter(([, value]) => !value);
 
-  process.exit(0);
+  if (missing.length) {
+    throw new Error(`Missing required environment variables: ${missing.map(([key]) => key).join(", ")}`);
+  }
+
+  const email = CLIENT_EMAIL.trim().toLowerCase();
+  const password = await bcrypt.hash(CLIENT_PASSWORD, 10);
+  const clientData = {
+    name: CLIENT_NAME.trim(),
+    email,
+    phone: CLIENT_PHONE.trim(),
+    password,
+    banquet_name: BANQUET_NAME.trim(),
+    role: "admin",
+    is_active: true,
+  };
+
+  const [existingClient] = await db.select({ id: clients.id }).from(clients).where(eq(clients.email, email));
+
+  if (existingClient) {
+    await db.update(clients).set(clientData).where(eq(clients.id, existingClient.id));
+    console.log(`Updated client account for ${email}.`);
+    return;
+  }
+
+  await db.insert(clients).values(clientData);
+  console.log(`Created client account for ${email}.`);
 }
 
-
-main();
+main()
+  .catch((error) => {
+    console.error("Could not create client account:", error.message);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await db.$client.end();
+  });
