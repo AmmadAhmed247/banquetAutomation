@@ -8,7 +8,7 @@ const cashDeskService = {
       amount: payload.amount,
       payment_method: payload.method,
       isFinished: payload.isFinished,
-      note: payload.rNo ? `Cash desk payment for receipt ${payload.rNo}` : "Cash desk payment",
+      note: "Advance received",
     });
     return res.data?.data || res.data;
   },

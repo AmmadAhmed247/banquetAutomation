@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   X,
@@ -14,6 +14,10 @@ import {
   ReceiptText,
   PackageMinus,
   Loader2,
+  Plus,
+  Trash2,
+  Download,
+  ChevronDown,
 } from "lucide-react";
 
 import { getAllBookings } from "../lib/hooks/booking.hook";
@@ -29,6 +33,89 @@ const FONT_IMPORT =
   "@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');";
 
 const currency = (n) => `Rs ${Number(n || 0).toLocaleString("en-PK")}`;
+const escapeHtml = (value) =>
+  String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]);
+
+function openCashflowPdf(printWindow, activity, periodLabel, flowFilter, allTimeCashInHand) {
+  const entries = (Array.isArray(activity) ? activity : []).filter(
+    (item) => flowFilter === "all" || item.flow === flowFilter
+  );
+  const bankBalances = new Map(
+    PDF_BANK_ACCOUNTS.map((account) => [account.key, { ...account, balance: 0 }])
+  );
+  (Array.isArray(activity) ? activity : []).forEach((item) => {
+    const account = bankBalances.get(accountKey(item.method));
+    if (!account) return;
+    const amount = Number(item.amount) || 0;
+    account.balance += item.flow === "IN" ? amount : -amount;
+  });
+  const totalIn = entries.reduce((sum, item) => sum + (item.flow === "IN" ? Number(item.amount) || 0 : 0), 0);
+  const totalOut = entries.reduce((sum, item) => sum + (item.flow === "OUT" ? Number(item.amount) || 0 : 0), 0);
+  const bankBalanceCards = [...bankBalances.values()].map((account) => `
+    <div>${escapeHtml(account.label)}<strong>${escapeHtml(currency(account.balance))}</strong></div>
+  `).join("");
+  const rows = entries.map((item) => `
+    <tr>
+      <td>${escapeHtml(getPKTDateISO(item.time))}</td>
+      <td>${item.flow === "IN" ? "Money in" : "Money out"}</td>
+      <td>${escapeHtml(item.category)}</td>
+      <td>${escapeHtml(item.addonService || item.note || "")}</td>
+      <td>${escapeHtml(item.who || "—")}${item.receiptNo ? `<br>Receipt ${escapeHtml(item.receiptNo)}` : ""}</td>
+      <td>${escapeHtml(formatMethod(item.method))}</td>
+      <td class="amount">${item.flow === "IN" ? "+" : "-"}${escapeHtml(currency(item.amount))}</td>
+    </tr>
+  `).join("");
+
+  printWindow.document.open();
+  printWindow.document.write(`<!doctype html>
+    <html><head><title>Cashflow - ${escapeHtml(periodLabel)}</title>
+    <style>
+      body { font: 12px Arial, sans-serif; color: #1c1917; margin: 28px; }
+      h1 { margin: 0 0 4px; font-size: 22px; }
+      p { margin: 0 0 18px; color: #57534e; }
+      .summary { display: flex; gap: 28px; margin-bottom: 18px; }
+      .summary strong { display: block; margin-top: 4px; font-size: 15px; }
+      .accounts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 18px; }
+      .accounts > div { padding: 10px; border: 1px solid #e7e5e4; border-radius: 8px; color: #57534e; }
+      .accounts strong { display: block; margin-top: 5px; color: #1c1917; font-size: 14px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 8px 6px; border-bottom: 1px solid #e7e5e4; text-align: left; vertical-align: top; }
+      th { background: #f5f5f4; font-size: 10px; text-transform: uppercase; }
+      .amount { text-align: right; white-space: nowrap; }
+      @media print { body { margin: 12mm; } tr { break-inside: avoid; } }
+    </style></head>
+    <body>
+      <h1>Cashflow activity</h1>
+      <p>${escapeHtml(periodLabel)} · ${entries.length} ${entries.length === 1 ? "record" : "records"}</p>
+      <div class="summary">
+        <div>Money in<strong>${escapeHtml(currency(totalIn))}</strong></div>
+        <div>Money out<strong>${escapeHtml(currency(totalOut))}</strong></div>
+        <div>Net<strong>${escapeHtml(currency(totalIn - totalOut))}</strong></div>
+        <div>Cash in hand<strong>${escapeHtml(currency(allTimeCashInHand))}</strong></div>
+      </div>
+      <h2>Bank account balances · ${escapeHtml(periodLabel)}</h2>
+      <div class="accounts">${bankBalanceCards}</div>
+      <table>
+        <thead><tr><th>Date</th><th>Flow</th><th>Category</th><th>Description</th><th>Client / payee</th><th>Method</th><th class="amount">Amount</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="7">No activity for this period.</td></tr>'}</tbody>
+      </table>
+      <script>window.onafterprint = () => window.close(); window.onload = () => { window.focus(); window.print(); };</script>
+    </body></html>`);
+  printWindow.document.close();
+}
+
+const billDescriptionForDate = (date) => {
+  const parsedDate = new Date(`${date}T00:00:00.000+05:00`);
+  if (Number.isNaN(parsedDate.getTime())) return "";
+  const month = new Intl.DateTimeFormat("en", { month: "long", timeZone: "Asia/Karachi" }).format(parsedDate);
+  return `${month} bill`;
+};
 
 const getPKTDateISO = (dateInput) => {
   const parsedDate = typeof dateInput === "string" ? new Date(dateInput) : dateInput || new Date();
@@ -64,6 +151,10 @@ const ACCOUNTS = [
 ];
 const OTHER_ACCOUNT = { key: "other", label: "Other", dot: "bg-stone-400" };
 const LEDGER_ACCOUNTS = [...ACCOUNTS, OTHER_ACCOUNT];
+const PDF_BANK_ACCOUNTS = [
+  ...ACCOUNTS.filter((account) => account.key !== "cash").map(({ key, label }) => ({ key, label })),
+  { key: OTHER_ACCOUNT.key, label: "Other banks / transfers" },
+];
 
 function accountKey(method) {
   const m = (method || "").toLowerCase();
@@ -87,6 +178,7 @@ const QUICK_ITEM_CATEGORIES = {
   "Coca-Cola": "Coca Cola Co.",
   Pepsi: "Pepsi Co.",
 };
+const BILL_CATEGORIES = ["Internet", "Water Bill", "Sui Gas", "Electric Bill"];
 const QUANTITY_CATEGORIES = ["Pepsi Co.", "Coca Cola Co.", "Diesel", "Water Bottles"];
 const JUMBO_BRANDS = ["Pepsi", "Coca Cola", "Fanta", "Dew", "Sprite", "Other"];
 
@@ -133,7 +225,7 @@ function Field({ label, action, children }) {
   );
 }
 
-function AmountInput({ value, onChange, onEnter, placeholder = "0" }) {
+function AmountInput({ value, onChange, onEnter, placeholder = "0", disabled = false }) {
   return (
     <div className="relative">
       <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-stone-400">
@@ -144,17 +236,18 @@ function AmountInput({ value, onChange, onEnter, placeholder = "0" }) {
         inputMode="numeric"
         min="0"
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && onEnter?.()}
         placeholder={placeholder}
-        className={`${inputCls} py-3 pl-11 text-2xl font-semibold tabular-nums tracking-tight`}
+        className={`${inputCls} py-3 pl-11 text-2xl font-semibold tabular-nums tracking-tight disabled:cursor-not-allowed disabled:opacity-60`}
         style={display}
       />
     </div>
   );
 }
 
-function Chip({ active, onClick, tone = "dark", children }) {
+function Chip({ active, onClick, tone = "dark", disabled = false, children }) {
   const activeCls = {
     dark: "border-stone-900 bg-stone-900 text-white",
     rose: "border-rose-500 bg-rose-50 text-rose-800",
@@ -165,21 +258,28 @@ function Chip({ active, onClick, tone = "dark", children }) {
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={Boolean(active)}
       className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20 ${
         active ? activeCls : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:bg-stone-50"
-      }`}
+      } disabled:cursor-not-allowed disabled:opacity-50`}
     >
       {children}
     </button>
   );
 }
 
-function MethodPicker({ value, onChange }) {
+function MethodPicker({ value, onChange, disabled = false }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {ACCOUNTS.map((a) => (
-        <Chip key={a.key} active={value === a.method} tone="emerald" onClick={() => onChange(a.method)}>
+        <Chip
+          key={a.key}
+          active={value === a.method}
+          tone="emerald"
+          disabled={disabled}
+          onClick={() => onChange(a.method)}
+        >
           <span className={`h-2 w-2 rounded-full ${a.dot}`} />
           {a.label}
         </Chip>
@@ -313,8 +413,14 @@ export default function Cashflow() {
   const todayPKT = useMemo(() => getPKTDateISO(), []);
   const [startDate, setStartDate] = useState(todayPKT);
   const [endDate, setEndDate] = useState(todayPKT);
-  const [account, setAccount] = useState("all");
+  const [receivedAccount, setReceivedAccount] = useState("meezan");
   const [flowFilter, setFlowFilter] = useState("all");
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exportCustomOpen, setExportCustomOpen] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState(todayPKT);
+  const [exportEndDate, setExportEndDate] = useState(todayPKT);
+  const [exportRequest, setExportRequest] = useState(null);
+  const exportWindowRef = useRef(null);
 
   const { queryStart, queryEnd } = useMemo(() => {
     if (range === "today") return { queryStart: todayPKT, queryEnd: todayPKT };
@@ -339,6 +445,25 @@ export default function Cashflow() {
     end: range === "all" ? "" : queryEnd,
     range,
   });
+  const exportQuery = useGetCashflow({
+    ...(exportRequest || {}),
+    enabled: Boolean(exportRequest),
+    keepPreviousData: false,
+  });
+  const allTimeCashQuery = useGetCashflow({
+    range: "all",
+    enabled: true,
+    keepPreviousData: false,
+  });
+  const accountReceivedByKey = Object.entries(cashflowQuery.data?.byMethod || {}).reduce(
+    (totals, [method, amount]) => {
+      const key = accountKey(method);
+      totals[key] = (totals[key] || 0) + (Number(amount) || 0);
+      return totals;
+    },
+    {}
+  );
+  const selectedAccountReceived = accountReceivedByKey[receivedAccount] || 0;
   const activity = cashflowQuery?.data?.activity || [];
   const isLoading = cashflowQuery.isLoading;
 
@@ -374,26 +499,20 @@ export default function Cashflow() {
     return per;
   }, [rows]);
 
-  const scope = account === "all" ? LEDGER_ACCOUNTS.map((a) => a.key) : [account];
-  const totalIn = scope.reduce((s, k) => s + perAccount[k].in, 0);
-  const totalOut = scope.reduce((s, k) => s + perAccount[k].out, 0);
+  const totalIn = Object.values(perAccount).reduce((sum, accountTotals) => sum + accountTotals.in, 0);
+  const totalOut = Object.values(perAccount).reduce((sum, accountTotals) => sum + accountTotals.out, 0);
   const net = totalIn - totalOut;
 
-  const handKey = account === "all" ? "cash" : account;
-  const inHand = perAccount[handKey].in - perAccount[handKey].out;
-  const handLabel =
-    account === "all" || account === "cash"
-      ? "Cash in hand"
-      : `${LEDGER_ACCOUNTS.find((a) => a.key === account).label} balance`;
+  const inHand = Number(allTimeCashQuery.data?.cashInHand) || 0;
+  const handLabel = "Cash in hand";
 
   const visibleRows = useMemo(
     () =>
       rows.filter(
         (r) =>
-          (account === "all" || accountKey(r.method) === account) &&
           (flowFilter === "all" || r.flow === flowFilter)
       ),
-    [rows, account, flowFilter]
+    [rows, flowFilter]
   );
 
   const rangeLabel =
@@ -418,17 +537,106 @@ export default function Cashflow() {
 
   /* notices */
   const [notice, setNotice] = useState(null); // { type: "ok" | "err", text }
-  const flash = (type, text) => {
+  const flash = useCallback((type, text) => {
     setNotice({ type, text });
     setTimeout(() => setNotice(null), 4000);
+  }, []);
+
+  const startPdfExport = (request) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      flash("err", "Allow pop-ups to export the PDF");
+      return;
+    }
+
+    exportWindowRef.current = printWindow;
+    setExportMenuOpen(false);
+    setExportCustomOpen(false);
+    setExportRequest(request);
   };
+
+  const choosePdfPeriod = (period) => {
+    if (period === "all") {
+      startPdfExport({ start: "", end: "", range: "all", label: "All-time activity" });
+      return;
+    }
+
+    if (period === "daily") {
+      startPdfExport({
+        start: todayPKT,
+        end: todayPKT,
+        range: "custom",
+        label: `Daily activity - ${prettyDate(todayPKT)}`,
+      });
+      return;
+    }
+
+    const [year, month] = todayPKT.split("-").map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    startPdfExport({
+      start: `${year}-${String(month).padStart(2, "0")}-01`,
+      end: `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+      range: "custom",
+      label: `Monthly activity - ${new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Karachi",
+        month: "long",
+        year: "numeric",
+      }).format(new Date(`${todayPKT}T12:00:00+05:00`))}`,
+    });
+  };
+
+  const exportCustomPdf = () => {
+    if (!exportStartDate || !exportEndDate || exportStartDate > exportEndDate) {
+      flash("err", "Choose a valid custom date range");
+      return;
+    }
+    const label =
+      exportStartDate === exportEndDate
+        ? `Activity - ${prettyDate(exportStartDate)}`
+        : `Activity - ${prettyDate(exportStartDate)} to ${prettyDate(exportEndDate)}`;
+    startPdfExport({ start: exportStartDate, end: exportEndDate, range: "custom", label });
+  };
+
+  useEffect(() => {
+    const printWindow = exportWindowRef.current;
+    if (!printWindow || !exportRequest) return;
+
+    if (exportQuery.isError || allTimeCashQuery.isError) {
+      exportWindowRef.current = null;
+      printWindow.close();
+      setTimeout(() => flash("err", "Could not load the activity or all-time cash balance for the PDF export"), 0);
+      return;
+    }
+    if (exportQuery.isFetching || allTimeCashQuery.isFetching || !exportQuery.data || !allTimeCashQuery.data) return;
+
+    exportWindowRef.current = null;
+    openCashflowPdf(
+      printWindow,
+      exportQuery.data.activity,
+      exportRequest.label,
+      flowFilter,
+      Number(allTimeCashQuery.data.cashInHand) || 0
+    );
+  }, [
+    exportRequest,
+    exportQuery.data,
+    exportQuery.isError,
+    exportQuery.isFetching,
+    allTimeCashQuery.data,
+    allTimeCashQuery.isError,
+    allTimeCashQuery.isFetching,
+    flowFilter,
+    flash,
+  ]);
 
   /* ── Money In ── */
   const settleIn = useSettleMoneyIn();
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState(null);
-  const [inAmount, setInAmount] = useState("");
-  const [inMethod, setInMethod] = useState("Cash");
+  const [inPayments, setInPayments] = useState([{ id: 0, amount: "", method: "Cash" }]);
+  const [nextPaymentId, setNextPaymentId] = useState(1);
+  const [inSavedAmount, setInSavedAmount] = useState(0);
+  const [isSubmittingIn, setIsSubmittingIn] = useState(false);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -462,43 +670,80 @@ export default function Cashflow() {
   const pickBooking = (b) => {
     setPicked(b);
     setQuery("");
-    setInAmount(bDue(b) > 0 ? String(bDue(b)) : "");
+    setInPayments([{ id: 0, amount: bDue(b) > 0 ? String(bDue(b)) : "", method: "Cash" }]);
+    setNextPaymentId(1);
+    setInSavedAmount(0);
   };
   const clearPick = () => {
     setPicked(null);
-    setInAmount("");
+    setInPayments([{ id: 0, amount: "", method: "Cash" }]);
+    setNextPaymentId(1);
+    setInSavedAmount(0);
   };
 
-  const inValue = Number(inAmount) || 0;
-  const pickedDue = picked ? bDue(picked) : 0;
-  const paidPct = picked && bTotal(picked) > 0 ? Math.min(100, (bPaid(picked) / bTotal(picked)) * 100) : 0;
-  const inError = picked && inValue > pickedDue ? `More than the ${currency(pickedDue)} due` : null;
-  const canSettleIn = picked && inValue > 0 && !inError && !settleIn.isPending;
+  const pickedDue = picked ? Math.max(bDue(picked) - inSavedAmount, 0) : 0;
+  const paidSoFar = picked ? bPaid(picked) + inSavedAmount : 0;
+  const paidPct = picked && bTotal(picked) > 0 ? Math.min(100, (paidSoFar / bTotal(picked)) * 100) : 0;
+  const inValue = inPayments.reduce((total, payment) => total + (Number(payment.amount) || 0), 0);
+  const hasIncompletePayments = inPayments.some((payment) => !(Number(payment.amount) > 0));
+  const inError =
+    picked && inValue > pickedDue
+      ? `More than the ${currency(pickedDue)} due`
+      : inPayments.length > 1 && hasIncompletePayments && inValue > 0
+        ? "Enter an amount for each payment part"
+        : null;
+  const canSettleIn =
+    picked && inValue > 0 && !hasIncompletePayments && !inError && !isSubmittingIn && !settleIn.isPending;
 
-  const submitIn = () => {
+  const submitIn = async () => {
     if (!canSettleIn) return;
-    settleIn.mutate(
-      {
-        bookingId: picked.id,
-        rNo: bRNo(picked),
-        amount: inValue,
-        method: inMethod,
-        isFinished: pickedDue > 0 && inValue === pickedDue,
-      },
-      {
-        onSuccess: () => {
-          flash("ok", `Received ${currency(inValue)} from ${bName(picked)}`);
-          clearPick();
-        },
-        onError: (e) => flash("err", e?.message || "Could not save payment"),
+    setIsSubmittingIn(true);
+    let remainingDue = pickedDue;
+    let savedThisSubmit = 0;
+    const paymentsToSave = [...inPayments];
+
+    try {
+      for (const payment of paymentsToSave) {
+        const amount = Number(payment.amount);
+        try {
+          await settleIn.mutateAsync({
+            bookingId: picked.id,
+            rNo: bRNo(picked),
+            amount,
+            method: payment.method,
+            isFinished: remainingDue > 0 && amount === remainingDue,
+          });
+        } catch (error) {
+          const message = error?.message || "Could not save payment";
+          flash(
+            "err",
+            savedThisSubmit > 0
+              ? `Saved ${currency(savedThisSubmit)}. Remaining parts were kept: ${message}`
+              : message
+          );
+          return;
+        }
+
+        remainingDue = Math.max(remainingDue - amount, 0);
+        savedThisSubmit += amount;
+        setInSavedAmount((saved) => saved + amount);
+        setInPayments((payments) => payments.filter((item) => item.id !== payment.id));
       }
-    );
+
+      const nextId = nextPaymentId;
+      setInPayments([{ id: nextId, amount: "", method: "Cash" }]);
+      setNextPaymentId(nextId + 1);
+      flash("ok", `Received ${currency(savedThisSubmit)} from ${bName(picked)}`);
+    } finally {
+      setIsSubmittingIn(false);
+    }
   };
 
   /* ── Money Out ── */
   const settleOut = useSettleMoneyOut();
   const [quick, setQuick] = useState(""); // a QUICK_ITEMS value or "other"
   const [outCategory, setOutCategory] = useState("Petty Cash");
+  const [outDate, setOutDate] = useState(todayPKT);
   const [otherName, setOtherName] = useState("");
   const [outQty, setOutQty] = useState("1");
   const [outAmount, setOutAmount] = useState("");
@@ -509,7 +754,7 @@ export default function Cashflow() {
   const selectedJumboBrand = jumboBrand === "Other" ? otherJumboBrand.trim() : jumboBrand;
   const outItem =
     quick === "other"
-      ? otherName.trim() || (hasOutQuantity ? outCategory : "")
+      ? otherName.trim() || (hasOutQuantity || BILL_CATEGORIES.includes(outCategory) ? outCategory : "")
       : !hasOutQuantity && !quick
       ? otherName.trim()
       : quick || (outCategory === "JUMBO" ? selectedJumboBrand : outCategory);
@@ -518,13 +763,14 @@ export default function Cashflow() {
   const canSettleOut =
     outItem &&
     outValue > 0 &&
+    (!BILL_CATEGORIES.includes(outCategory) || Boolean(outDate)) &&
     (!hasOutQuantity || (Number.isInteger(outQuantity) && outQuantity > 0)) &&
     (!hasOutQuantity || outCategory !== "JUMBO" || selectedJumboBrand) &&
     !settleOut.isPending;
 
   const selectOutCategory = (category) => {
     setOutCategory(category);
-    setOtherName("");
+    setOtherName(BILL_CATEGORIES.includes(category) ? billDescriptionForDate(outDate) : "");
     setOtherJumboBrand("");
     setJumboBrand(JUMBO_BRANDS[0]);
 
@@ -554,13 +800,14 @@ export default function Cashflow() {
         category: outCategory,
         quantity: hasOutQuantity ? outQuantity : 1,
         amount: outValue,
-        date: getPKTDateISO(new Date()),
+        date: outDate,
       },
       {
         onSuccess: () => {
           flash("ok", `Paid out ${currency(outValue)} for ${outItem}`);
           setQuick("");
           setOutCategory("Petty Cash");
+          setOutDate(getPKTDateISO(new Date()));
           setOtherName("");
           setOutQty("1");
           setOutAmount("");
@@ -597,6 +844,7 @@ export default function Cashflow() {
       icon: <Banknote size={16} />,
       badge: "bg-sky-50 text-sky-600",
       tone: inHand < 0 ? "text-rose-600" : "text-stone-900",
+      allTimeCashBalance: true,
     },
     {
       label: "Net cashflow",
@@ -604,6 +852,14 @@ export default function Cashflow() {
       icon: <Scale size={16} />,
       badge: "bg-stone-100 text-stone-600",
       tone: net < 0 ? "text-rose-600" : "text-emerald-600",
+    },
+    {
+      label: `${LEDGER_ACCOUNTS.find((item) => item.key === receivedAccount).label} received`,
+      value: selectedAccountReceived,
+      icon: <Banknote size={16} />,
+      badge: "bg-blue-50 text-blue-600",
+      tone: "text-stone-900",
+      accountSelector: true,
     },
   ];
 
@@ -670,7 +926,7 @@ export default function Cashflow() {
 
         {/* Summary */}
         <section className="rounded-2xl border border-stone-200/80 bg-white shadow-sm mb-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 lg:divide-x divide-stone-100">
+          <div className="grid grid-cols-2 lg:grid-cols-5 lg:divide-x divide-stone-100">
             {stats.map((s, i) => (
               <div
                 key={s.label}
@@ -680,22 +936,50 @@ export default function Cashflow() {
               >
                 <div className="flex items-center gap-2.5">
                   <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${s.badge}`}>{s.icon}</span>
-                  <span className="text-xs font-medium text-stone-500">{s.label}</span>
+                  {s.accountSelector ? (
+                    <select
+                      aria-label="Account received total"
+                      value={receivedAccount}
+                      onChange={(event) => setReceivedAccount(event.target.value)}
+                      className="min-w-0 max-w-[calc(100%-2.5rem)] rounded-md border border-stone-200 bg-white px-2 py-1 text-xs font-medium text-stone-600 outline-none focus:border-emerald-500"
+                    >
+                      {LEDGER_ACCOUNTS.map((item) => (
+                        <option key={item.key} value={item.key}>
+                          {item.label} received
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-xs font-medium text-stone-500">{s.label}</span>
+                  )}
                 </div>
                 <p
                   className={`mt-3 text-2xl lg:text-[28px] leading-none font-semibold tracking-tight tabular-nums ${s.tone}`}
                   style={display}
                 >
-                  {s.value < 0 ? "-" : ""}
-                  {currency(Math.abs(s.value))}
+                  {s.allTimeCashBalance && allTimeCashQuery.isLoading
+                    ? "Loading…"
+                    : s.allTimeCashBalance && allTimeCashQuery.isError
+                      ? "Unavailable"
+                      : cashflowQuery.isLoading && s.accountSelector
+                    ? "Loading…"
+                    : cashflowQuery.isError && s.accountSelector
+                      ? "Unavailable"
+                      : `${s.value < 0 ? "-" : ""}${currency(Math.abs(s.value))}`}
                 </p>
-                <p className="text-[11px] text-stone-400 mt-2">{rangeLabel}</p>
+                <p className="text-[11px] text-stone-400 mt-2">
+                  {s.allTimeCashBalance
+                    ? "All time · current cash balance"
+                    : s.accountSelector
+                      ? `${rangeLabel} · received`
+                      : rangeLabel}
+                </p>
               </div>
             ))}
           </div>
 
-          <div className="border-t border-stone-100 bg-stone-50/50 rounded-b-2xl px-4 py-3 lg:px-6">
-            <div className="flex flex-wrap items-center gap-2">
+          {/* <div className="border-t border-stone-100 bg-stone-50/50 rounded-b-2xl px-4 py-3 lg:px-6"> */}
+            {/* <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium text-stone-500 mr-1">Account</span>
               <button
                 onClick={() => setAccount("all")}
@@ -731,7 +1015,7 @@ export default function Cashflow() {
                 );
               })}
             </div>
-          </div>
+          </div> */}
         </section>
 
         {/* Money in / Money out */}
@@ -816,8 +1100,9 @@ export default function Cashflow() {
                     </div>
                     <button
                       onClick={clearPick}
+                      disabled={isSubmittingIn}
                       aria-label="Choose a different booking"
-                      className="rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-200/60 hover:text-stone-700"
+                      className="rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-stone-200/60 hover:text-stone-700 disabled:opacity-50"
                     >
                       <X size={15} />
                     </button>
@@ -849,35 +1134,120 @@ export default function Cashflow() {
                 </div>
 
                 <Field
-                  label="Amount received"
+                  label="Payment parts"
                   action={
-                  pickedDue > 0 && (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      {pickedDue > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={isSubmittingIn}
+                            onClick={() => {
+                              const otherAmounts = inPayments
+                                .slice(1)
+                                .reduce((total, payment) => total + (Number(payment.amount) || 0), 0);
+                              setInPayments((payments) =>
+                                payments.map((payment, index) =>
+                                  index === 0
+                                    ? { ...payment, amount: String(Math.round(Math.max(pickedDue - otherAmounts, 0) / 2)) }
+                                    : payment
+                                )
+                              );
+                            }}
+                            className="rounded-md bg-stone-100 px-2 py-1 text-[11px] font-medium text-stone-600 hover:bg-stone-200"
+                          >
+                            Half
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSubmittingIn}
+                            onClick={() => {
+                              const otherAmounts = inPayments
+                                .slice(1)
+                                .reduce((total, payment) => total + (Number(payment.amount) || 0), 0);
+                              setInPayments((payments) =>
+                                payments.map((payment, index) =>
+                                  index === 0
+                                    ? { ...payment, amount: String(Math.max(pickedDue - otherAmounts, 0)) }
+                                    : payment
+                                )
+                              );
+                            }}
+                            className="rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
+                          >
+                            Full due
+                          </button>
+                        </>
+                      )}
                       <button
                         type="button"
-                        onClick={() => setInAmount(String(Math.round(pickedDue / 2)))}
-                        className="rounded-md bg-stone-100 px-2 py-1 text-[11px] font-medium text-stone-600 hover:bg-stone-200"
+                        onClick={() => {
+                          setInPayments((payments) => [
+                            ...payments,
+                            { id: nextPaymentId, amount: "", method: "Cash" },
+                          ]);
+                          setNextPaymentId((id) => id + 1);
+                        }}
+                        disabled={isSubmittingIn}
+                        className="inline-flex items-center gap-1 rounded-md bg-stone-100 px-2 py-1 text-[11px] font-medium text-stone-600 hover:bg-stone-200 disabled:opacity-50"
                       >
-                        Half
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setInAmount(String(pickedDue))}
-                        className="rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
-                      >
-                        Full due
+                        <Plus size={12} />
+                        Add part
                       </button>
                     </div>
-                  )
                   }
                 >
-                  <AmountInput value={inAmount} onChange={setInAmount} onEnter={submitIn} />
+                  <div className="space-y-3">
+                    {inPayments.map((payment, index) => (
+                      <div key={payment.id} className="rounded-xl border border-stone-200 p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs font-medium text-stone-600">Part {index + 1}</span>
+                          {inPayments.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setInPayments((payments) => payments.filter((item) => item.id !== payment.id))
+                              }
+                              disabled={isSubmittingIn}
+                              aria-label={`Remove payment part ${index + 1}`}
+                              className="rounded-md p-1 text-stone-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <AmountInput
+                          value={payment.amount}
+                          onChange={(amount) =>
+                            setInPayments((payments) =>
+                              payments.map((item) => (item.id === payment.id ? { ...item, amount } : item))
+                            )
+                          }
+                          onEnter={submitIn}
+                          disabled={isSubmittingIn}
+                        />
+                        <div className="mt-3">
+                          <p className="mb-1.5 text-[11px] font-medium text-stone-500">Payment method</p>
+                          <MethodPicker
+                            value={payment.method}
+                            onChange={(method) =>
+                              setInPayments((payments) =>
+                                payments.map((item) => (item.id === payment.id ? { ...item, method } : item))
+                              )
+                            }
+                            disabled={isSubmittingIn}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                   {inError && <p className="mt-1.5 text-xs text-rose-600">{inError}</p>}
                   {pickedDue === 0 && <p className="mt-1.5 text-xs text-emerald-700">This booking is paid in full.</p>}
-                </Field>
-
-                <Field label="Method">
-                  <MethodPicker value={inMethod} onChange={setInMethod} />
+                  {inPayments.length > 1 && (
+                    <p className="mt-2 text-xs text-stone-500">
+                      Total received now: <span className="font-semibold text-stone-700">{currency(inValue)}</span>
+                    </p>
+                  )}
                 </Field>
 
               </div>
@@ -892,15 +1262,15 @@ export default function Cashflow() {
                       <span className="font-medium text-stone-700">
                         {currency(Math.max(pickedDue - inValue, 0))}
                       </span>{" "}
-                      will remain due after this payment
+                      will remain due after these payments
                     </>
                   ) : (
                     "Enter the amount to settle"
                   )
                 }
-                label={inValue > 0 ? `Settle ${currency(inValue)}` : "Settle"}
+                label={inValue > 0 ? `Receive ${currency(inValue)}` : "Receive payment"}
                 disabled={!canSettleIn}
-                pending={settleIn.isPending}
+                pending={isSubmittingIn || settleIn.isPending}
                 onClick={submitIn}
               />
             )}
@@ -932,7 +1302,27 @@ export default function Cashflow() {
                 </div>
               </Field>
 
-              {outCategory !== "JUMBO" && (
+              {BILL_CATEGORIES.includes(outCategory) && (
+                <Field label="Bill date">
+                  <input
+                    type="date"
+                    value={outDate}
+                    onChange={(e) => {
+                      const date = e.target.value;
+                      const previousDefault = billDescriptionForDate(outDate);
+                      setOutDate(date);
+                      setOtherName((description) =>
+                        !description.trim() || description === previousDefault
+                          ? billDescriptionForDate(date)
+                          : description
+                      );
+                    }}
+                    className={inputCls}
+                  />
+                </Field>
+              )}
+
+              {outCategory !== "JUMBO" && !BILL_CATEGORIES.includes(outCategory) && (
                 <Field label="Item">
                   <div className="flex flex-wrap gap-1.5">
                     {[...QUICK_ITEMS, "other"].map((q) => (
@@ -980,7 +1370,20 @@ export default function Cashflow() {
                 </Field>
               )}
 
-              {(quick === "other" || !hasOutQuantity) && outCategory !== "JUMBO" && (
+              {BILL_CATEGORIES.includes(outCategory) && (
+                <Field label="Bill description (optional)">
+                  <input
+                    value={otherName}
+                    onChange={(e) => setOtherName(e.target.value)}
+                    placeholder="Bill description"
+                    className={inputCls}
+                  />
+                </Field>
+              )}
+
+              {(quick === "other" || !hasOutQuantity) &&
+                outCategory !== "JUMBO" &&
+                !BILL_CATEGORIES.includes(outCategory) && (
                 <Field label={hasOutQuantity ? "Item (optional)" : "What was it for?"}>
                   <input
                     autoFocus={!hasOutQuantity}
@@ -1044,25 +1447,98 @@ export default function Cashflow() {
               </h3>
               <p className="text-xs text-stone-500 mt-0.5">
                 {visibleRows.length} {visibleRows.length === 1 ? "record" : "records"}
-                {account !== "all" && ` in ${LEDGER_ACCOUNTS.find((a) => a.key === account).label}`}
               </p>
             </div>
-            <div className="flex items-center rounded-lg bg-stone-100 p-0.5 text-xs">
-              {[
-                { key: "all", label: "All" },
-                { key: "IN", label: "In" },
-                { key: "OUT", label: "Out" },
-              ].map((f) => (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center rounded-lg bg-stone-100 p-0.5 text-xs">
+                {[
+                  { key: "all", label: "All" },
+                  { key: "IN", label: "In" },
+                  { key: "OUT", label: "Out" },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setFlowFilter(f.key)}
+                    className={`rounded-md px-3.5 py-1.5 font-medium transition-colors ${
+                      flowFilter === f.key ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
                 <button
-                  key={f.key}
-                  onClick={() => setFlowFilter(f.key)}
-                  className={`rounded-md px-3.5 py-1.5 font-medium transition-colors ${
-                    flowFilter === f.key ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
-                  }`}
+                  type="button"
+                  onClick={() => setExportMenuOpen((open) => !open)}
+                  disabled={exportQuery.isFetching}
+                  aria-expanded={exportMenuOpen}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-700 shadow-sm hover:bg-stone-50 disabled:cursor-wait disabled:opacity-70"
                 >
-                  {f.label}
+                  {exportQuery.isFetching ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  {exportQuery.isFetching ? "Preparing PDF..." : "Export PDF"}
+                  <ChevronDown size={13} />
                 </button>
-              ))}
+                {exportMenuOpen && (
+                  <div className="absolute right-0 top-full z-30 mt-1 w-64 rounded-xl border border-stone-200 bg-white p-2 shadow-lg">
+                    <div className="space-y-1">
+                      {[
+                        { key: "daily", label: "Daily (today)" },
+                        { key: "monthly", label: "Monthly (this month)" },
+                        { key: "all", label: "All time" },
+                      ].map((period) => (
+                        <button
+                          key={period.key}
+                          type="button"
+                          onClick={() => choosePdfPeriod(period.key)}
+                          className="block w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-stone-700 hover:bg-stone-100"
+                        >
+                          {period.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-2 border-t border-stone-100 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setExportCustomOpen((open) => !open)}
+                        aria-expanded={exportCustomOpen}
+                        className="block w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-stone-700 hover:bg-stone-100"
+                      >
+                        Custom date range
+                      </button>
+                      {exportCustomOpen && (
+                        <div className="space-y-2 px-2 pb-1 pt-2">
+                          <label className="block text-[11px] text-stone-500">
+                            From
+                            <input
+                              type="date"
+                              value={exportStartDate}
+                              onChange={(event) => setExportStartDate(event.target.value)}
+                              className={`${inputCls} mt-1 px-2 py-2 text-xs`}
+                            />
+                          </label>
+                          <label className="block text-[11px] text-stone-500">
+                            To
+                            <input
+                              type="date"
+                              value={exportEndDate}
+                              onChange={(event) => setExportEndDate(event.target.value)}
+                              className={`${inputCls} mt-1 px-2 py-2 text-xs`}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={exportCustomPdf}
+                            className="w-full rounded-lg bg-stone-900 px-3 py-2 text-xs font-medium text-white hover:bg-stone-700"
+                          >
+                            Export selected dates
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
