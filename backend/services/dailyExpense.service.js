@@ -4,8 +4,7 @@ const { eq } = require("drizzle-orm")
 
 
 async function createDailyExpense(date, category, label, amount) {
-    try {
-        const newExpense = await db
+    const newExpense = await db
         .insert(dailyExpenses)
         .values({
             date: date,
@@ -15,11 +14,7 @@ async function createDailyExpense(date, category, label, amount) {
         })
         .returning()
         
-       return newExpense
-
-    } catch (error) {
-        console.log("Error", error)
-    }
+    return newExpense
 }
 
 async function DeleteDailyExpense(expenseId) {

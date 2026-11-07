@@ -15,11 +15,18 @@ const financeService = {
   },
 };
 
-export function useFinanceSummary({ start = "", end = "", range = "all" } = {}) {
+export function useFinanceSummary({
+  start = "",
+  end = "",
+  range = "all",
+  enabled = true,
+  keepPreviousData = true,
+} = {}) {
   return useQuery({
     queryKey: ["finance-summary", { start, end, range }],
     queryFn: () => financeService.getSummary({ start, end, range }),
-    keepPreviousData: true,
+    enabled,
+    keepPreviousData,
     staleTime: 1000 * 60, // 1 minute
   });
 }

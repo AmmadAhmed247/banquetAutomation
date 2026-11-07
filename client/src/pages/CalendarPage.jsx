@@ -11,17 +11,17 @@ import {
 import { getAllBookings, useCreateBooking, useUpdateBooking } from "../lib/hooks/booking.hook";
 import { useAllAddons } from "../lib/hooks/addon.hook";
 import {
-  getAllDailyExpenses, useCreateDailyExpense, useDeleteDailyExpense,
+  getAllDailyExpenses, useDeleteDailyExpense,
 } from "../lib/hooks/dailyExpense.hook";
 import {
   getAllMonthlyExpenses, useCreateMonthlyExpense, useDeleteMonthlyExpense,
 } from "../lib/hooks/monthlyExpense.hook";
 import { getAllExpenses } from "../lib/hooks/expense.hook";
 import BookingModal from "../components/BookingModal";
-import { DailyExpensesPanel } from "../components/Management/DailyExpensesPanel";
+import { StaffPaymentsSummary } from "../components/Management/StaffPaymentsSummary";
 import { MonthlyOverheadPanel } from "../components/Management/MonthlyOverheadPanel";
 import {
-  MONTHLY_EXPENSE_CATEGORIES, DAILY_EXPENSE_CATEGORIES,
+  MONTHLY_EXPENSE_CATEGORIES,
 } from "../components/Management/ManagementUtils";
 
 // ── constants ────────────────────────────────────────────────────────────────
@@ -122,6 +122,16 @@ function isPepsi(label = "", category = "") {
 function isCoke(label = "", category = "") {
   return /coca\s*cola|coke/i.test(label) || /coca\s*cola|coke/i.test(category);
 }
+function isJumbo(category = "") {
+  return /^jumbo$/i.test(String(category || "").trim());
+}
+function isJumboBrand(label = "", brand = "") {
+  if (!brand || brand === "all") return true;
+  const normalizedLabel = String(label || "").toLowerCase().replace(/[^a-z]/g, "");
+  const normalizedBrand = brand.toLowerCase().replace(/[^a-z]/g, "");
+  return normalizedLabel.includes(normalizedBrand) ||
+    (normalizedBrand === "cocacola" && normalizedLabel.includes("coke"));
+}
 function isDiesel(label = "", category = "") {
   return /diesel|fuel|petrol/i.test(label) || /diesel|fuel|petrol/i.test(category);
 }
@@ -141,13 +151,6 @@ function getTodayIslamicDate() {
   );
   const monthName = HIJRI_MONTHS[parseInt(parts.month, 10) - 1];
   return `${parts.day} ${monthName} ${parts.year} AH`;
-}
-
-function getTodayDateString() {
-  const d = new Date();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${month}-${day}`;
 }
 
 function useCountUp(target, duration = 700) {
@@ -300,13 +303,58 @@ function DieselCard({ liters, count, paid, onClick }) {
   );
 }
 
-/** Popup listing every matching Pepsi / Coke / Diesel transaction */
-function CategoryTransactionsModal({ open, kind, rows, periodLabel, onClose, onDeleteDaily }) {
+function JumboCard({ quantity, paid, brand, onBrandChange, onClick }) {
+  return (
+    <motion.div
+      variants={scaleIn}
+      whileHover={{ y: -4, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 360, damping: 26 }}
+      onClick={onClick}
+      className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex flex-col gap-2 cursor-pointer select-none"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick?.(); }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[13px] font-bold text-amber-800">JUMBO</span>
+        <select
+          value={brand}
+          aria-label="Filter JUMBO by brand"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          onChange={(e) => onBrandChange(e.target.value)}
+          className="max-w-[120px] rounded-md border border-amber-200 bg-white px-2 py-1 text-[11px] font-medium text-stone-700 outline-none cursor-pointer"
+        >
+          <option value="all">All brands</option>
+          <option value="Fanta">Fanta</option>
+          <option value="Sprite">Sprite</option>
+          <option value="Pepsi">Pepsi</option>
+          <option value="Coca-Cola">Coca-Cola</option>
+        </select>
+      </div>
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-2xl font-semibold text-stone-900 leading-none">{quantity}</p>
+          <p className="text-[11px] text-stone-500 mt-0.5">items</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[14px] font-semibold" style={{ color: GOLD }}>{currency(paid)}</p>
+          <p className="text-[11px] text-stone-500">spent · tap details</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/** Popup listing every matching beverage or fuel transaction */
+function CategoryTransactionsModal({ open, kind, rows, periodLabel, brandLabel, onClose, onDeleteDaily }) {
   if (!open) return null;
 
   const title =
     kind === "pepsi" ? "Pepsi Co. transactions" :
     kind === "coke" ? "Coca Cola Co. transactions" :
+    kind === "jumbo" ? `JUMBO${brandLabel ? ` · ${brandLabel}` : ""} transactions` :
     "Diesel / Fuel transactions";
   const accent =
     kind === "pepsi" ? PEPSI_BLUE :
@@ -314,7 +362,7 @@ function CategoryTransactionsModal({ open, kind, rows, periodLabel, onClose, onD
     DIESEL_AMBER;
   const totalPaid = rows.reduce((s, r) => s + Number(r.amount || 0), 0);
   const totalQty = rows.reduce((s, r) => s + Number(r.qty || 0), 0);
-  const qtyUnit = kind === "diesel" ? "liters" : "crates";
+  const qtyUnit = kind === "diesel" ? "liters" : kind === "jumbo" ? "items" : "crates";
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
@@ -499,13 +547,6 @@ export default function CalendarAddonsPage() {
   const createBookingMutation = useCreateBooking();
   const bookingModalLoading = isNewBooking ? createBookingMutation.isPending : updateBookingMutation.isPending;
 
-  const [addingDaily, setAddingDaily] = useState(false);
-  const [newDaily, setNewDaily] = useState({
-    date: getTodayDateString(),
-    category: DAILY_EXPENSE_CATEGORIES?.[0] ?? "",
-    label: "",
-    amount: "",
-  });
   const [addingMonthly, setAddingMonthly] = useState(false);
   const [newMonthly, setNewMonthly] = useState({
     month: new Date().getMonth() + 1,
@@ -521,16 +562,16 @@ export default function CalendarAddonsPage() {
   const [monthlySearch, setMonthlySearch] = useState("");
   const [standardSearch, setStandardSearch] = useState("");
   const [selectedBooking, setSelectedBooking] = useState(null);
-  // Pepsi / Coke / Diesel: period filter + detail popup
+  // Beverage/fuel period filter and transaction popup
   const [statPeriod, setStatPeriod] = useState("month"); // "month" | "overall"
-  const [statPopup, setStatPopup] = useState(null); // null | "pepsi" | "coke" | "diesel"
+  const [statPopup, setStatPopup] = useState(null); // null | "pepsi" | "coke" | "jumbo" | "diesel"
+  const [jumboBrand, setJumboBrand] = useState("all");
 
   const { data: fetchedBookings = [], isLoading: bookingsLoading, error } = getAllBookings();
   const { data: fetchedAddons = [] } = useAllAddons();
   const { data: allDailyExpenses = [] } = getAllDailyExpenses();
   const { data: allMonthlyExpenses = [] } = getAllMonthlyExpenses();
   const expensesQuery = getAllExpenses() || {};
-  const createDailyExpenseMutation = useCreateDailyExpense();
   const deleteDailyExpenseMutation = useDeleteDailyExpense();
   const createMonthlyExpenseMutation = useCreateMonthlyExpense();
   const deleteMonthlyExpenseMutation = useDeleteMonthlyExpense();
@@ -663,6 +704,7 @@ export default function CalendarAddonsPage() {
     const result = {
       pepsi: { crates: 0, paid: 0 },
       coke: { crates: 0, paid: 0 },
+      jumbo: { quantity: 0, paid: 0 },
       diesel: { liters: 0, paid: 0, count: 0 },
     };
     periodDailyExpenses.forEach((e) => {
@@ -676,6 +718,10 @@ export default function CalendarAddonsPage() {
         result.coke.crates += crates;
         result.coke.paid += amount;
       }
+      if (isJumbo(e.category) && isJumboBrand(e.label, jumboBrand)) {
+        result.jumbo.quantity += extractCrates(e.label);
+        result.jumbo.paid += amount;
+      }
       if (isDiesel(e.label, e.category)) {
         result.diesel.liters += extractLiters(e.label);
         result.diesel.paid += amount;
@@ -688,7 +734,7 @@ export default function CalendarAddonsPage() {
       result.diesel.count += 1;
     });
     return result;
-  }, [periodDailyExpenses, periodMonthlyDiesel]);
+  }, [periodDailyExpenses, periodMonthlyDiesel, jumboBrand]);
 
   const formatExpenseDate = (raw) => {
     if (!raw) return "—";
@@ -704,7 +750,8 @@ export default function CalendarAddonsPage() {
       const match =
         (statPopup === "pepsi" && isPepsi(e.label, e.category)) ||
         (statPopup === "coke" && isCoke(e.label, e.category)) ||
-        (statPopup === "diesel" && isDiesel(e.label, e.category));
+        (statPopup === "diesel" && isDiesel(e.label, e.category)) ||
+        (statPopup === "jumbo" && isJumbo(e.category) && isJumboBrand(e.label, jumboBrand));
       if (!match) return;
       rows.push({
         id: e.id,
@@ -731,7 +778,7 @@ export default function CalendarAddonsPage() {
       });
     }
     return rows;
-  }, [statPopup, periodDailyExpenses, periodMonthlyDiesel]);
+  }, [statPopup, periodDailyExpenses, periodMonthlyDiesel, jumboBrand]);
 
   const statPeriodLabel =
     statPeriod === "overall"
@@ -1074,7 +1121,7 @@ export default function CalendarAddonsPage() {
             </div>
           </div>
 
-          {/* Pepsi / Coke / Diesel + period filter */}
+          {/* Beverage and fuel summaries with a period filter */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[12px] font-medium text-stone-500">Beverages & fuel · tap a card for every transaction</p>
@@ -1094,7 +1141,7 @@ export default function CalendarAddonsPage() {
               variants={stagger}
               initial="hidden"
               animate="show"
-              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"
             >
               <DrinkCard
                 name="Pepsi Co."
@@ -1110,6 +1157,13 @@ export default function CalendarAddonsPage() {
                 brand="coke"
                 onClick={() => setStatPopup("coke")}
               />
+              <JumboCard
+                quantity={drinkAndFuelStats.jumbo.quantity}
+                paid={drinkAndFuelStats.jumbo.paid}
+                brand={jumboBrand}
+                onBrandChange={setJumboBrand}
+                onClick={() => setStatPopup("jumbo")}
+              />
               <DieselCard
                 liters={drinkAndFuelStats.diesel.liters}
                 count={drinkAndFuelStats.diesel.count}
@@ -1120,16 +1174,7 @@ export default function CalendarAddonsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="bg-white rounded-2xl border border-stone-200 p-4">
-              <p className="font-semibold text-sm text-stone-800 mb-3">Daily Expenses</p>
-              <DailyExpensesPanel
-                allDailyExpenses={allDailyExpenses}
-                addingDaily={addingDaily} setAddingDaily={setAddingDaily}
-                newDaily={newDaily} setNewDaily={setNewDaily}
-                createDailyExpenseMutation={createDailyExpenseMutation}
-                deleteDailyExpenseMutation={deleteDailyExpenseMutation}
-              />
-            </div>
+            <StaffPaymentsSummary dailyExpenses={dailyExpenses} monthlyExpenses={monthlyExpenses} />
             <div className="bg-white rounded-2xl border border-stone-200 p-4">
               <p className="font-semibold text-sm text-stone-800 mb-3">Monthly Overheads</p>
               <MonthlyOverheadPanel
@@ -1355,9 +1400,16 @@ export default function CalendarAddonsPage() {
                   <Droplet size={14} style={{ color: GOLD }} />
                   <h2 className="text-[14px] font-semibold text-stone-900">Beverages (from daily log)</h2>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" onClick={() => setStatPopup("pepsi")} />
                   <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" onClick={() => setStatPopup("coke")} />
+                  <JumboCard
+                    quantity={drinkAndFuelStats.jumbo.quantity}
+                    paid={drinkAndFuelStats.jumbo.paid}
+                    brand={jumboBrand}
+                    onBrandChange={setJumboBrand}
+                    onClick={() => setStatPopup("jumbo")}
+                  />
                 </div>
               </div>
             </div>
@@ -1409,10 +1461,17 @@ export default function CalendarAddonsPage() {
               variants={stagger}
               initial="hidden"
               animate="show"
-              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"
             >
               <DrinkCard name="Pepsi Co." crates={drinkAndFuelStats.pepsi.crates} paid={drinkAndFuelStats.pepsi.paid} brand="pepsi" onClick={() => setStatPopup("pepsi")} />
               <DrinkCard name="Coca Cola Co." crates={drinkAndFuelStats.coke.crates} paid={drinkAndFuelStats.coke.paid} brand="coke" onClick={() => setStatPopup("coke")} />
+              <JumboCard
+                quantity={drinkAndFuelStats.jumbo.quantity}
+                paid={drinkAndFuelStats.jumbo.paid}
+                brand={jumboBrand}
+                onBrandChange={setJumboBrand}
+                onClick={() => setStatPopup("jumbo")}
+              />
               <DieselCard
                 liters={drinkAndFuelStats.diesel.liters}
                 count={drinkAndFuelStats.diesel.count}
@@ -1635,6 +1694,7 @@ export default function CalendarAddonsPage() {
             kind={statPopup}
             rows={statPopupRows}
             periodLabel={statPeriodLabel}
+            brandLabel={jumboBrand === "all" ? "" : jumboBrand}
             onClose={() => setStatPopup(null)}
             onDeleteDaily={(id) => deleteDailyExpenseMutation.mutate(id)}
           />

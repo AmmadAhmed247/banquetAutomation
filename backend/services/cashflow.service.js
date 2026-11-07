@@ -162,7 +162,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
       `payment-${p.id}`,
       p.payment_date || p.created_at,
       p.category || "Payment",
-      p.note || `Payment Received`,
+      /^cash desk payment/i.test(p.note || "") ? "Advance received" : p.note || "Payment Received",
       booking?.client || p.who || null,
       p.payment_method || "Cash",
       Number(p.amount || 0),
@@ -278,7 +278,7 @@ async function computeCashflowSummary(startDate, endDate, { startQ, endQ, range 
       d.category || "Daily Expense",
       d.label || "Daily Petty Cash",
       null,
-      "Cash",
+      d.payment_method || "Cash",
       amount
     );
 

@@ -1,0 +1,1 @@
+ALTER TABLE "daily_expenses" ADD COLUMN "payment_method" varchar(50) DEFAULT 'Cash' NOT NULL;
