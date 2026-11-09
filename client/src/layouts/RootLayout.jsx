@@ -9,7 +9,8 @@ import {
   DollarSign,
   LogOut,
   BanknoteArrowDown ,
-  BanknoteArrowUp 
+  BanknoteArrowUp ,
+  MessageCircle,
 
 } from "lucide-react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -32,6 +33,7 @@ export default function RootLayout() {
     // { name: "Management System", path: "management", icon: FolderKanban },
     // { name: "Add-ons", path: "addons", icon: BanknoteArrowDown },
     { name: "Cash Flow", path: "cash-flow", icon: DollarSign },
+    { name: "Whats App Inbox", path: "whatsapp-inbox", icon: MessageCircle },
     // { name: "Alerts", path: "Alerts", icon: BanknoteArrowUp },
   ];
 

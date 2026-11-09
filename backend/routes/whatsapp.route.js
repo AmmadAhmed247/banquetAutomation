@@ -1,11 +1,12 @@
 const express = require("express")
 const router = express.Router()
 const { handleWhatsappWebhook, SendMenuFromVoiceAgent } = require("../controllers/whatsapp.controller")
+const { handleInbound: handleAgentWebhook } = require("../controllers/Inboxwebhook.controller")
 const dotenv = require("dotenv")
 
 dotenv.config()
 
-router.get("/handleWebhook", (req, res) => {
+const verifyWebhook = (req, res) => {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
@@ -16,9 +17,13 @@ router.get("/handleWebhook", (req, res) => {
     } else {
         res.sendStatus(403);
     }
-});
+};
+
+router.get("/handleWebhook", verifyWebhook);
+router.get("/agentWebhook", verifyWebhook);
 
 router.post("/handleWebhook", handleWhatsappWebhook)
+router.post("/agentWebhook", handleAgentWebhook)
 
 router.post("/voice/sendMenu", SendMenuFromVoiceAgent);
 

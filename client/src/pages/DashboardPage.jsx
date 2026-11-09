@@ -24,6 +24,7 @@ export default function DashboardPage() {
     // { name: "Management System", path: "management", icon: FolderKanban, desc: "Manage your studio" },
     // { name: "Add-ons", path: "addons", icon: BanknoteArrowDown, desc: "Manage your studio" },
     { name: "Cash Flow", path: "cash-flow", icon: DollarSign, desc: "Manage your studio" },
+    { name: "Whats App Inbox", path: "whatsapp-inbox", icon: MessageCircle, desc: "Whatsapp Inbox" },
   ];
 
   const handleLogout = async () => {

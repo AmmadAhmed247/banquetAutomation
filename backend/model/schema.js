@@ -1,3 +1,4 @@
+const { jsonb } = require("drizzle-orm/pg-core");
 const { pgTable, integer, serial, varchar, text, timestamp, numeric, time, boolean, date } = require("drizzle-orm/pg-core");
 
 
@@ -126,6 +127,37 @@ const payments = pgTable("payments", {
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
+
+
+const conversation = pgTable("conversations", {
+    id: serial("id").primaryKey().notNull(),
+    userId: integer("user_id").notNull().unique().references(() => user.id, { onDelete: "cascade" }),
+    status: varchar("status", { length: 20 }).notNull().default("bot"), // bot | needs_human | human | resolved
+    bot_paused: boolean("bot_paused").notNull().default(false),
+    flag_reason: text("flag_reason"),
+    source_ad_id: text("source_ad_id"),
+    source_headline: text("source_headline"),
+    last_message_at: timestamp("last_message_at"),
+    last_message_preview: text("last_message_preview"),
+    last_nudge_at: timestamp("last_nudge_at"),
+    created_at: timestamp("created_at").defaultNow(),
+});
+
+const waMessage = pgTable("wa_messages", {
+    id: serial("id").primaryKey().notNull(),
+    conversationId: integer("conversation_id").notNull().references(() => conversation.id, { onDelete: "cascade" }),
+    wa_message_id: text("wa_message_id").unique(),
+    direction: varchar("direction", { length: 3 }).notNull(), // in | out
+    sender: varchar("sender", { length: 10 }).notNull(), // customer | bot | staff
+    type: varchar("type", { length: 20 }).notNull().default("text"),
+    body: text("body"),
+    tool_calls: jsonb("tool_calls"),
+    latency_ms: integer("latency_ms"),
+    delivery_status: varchar("delivery_status", { length: 12 }),
+    delivery_error: text("delivery_error"),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
 module.exports = {
     user,
     booking,
@@ -135,5 +167,7 @@ module.exports = {
     addons,
     monthlyExpenses,
     dailyExpenses,
-    payments
+    payments,
+    conversation,
+    waMessage,
 }

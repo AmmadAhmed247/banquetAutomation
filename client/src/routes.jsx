@@ -13,6 +13,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import Cashflow from "./pages/CashflowPage.jsx";
 import BookPage from "./pages/BookPage.jsx";
 import Alerts from "./pages/Alerts.jsx";
+import WhatsAppInbox from "./pages/whatsappbot.jsx";
 const ComingSoon = ({ pageName }) => {
   return (
     <div className="flex items-center justify-center h-[80vh]">
@@ -79,6 +80,10 @@ export const router = createBrowserRouter([
       {
         path: "management",
         element: <Management />,
+      },
+      {
+        path: "whatsapp-inbox",
+        element: <WhatsAppInbox />,
       },
     ],
   },

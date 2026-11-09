@@ -1,9 +1,7 @@
 const { createCanvas } = require("canvas");
 const { db } = require("../config/db");
 const { booking } = require("../model/schema");
-const { and, gte, lte, eq } = require("drizzle-orm");
-const fs = require("fs");
-const path = require("path");
+const { and, gte, lte, eq, inArray } = require("drizzle-orm");
 const { uploadBuffer } = require("../utils/uploadToImagekit");
 
 async function generateCalendarImage(year, month, hall) {
@@ -11,37 +9,41 @@ async function generateCalendarImage(year, month, hall) {
         throw new Error(`Invalid inputs: year=${year}, month=${month}, hall=${hall}`);
     }
 
-    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
-    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+    const karachiOffsetMs = 5 * 60 * 60 * 1000;
+    const calendarStart = new Date(Date.UTC(year, month - 1, 1));
+    const queryStart = new Date(calendarStart.getTime() - karachiOffsetMs);
+    const queryEnd = new Date(Date.UTC(year, month, 1) - karachiOffsetMs - 1);
 
     const booked = await db
-        .select({ date: booking.date })
+        .select({ date: booking.date, status: booking.status })
         .from(booking)
         .where(
             and(
-                gte(booking.date, start),
-                lte(booking.date, end),
+                gte(booking.date, queryStart),
+                lte(booking.date, queryEnd),
                 eq(booking.venue, hall),
-                eq(booking.status, "Confirmed")
+                inArray(booking.status, ["Confirmed", "Pending", "Finished"])
             )
         );
 
-    const bookedDays = booked
-        .map(b => b?.date)
-        .filter(Boolean)
-        .map(d => {
-            const dateObj = typeof d === "string" ? new Date(d) : d;
-            return dateObj.getUTCDate();
-        });
+    const bookedDays = new Set();
+    for (const { date, status } of booked) {
+        if (!date) continue;
+        const dateObj = typeof date === "string" ? new Date(date) : date;
+        const day = new Date(dateObj.getTime() + karachiOffsetMs).getUTCDate();
+        bookedDays.add(day);
+    }
 
     const bookedColor = hall === "Hall B" ? "#e51a28" : "#3b82f6"; 
     const headerColor = "#10b981";
+    const canvasWidth = 600;
+    const canvasHeight = 540;
 
-    const canvas = createCanvas(600, 500);
+    const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext("2d");
 
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, 600, 500);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     ctx.fillStyle = headerColor;
     ctx.fillRect(0, 0, 600, 70);
@@ -50,7 +52,7 @@ async function generateCalendarImage(year, month, hall) {
     ctx.textAlign = "center";
 
     // Format month using explicit UTC timezone
-    const monthName = start.toLocaleString("en-US", { month: "long", timeZone: "UTC" });
+    const monthName = calendarStart.toLocaleString("en-US", { month: "long", timeZone: "UTC" });
     ctx.fillText(`${hall} — ${monthName} ${year}`, 300, 45);
 
     ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((d, i) => {
@@ -60,7 +62,7 @@ async function generateCalendarImage(year, month, hall) {
     });
 
     // Fix: Use UTC day positioning to match UTC date bounds
-    const firstDay = start.getUTCDay();
+    const firstDay = calendarStart.getUTCDay();
     const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
     let row = 0;
 
@@ -69,13 +71,10 @@ async function generateCalendarImage(year, month, hall) {
         if (day > 1 && col === 0) row++;
 
         const x = 50 + col * 80;
-        const y = 140 + row * 70;
-        const isBooked = bookedDays.includes(day);
-
-        ctx.beginPath();
-        ctx.arc(x, y, 24, 0, Math.PI * 2);
+        const y = 140 + row * 55;
+        const isBooked = bookedDays.has(day);
         ctx.fillStyle = isBooked ? bookedColor : "#f1f5f9";
-        ctx.fill();
+        ctx.fillRect(x - 30, y - 22, 60, 44);
 
         ctx.fillStyle = isBooked ? "#ffffff" : "#1e293b";
         ctx.font = "bold 16px Arial";
@@ -84,21 +83,17 @@ async function generateCalendarImage(year, month, hall) {
     }
 
     // Legend
-    ctx.beginPath();
-    ctx.arc(220, 460, 10, 0, Math.PI * 2);
     ctx.fillStyle = bookedColor;
-    ctx.fill();
+    ctx.fillRect(130, 490, 20, 20);
     ctx.fillStyle = "#64748b";
     ctx.font = "14px Arial";
     ctx.textAlign = "left";
-    ctx.fillText("Booked", 238, 465);
+    ctx.fillText("Booked", 158, 505);
 
-    ctx.beginPath();
-    ctx.arc(340, 460, 10, 0, Math.PI * 2);
     ctx.fillStyle = "#f1f5f9";
-    ctx.fill();
+    ctx.fillRect(400, 490, 20, 20);
     ctx.fillStyle = "#64748b";
-    ctx.fillText("Available", 358, 465);
+    ctx.fillText("Available", 428, 505);
 
     const fileName = `calendar-${hall.replace(/\s+/g, '')}-${year}-${month}-${Date.now()}.png`;
     const buffer = canvas.toBuffer("image/png");

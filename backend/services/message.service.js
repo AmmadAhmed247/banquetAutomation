@@ -195,17 +195,11 @@ async function getReceiptMessage(phone, data) {
 async function getCalendarMessage(phone, hall, year, month) {
   try {
     const { url } = await generateCalendarImage(year, month, hall);
-    const priceMessage = getMonthPriceMessage(hall, month);
+    const monthName = monthNames[month - 1];
+    const caption = `${hall} — ${capitalize(monthName)} ${year}\nFilled = booked`;
 
-    const caption = [
-      `Here is ${hall}'s availability!`,
-      "",
-      `${hall === "Hall B" ? "🔴 Red" : "🔵 Blue"} = Booked \n⚪ White = Available`,
-      "",
-      priceMessage,
-    ].join("\n");
-
-    await sendMediaMessage(phone, caption, url);
+    const result = await sendMediaMessage(phone, caption, url);
+    if (!result?.success) throw new Error("Could not send calendar image");
     await sleep(10000);
     return
   } catch (error) {
