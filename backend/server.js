@@ -16,6 +16,7 @@ const monthlyExpenseRouter = require("./routes/monthlexpense.route")
 const dailyExpenseRouter = require("./routes/dailyExpense.route")
 const PaymentRouter = require("./routes/payment.route")
 const CashflowRouter = require("./routes/cashflow.route")
+const InboxRouter = require("./routes/Inbox.route")
 const cookieParser = require("cookie-parser");
 const path = require("path");
 const { startReminderJobs } = require("./jobs/reminder.jobs")
@@ -32,7 +33,11 @@ app.use(cors({
 }))
 
 app.use(cookieParser());
-app.use(express.json())
+app.use(express.json({
+    verify: (req, _res, buffer) => {
+        req.rawBody = buffer;
+    }
+}))
 app.use(express.urlencoded({ extended: false }))
 app.use("/public", express.static(path.join(__dirname, "public")));
 startReminderJobs();
@@ -53,8 +58,9 @@ app.use("/api/user", adminOnly, UserRouter)
 app.use("/api/booking", adminOnly, BookingRouter)
 app.use("/api/package", adminOnly, PackageRouter)
 app.use("/api/whatsapp", WhatsappRouter)
-app.use("/api/message", messageRouter)
-app.use("/api/receipt", receiptRouter)
+app.use("/api/inbox", adminOnly, InboxRouter)
+app.use("/api/message", adminOnly, messageRouter)
+app.use("/api/receipt", adminOnly, receiptRouter)
 app.use("/api/auth", authRoute)
 app.use("/api/client", clientRoute)
 app.use("/api/expense", adminOnly, expenseRouter)

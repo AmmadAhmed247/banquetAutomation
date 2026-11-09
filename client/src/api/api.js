@@ -1,7 +1,9 @@
 import axios from "axios"
 
 export default axios.create({
-    baseURL: "https://api.raabta.tech",
+    baseURL: import.meta.env.VITE_API_URL || (
+        import.meta.env.DEV ? "http://localhost:3000" : "https://api.raabta.tech"
+    ),
     withCredentials: true,
 })      
 
