@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { getRecentMessages, flagContact } = require("./Inbox.service");
+const { reserveAgentRequest } = require("./AgentRateLimit.service");
 const { toolDefinitions, toolHandlers } = require("./AgentTools.service");
 const { BUSINESS, HALLS } = require("./Agentdata.service");
 
@@ -130,9 +131,14 @@ function toGeminiSchema(schema) {
     return result;
 }
 
-async function generateContent(contents) {
+async function generateContent(contents, contactId) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+    if (!await reserveAgentRequest(contactId)) {
+        const error = new Error("Gemini request rate limit reached");
+        error.code = "AGENT_RATE_LIMITED";
+        throw error;
+    }
 
     // Add PRICING as part of system instruction context dynamically
     const pricingString = JSON.stringify(PRICING);
@@ -163,7 +169,7 @@ async function runAgent(contact) {
     let calendarSent = false;
 
     for (let step = 0; step < MAX_STEPS; step++) {
-        const content = await generateContent(messages);
+        const content = await generateContent(messages, contact.id);
         const parts = content?.parts ?? [];
         const calls = parts.filter((part) => part.functionCall);
 

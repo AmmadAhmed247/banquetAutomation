@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const inbox = require("../services/Inbox.service");
 const { runAgent } = require("../services/Agent.service");
+const { reserveInboundMessage } = require("../services/AgentRateLimit.service");
 const { handleWhatsappWebhook } = require("./whatsapp.controller"); // your existing handler
 
 const FALLBACK = "Thanks for your message. Our team will reply to you shortly.";
@@ -80,6 +81,14 @@ async function processInbound(value, msg) {
     });
     if (!logged) return; // duplicate delivery
 
+    if (!await reserveInboundMessage(contact.id)) {
+        if (!contact.bot_paused) {
+            console.warn(`[inbox rate limit] Daily message limit reached for contact ${contact.id}`);
+            await inbox.flagContact(contact.id, "Daily inbound message limit reached", true);
+        }
+        return;
+    }
+
     if (!text) return inbox.handleUnsupportedMedia(contact); // voice, image, sticker...
     if (contact.bot_paused) return; // a person has this chat
 
@@ -90,6 +99,10 @@ async function processInbound(value, msg) {
             await inbox.sendOutbound(contact, reply, { sender: "bot", toolCalls, latencyMs: Date.now() - started });
         }
     } catch (err) {
+        if (err.code === "AGENT_RATE_LIMITED") {
+            console.warn(`[agent rate limit] Gemini request blocked for contact ${contact.id}`);
+            return;
+        }
         console.error("[agent]", err);
         await inbox.flagContact(contact.id, "Agent error, needs a person", true).catch(() => {});
         await inbox.sendOutbound(contact, FALLBACK, { sender: "bot" }).catch(() => {});

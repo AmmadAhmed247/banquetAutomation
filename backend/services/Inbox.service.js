@@ -125,7 +125,6 @@ async function setStatus(id, status, { reason = null, pauseBot } = {}) {
 
 const flagContact = (id, reason, pauseBot = true) => setStatus(id, "needs_human", { reason, pauseBot });
 
-/* ---------- Messages ---------- */
 
 async function logMessage(m) {
     const [row] = await db.insert(waMessage).values(m).onConflictDoNothing().returning();

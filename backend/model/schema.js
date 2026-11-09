@@ -1,5 +1,5 @@
 const { jsonb } = require("drizzle-orm/pg-core");
-const { pgTable, integer, serial, varchar, text, timestamp, numeric, time, boolean, date } = require("drizzle-orm/pg-core");
+const { pgTable, integer, serial, varchar, text, timestamp, numeric, time, boolean, date, primaryKey } = require("drizzle-orm/pg-core");
 
 
 const user = pgTable("users", {
@@ -158,6 +158,14 @@ const waMessage = pgTable("wa_messages", {
     created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
+const agentUsage = pgTable("agent_usage", {
+    scopeKey: text("scope_key").notNull(),
+    windowStart: timestamp("window_start").notNull(),
+    requestCount: integer("request_count").notNull().default(0),
+}, (table) => ({
+    pk: primaryKey({ columns: [table.scopeKey, table.windowStart], name: "agent_usage_pk" }),
+}));
+
 module.exports = {
     user,
     booking,
@@ -170,4 +178,5 @@ module.exports = {
     payments,
     conversation,
     waMessage,
+    agentUsage,
 }
