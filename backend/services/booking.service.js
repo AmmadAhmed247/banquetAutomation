@@ -196,7 +196,7 @@ async function CreateBooking(bookingData) {
       paymentMethod = "Cash",
       paymentNote = "",
       status = "Pending",
-      timeSlot = "Night",
+      timeSlot,
       bankName = null,
       payments: paymentInputs,
       advancePaid = 0, // legacy fallback only

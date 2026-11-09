@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { Printer, RotateCcw, User, Phone, MessageCircle, MapPin, CalendarDays, Users, Building2, Wallet, CreditCard, PiggyBank } from "lucide-react";
+import { Printer, RotateCcw, User, Phone, MessageCircle, MapPin, CalendarDays, Users, Building2, Wallet, CreditCard, PiggyBank, Clock } from "lucide-react";
 import receiptService from "../services/receipt.service";
 import bookingService from "../services/booking.service"; // Added booking service import
 import toast from "react-hot-toast";
@@ -50,6 +50,7 @@ const isValidPhoneLength = (number) => {
 };
 
 const HALLS = ["Hall A", "Hall B", "Hall A & B"];
+const TIME_SLOTS = ["Day", "Night"];
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const FUNCS = ["Wedding", "Valima", "Mehndi", "Barat", "Engagement", "Birthday", "Corporate", "Barat and Valima", "Nikah"];
 
@@ -169,6 +170,20 @@ function ReceiptPreview({ data }) {
         </div>
       </div>
 
+      <div className="flex items-end gap-2 mb-2">
+        <span className="text-[13px] font-bold whitespace-nowrap">Venue</span>
+        <div className="w-56 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.venue && <span className="text-[13px]">{data.venue}</span>}
+        </div>
+      </div>
+
+      <div className="flex items-end gap-2 mb-2">
+        <span className="text-[13px] font-bold whitespace-nowrap">Time Slot</span>
+        <div className="w-56 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
+          {data.timeSlot && <span className="text-[13px]">{data.timeSlot}</span>}
+        </div>
+      </div>
+
       {/* Lump Sum */}
       <div className="flex items-end gap-2 mb-2">
         <span className="text-[13px] font-bold whitespace-nowrap">Lump Sum</span>
@@ -193,7 +208,7 @@ function ReceiptPreview({ data }) {
       </div>
 
       {/* Balance & Signature Layout */}
-       <div className="flex items-start justify-between gap-4 mb-3">
+      <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex items-end gap-2 flex-1 min-w-0 mt-5.5">
           <span className="text-[13px] font-bold whitespace-nowrap">Balance</span>
           <div className="flex-1 min-w-0 border-b border-[#1a237e] text-center" style={{ minHeight: 18 }}>
@@ -332,6 +347,8 @@ export default function DarbarReceiptForm() {
         advance: data.advance,
         balance: data.balance,
         paymentMethod: data.paymentMethod,
+        timeSlot: data.timeSlot,
+        venue: data.venue
       };
 
       const formattedData = {
@@ -353,11 +370,11 @@ export default function DarbarReceiptForm() {
         advanceAmount: Number(data.advance) || 0,
         // `advance_paid` in DB is numeric (amount). Send numeric paid amount here.
         payments:
-        advanceNum > 0
-          ? [{ amount: advanceNum, method: data.paymentMethod, bankName: null, note: "Advance at booking" }]
-          : [],
+          advanceNum > 0
+            ? [{ amount: advanceNum, method: data.paymentMethod, bankName: null, note: "Advance at booking" }]
+            : [],
         paymentMethod: data.paymentMethod,
-        timeSlot: "Night",
+        timeSlot: data.timeSlot || "Night",
         status: "Confirmed",
         guests: Number(data.noOfGuests) || 0,
       };
@@ -500,6 +517,11 @@ export default function DarbarReceiptForm() {
                 <Field label="Venue" icon={Building2}>
                   <select className={sel} {...register("venue", { required: true })}>
                     {HALLS.map(h => <option key={h}>{h}</option>)}
+                  </select>
+                </Field>
+                <Field label="Time Slot" icon={Clock}>
+                  <select className={sel} {...register("timeSlot", { required: true })}>
+                    {TIME_SLOTS.map(t => <option key={t}>{t}</option>)}
                   </select>
                 </Field>
               </div>

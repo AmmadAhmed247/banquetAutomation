@@ -163,6 +163,8 @@ async function getReceiptMessage(phone, data) {
       functionName: data.functionName,
       date: data.date,
     });
+
+    console.log(result)
   }
 
   if (!result.success) {

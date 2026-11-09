@@ -47,7 +47,7 @@ const cleanPhone = (phone = "") => {
 
 async function generateReceipt(data = {}) {
   const W = 794;
-  const H = 960;
+  const H = 1000;
 
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext("2d");
@@ -87,7 +87,7 @@ async function generateReceipt(data = {}) {
   ctx.strokeRect(18, 18, W - 36, H - 36);
 
   // Watermark
-  drawFan(ctx, W / 2, 450, 260);
+  drawFan(ctx, W / 2, 470, 260);
 
   // Logo / Header
   drawFanLogo(ctx, W / 2, 62, 38);
@@ -141,28 +141,36 @@ async function generateReceipt(data = {}) {
   line(494, 416, W - 42, 416);
   if (data.noOfGuests) centeredText(data.noOfGuests, 494, W - 42, 412, { size: 14 });
 
+  // Venue & Time Slot
+  text('Venue', 42, 460, { size: 14, weight: 'bold' });
+  line(100, 464, 390, 464);
+  if (data.venue) centeredText(data.venue, 100, 390, 460, { size: 14 });
+  text('Time Slot', 396, 460, { size: 14, weight: 'bold' });
+  line(470, 464, W - 42, 464);
+  if (data.timeSlot) centeredText(data.timeSlot, 470, W - 42, 460, { size: 14 });
+
   // Standardized Payment Lines Layout
   const payStartX = 120;
   const payEndX = 350;
 
   // Lump Sum
-  text('Lump Sum', 42, 460, { size: 14, weight: 'bold' });
-  line(payStartX, 464, payEndX, 464);
-  if (data.lumpSum) centeredText(data.lumpSum, payStartX, payEndX, 460, { size: 14 });
+  text('Lump Sum', 42, 500, { size: 14, weight: 'bold' });
+  line(payStartX, 504, payEndX, 504);
+  if (data.lumpSum) centeredText(data.lumpSum, payStartX, payEndX, 500, { size: 14 });
 
   // Advance
-  text('Advance', 42, 500, { size: 14, weight: 'bold' });
-  line(payStartX, 504, payEndX, 504);
-  if (data.advance) centeredText(data.advance, payStartX, payEndX, 500, { size: 14 });
+  text('Advance', 42, 540, { size: 14, weight: 'bold' });
+  line(payStartX, 544, payEndX, 544);
+  if (data.advance) centeredText(data.advance, payStartX, payEndX, 540, { size: 14 });
 
   // Payment Method
   const payMethodStartX = 160;
-  text('Payment Method', 42, 540, { size: 14, weight: 'bold' });
-  line(payMethodStartX, 544, payEndX, 544);
-  if (data.paymentMethod) centeredText(data.paymentMethod, payMethodStartX, payEndX, 540, { size: 14 });
+  text('Payment Method', 42, 580, { size: 14, weight: 'bold' });
+  line(payMethodStartX, 584, payEndX, 584);
+  if (data.paymentMethod) centeredText(data.paymentMethod, payMethodStartX, payEndX, 580, { size: 14 });
 
   // Balance & Manager Block
-  const rowY = 578;
+  const rowY = 618; // was 578
 
   // Balance Row
   text('Balance', 42, rowY, { size: 14, weight: 'bold' });
@@ -187,7 +195,7 @@ async function generateReceipt(data = {}) {
   }
 
   // Terms & Conditions
-  const tcY = 618;
+  const tcY = 658;
   ctx.save();
   ctx.fillStyle = '#c0392b';
   const pillW = 220, pillH = 28, pillX = (W - pillW) / 2, pillR = 14;
